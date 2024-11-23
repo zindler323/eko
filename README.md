@@ -22,9 +22,9 @@
 
 **Eko** is a full-stack agent development framework built on the [Fellou AI browser](https://fellou.ai), which transforms human words into actions. By leveraging natural language processing and advanced AI capabilities, it bridges the gap between user intent and system execution. Whether you're automating workflows, building browser agents, or accessing system-level operations, Eko provides the tools to make it effortless.  
 
-The biggest advantage of using Eko is that developers don’t need to build client software, and users don’t need to install any additional client to enjoy the most advanced AI-powered computer use capabilities. These capabilities span across both the browser and the operating system.
-
-**Eko** changes the paradigm of programming, shifting from developers telling computers how to do something to developers telling computers what to do and what goals to achieve.
+## **Why use the Eko**
+- The biggest advantage of using Eko is that developers don’t need to build client software, and users don’t need to install any additional client to enjoy the most advanced AI-powered computer use capabilities. These capabilities span across both the browser and the operating system.
+- **Eko** changes the paradigm of programming, shifting from developers telling computers how to do something to developers telling computers what to do and what goals to achieve.
 
 
 ### **Key Benefits**

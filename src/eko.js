@@ -1,9 +1,20 @@
 export class Eko {
     constructor() {
+        this.options = {
+            log: true,
+        }
+    }
+
+    generateWorkflow(task) {
 
     }
 
-    execute() {
-        console.log('aa')
+    inference(prompt) {
+
+    }
+
+    execute(workflow, options) {
+        this.options = options || this.options;
+
     }
 }

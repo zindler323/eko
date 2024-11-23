@@ -2,4 +2,9 @@ import { Eko }  from '../src/eko.js';
 
 const eko = new Eko();
 
-eko.test();
+const workflow = eko.generateWorkflow('');
+const result = eko.execute(workflow, {
+    callback (node) {
+        console.log(node);
+    }
+});

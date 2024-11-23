@@ -1,0 +1,33 @@
+{
+  "name": "eko",
+  "version": "1.0.0",
+  "description": "Empowering language to transform human words into action.",
+  "main": "src/eko.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "node test/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FellouAI/eko.git"
+  },
+  "keywords": [
+    "agent",
+    "rpa",
+    "browser",
+    "computer-use",
+    "AI",
+    "automation",
+    "natural language programming",
+    "propmt engineering",
+    ""
+  ],
+  "author": "Fellou AI Browser",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/FellouAI/eko/issues"
+  },
+  "homepage": "https://github.com/FellouAI/eko#readme"
+}
