@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Empowering language to transform human words into action.",
   "main": "src/eko.js",
+  "type": "module",
   "directories": {
     "test": "test"
   },
@@ -21,13 +22,17 @@
     "AI",
     "automation",
     "natural language programming",
-    "propmt engineering",
-    ""
+    "propmt engineering"
   ],
   "author": "Fellou AI Browser",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/FellouAI/eko/issues"
   },
-  "homepage": "https://github.com/FellouAI/eko#readme"
+  "homepage": "https://github.com/FellouAI/eko#readme",
+  "dependencies": {
+    "@langchain/anthropic": "^0.3.8",
+    "@langchain/core": "^0.3.18",
+    "langchain": "^0.3.6"
+  }
 }
