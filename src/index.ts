@@ -1,4 +1,5 @@
-import { EkoConfig, EkoInvokeParam, Tool, Workflow } from './types';
+import { WebSearch } from './extension/tools/web_search';
+import { EkoConfig, EkoInvokeParam, Tool, Workflow, ExecutionContext } from './types';
 
 /**
  * Eko core
@@ -18,5 +19,14 @@ export class Eko {
 
   public async pub(event: string): Promise<any> {
     throw Error('Not implemented');
+  }
+
+  public async testWebSearch(query: string, maxResults: number = 5): Promise<any> {
+    let webSearch = new WebSearch();
+    let context = {
+      variables: {},
+      tools: {},
+    } as ExecutionContext;
+    return await webSearch.execute(context, { query, maxResults });
   }
 }
