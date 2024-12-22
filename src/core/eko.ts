@@ -12,7 +12,7 @@ export default class Eko {
     throw Error('Not implemented');
   }
 
-  public registerTool(tool: Tool): void {
+  public registerTool(tool: Tool<any, any>): void {
     throw Error('Not implemented');
   }
 
