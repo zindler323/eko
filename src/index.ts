@@ -5,6 +5,8 @@ import { OpenaiProvider } from './services/llm/openai-provider';
 import { WorkflowParser } from './services/parser/workflow-parser';
 import { WorkflowGenerator } from "./services/workflow/generator"
 
+export default Eko;
+
 export {
   Eko,
   WorkflowGenerator,
