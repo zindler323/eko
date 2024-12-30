@@ -64,8 +64,8 @@ export class Eko {
     return await generator.generateWorkflow(prompt);
   }
 
-  public async execute(workflow: Workflow, callback?: WorkflowCallback): Promise<any> {
-    return await workflow.execute();
+  public async execute(workflow: Workflow, callback?: WorkflowCallback): Promise<void> {
+    return await workflow.execute(callback);
   }
 
   private getTool(toolName: string) {
