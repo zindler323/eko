@@ -50,7 +50,7 @@
 ### **Using npm**
 
 ```bash
-npm install fellou-eko
+npm install @eko-ai/eko
 ```
 
 ## Contributing
