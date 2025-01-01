@@ -47,7 +47,8 @@
   "author": "FellouAI",
   "license": "MIT",
   "keywords": [
-    "fellou-agent"
+    "fellou",
+    "eko"
   ],
   "publishConfig": {
     "access": "public",
