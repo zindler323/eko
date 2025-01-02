@@ -1,7 +1,6 @@
 import { WorkflowGenerator } from '../services/workflow/generator';
 import { ClaudeProvider } from '../services/llm/claude-provider';
 import { OpenaiProvider } from '../services/llm/openai-provider';
-import * as fellouUtils from '../services/tools/fellou';
 import {
   EkoConfig,
   EkoInvokeParam,
@@ -64,7 +63,7 @@ export class Eko {
     return await generator.generateWorkflow(prompt);
   }
 
-  public async execute(workflow: Workflow, callback?: WorkflowCallback): Promise<void> {
+  public async executeWorkflow(workflow: Workflow, callback?: WorkflowCallback): Promise<void> {
     return await workflow.execute(callback);
   }
 
@@ -73,21 +72,23 @@ export class Eko {
     if (this.toolRegistry.hasTools([toolName])) {
       tool = this.toolRegistry.getTool(toolName);
     } else {
-      let _tool = Eko.tools.get(toolName);
-      if (!_tool) {
-        throw new Error(`Tool with name ${toolName} not found`);
-      }
-      tool = _tool;
+      throw new Error(`Tool with name ${toolName} not found`);
     }
     return tool;
   }
 
-  public async callTool(toolName: string, input: object): Promise<any> {
-    let tool = this.getTool(toolName);
+  public async callTool(toolName: string, input: object, callback?: WorkflowCallback): Promise<any>;
+  public async callTool(tool: Tool<any, any>, input: object, callback?: WorkflowCallback): Promise<any>;
+
+  public async callTool(tool: Tool<any, any> | string, input: object, callback?: WorkflowCallback): Promise<any> {
+    if (typeof tool === 'string') {
+      tool = this.getTool(tool);
+    }
     let context = {
       llmProvider: this.llmProvider,
       variables: new Map<string, unknown>(),
       tools: new Map<string, Tool<any, any>>(),
+      callback,
     };
     let result = await tool.execute(context, input);
     if (tool.destroy) {
@@ -103,11 +104,6 @@ export class Eko {
   public unregisterTool(toolName: string): void {
     this.toolRegistry.unregisterTool(toolName);
   }
-}
-
-export namespace Eko {
-  export const fellou = fellouUtils;
-  export const tools = new Map<string, Tool<any, any>>();
 }
 
 export default Eko;
