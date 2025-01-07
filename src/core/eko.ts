@@ -1,7 +1,6 @@
 import { WorkflowGenerator } from '../services/workflow/generator';
 import { ClaudeProvider } from '../services/llm/claude-provider';
 import { OpenaiProvider } from '../services/llm/openai-provider';
-import * as fellouUtils from '../services/tools/fellou';
 import {
   EkoConfig,
   EkoInvokeParam,
@@ -18,6 +17,8 @@ import { ToolRegistry } from './tool-registry';
  * Eko core
  */
 export class Eko {
+  public static tools: Map<string, Tool<any, any>> = new Map();
+
   private llmProvider: LLMProvider;
   private toolRegistry = new ToolRegistry();
 
@@ -45,9 +46,10 @@ export class Eko {
     } else {
       this.llmProvider = config as LLMProvider;
     }
+    Eko.tools.forEach((tool) => this.toolRegistry.registerTool(tool));
   }
 
-  public async generateWorkflow(prompt: string, param?: EkoInvokeParam): Promise<Workflow> {
+  public async generate(prompt: string, param?: EkoInvokeParam): Promise<Workflow> {
     let toolRegistry = this.toolRegistry;
     if (param && param.tools && param.tools.length > 0) {
       toolRegistry = new ToolRegistry();
@@ -72,22 +74,34 @@ export class Eko {
     let tool: Tool<any, any>;
     if (this.toolRegistry.hasTools([toolName])) {
       tool = this.toolRegistry.getTool(toolName);
+    } else if (Eko.tools.has(toolName)) {
+      tool = Eko.tools.get(toolName) as Tool<any, any>;
     } else {
-      let _tool = Eko.tools.get(toolName);
-      if (!_tool) {
-        throw new Error(`Tool with name ${toolName} not found`);
-      }
-      tool = _tool;
+      throw new Error(`Tool with name ${toolName} not found`);
     }
     return tool;
   }
 
-  public async callTool(toolName: string, input: object): Promise<any> {
-    let tool = this.getTool(toolName);
+  public async callTool(toolName: string, input: object, callback?: WorkflowCallback): Promise<any>;
+  public async callTool(
+    tool: Tool<any, any>,
+    input: object,
+    callback?: WorkflowCallback
+  ): Promise<any>;
+
+  public async callTool(
+    tool: Tool<any, any> | string,
+    input: object,
+    callback?: WorkflowCallback
+  ): Promise<any> {
+    if (typeof tool === 'string') {
+      tool = this.getTool(tool);
+    }
     let context = {
       llmProvider: this.llmProvider,
       variables: new Map<string, unknown>(),
       tools: new Map<string, Tool<any, any>>(),
+      callback,
     };
     let result = await tool.execute(context, input);
     if (tool.destroy) {
@@ -103,11 +117,6 @@ export class Eko {
   public unregisterTool(toolName: string): void {
     this.toolRegistry.unregisterTool(toolName);
   }
-}
-
-export namespace Eko {
-  export const fellou = fellouUtils;
-  export const tools = new Map<string, Tool<any, any>>();
 }
 
 export default Eko;
