@@ -19,6 +19,8 @@
 npm install @eko-ai/eko
 ```
 
+> The following code is for reference only. For detailed usage, please refer to the [Eko Quickstart guide](https://eko.fellou.ai/docs/getting-started/quickstart/).
+
 ```typescript
 import { Eko } from '@eko-ai/eko';
 
