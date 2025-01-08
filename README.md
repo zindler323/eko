@@ -38,6 +38,26 @@ await eko.execute(sysWorkflow);
 
 ```
 
+## Demos
+
+**Propmt:** `Open youtube, Search for Elon Musk, click on the first video, extract and summarize the content, and export as md.`
+
+[![search-elon-musk-on-youtube](https://eko.fellou.ai/docs/run_browser_use.mov)](https://eko.fellou.ai/docs/browseruse/browser-extension/#example-search-elon-musk-in-youtube-and-summarize)
+
+---
+
+**Propmt:** `Search Sam Altman's information and summarize it into markdown format for export`
+
+[![search-sam-altman-on-google](https://eko.fellou.ai/docs/load_extension.mov)](https://eko.fellou.ai/docs/getting-started/quickstart/#creat-your-first-workflow)
+
+
+---
+
+**Propmt:** `Clean up all files in the current directory larger than 1MB`
+
+[![clean-up-files-larger-than-1mb](https://eko.fellou.ai/docs/nodejs_clean_computer.mov)](https://eko.fellou.ai/docs/computeruse/computer-node/#example-file-cleanup-workflow)
+
+
 ## Use Cases
 
 - Browser automation and web scraping
