@@ -4,7 +4,18 @@
 
 **Eko** is a revolutionary framework designed to empower developers and users alike to program their browser and operating system using natural language. With seamless integration of browser APIs, OS-level capabilities, and cutting-edge AI tools like Claude 3.5, Eko redefines how we interact with technology, making it intuitive, powerful, and accessible.
 
-## Key Features
+# Framework Comparison
+
+| Feature                              | Eko   | Langchain  | Browser-use  | Dify.ai  | Coze   | Midscene.js |
+|--------------------------------------|-------|------------|--------------|----------|--------|-------------|
+| **Supported Platform**               | All platform  | Server side  | Browser  | Web  | Web  | Web  |
+| **One sentence to multi-step workflow** | ✅    | ❌          | ✅            | ❌        | ❌      | ❌           |
+| **Intervenability**                  | ✅    | ✅          | ❌            | ❌        | ❌      | ❌           |
+| **Development Efficiency**           | High  | Middle      | Middle        | Middle    | Low    | Middle       |
+| **Open-source**                      | ✅    | ✅          | ✅            | ✅        | ❌      | ✅           |
+| **Access to private web resources** | ✅ (Coming soon) | ❌          | ❌            | ❌        | ❌      | ❌           |
+
+## Why Eko?
 
 - **Natural Language Programming**: Transform human instructions into e- **Natural Language Programming**: Convert natural language task descriptions into executable workflows, making agent development more intuitive
 - **Two-Layer Execution Model**: Separate offline planning from online execution, making agent decisions more structured and explainable
