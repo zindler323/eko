@@ -21,6 +21,7 @@ export class Eko {
 
   private llmProvider: LLMProvider;
   private toolRegistry = new ToolRegistry();
+  private workflowGeneratorMap = new Map<Workflow, WorkflowGenerator>();
 
   constructor(config: EkoConfig) {
     if (typeof config == 'string') {
@@ -63,11 +64,20 @@ export class Eko {
       }
     }
     const generator = new WorkflowGenerator(this.llmProvider, toolRegistry);
-    return await generator.generateWorkflow(prompt);
+    const workflow = await generator.generateWorkflow(prompt);
+    this.workflowGeneratorMap.set(workflow, generator);
+    return workflow;
   }
 
   public async execute(workflow: Workflow, callback?: WorkflowCallback): Promise<void> {
     return await workflow.execute(callback);
+  }
+
+  public async modify(workflow: Workflow, prompt: string): Promise<Workflow> {
+    const generator = this.workflowGeneratorMap.get(workflow) as WorkflowGenerator;
+    workflow = await generator.modifyWorkflow(prompt);
+    this.workflowGeneratorMap.set(workflow, generator);
+    return workflow;
   }
 
   private getTool(toolName: string) {
