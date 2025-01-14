@@ -25,7 +25,7 @@ Eko (pronounced like ‘echo’) is a production-ready JavaScript framework that
 | **Development Efficiency**           | **High**  | Low      | Middle        | Middle    | Low    | 
 | **Task Complexity**           | High  | High      | Low        | Middle    | Middle    | Middle       |
 | **Open-source**                      | ✅    | ✅          | ✅            | ✅        | ❌      |
-| **Access to private web resources** | ✅ **(Coming soon)** | ❌          | ❌            | ❌        | ❌      |
+| **Access to private web resources** | ✅ | ❌          | ❌            | ❌        | ❌      |
 
 ## Quickstart
 
