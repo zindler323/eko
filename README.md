@@ -126,6 +126,12 @@ Eko can be used in multiple environments:
 - Contribute tools and improvements
 - Share your use cases and feedback
 
+<h1 align="center">
+  <a href="https://github.com/FellouAI/eko" target="_blank">
+    <img width="452" alt="Screenshot 2025-01-15 at 10 43 05 AM" src="https://github.com/user-attachments/assets/d64e9a7a-77d8-4d91-abb5-33d1253df373" />
+  </a>
+</h1>
 ## License
+
 
 Eko is released under the MIT License. See the [LICENSE](LICENSE) file for details.
