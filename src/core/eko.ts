@@ -111,7 +111,6 @@ export class Eko {
     let context = {
       llmProvider: this.llmProvider,
       variables: new Map<string, unknown>(),
-      tabs: [],
       tools: new Map<string, Tool<any, any>>(),
       callback,
     };
