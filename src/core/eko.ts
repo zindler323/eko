@@ -57,9 +57,8 @@ export class Eko {
     if (ekoConfig) {
       this.ekoConfig = ekoConfig;
     } else {
-      this.ekoConfig = {
-        workingWindowId: undefined,
-      };
+      console.warn("`ekoConfig` is missing when construct `Eko` instance, default to `{}`");
+      this.ekoConfig = {};
     }
     this.registerTools();
   }
@@ -87,6 +86,8 @@ export class Eko {
           return true;
         }
       });
+    } else {
+      console.warn("`ekoConfig.callback` is missing when construct `Eko` instance.")
     }
     
     tools.forEach(tool => this.toolRegistry.registerTool(tool));
