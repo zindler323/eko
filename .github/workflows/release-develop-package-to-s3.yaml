@@ -36,7 +36,7 @@ jobs:
       - name: Make uploaded files public
         run: |
           aws s3api put-object-acl --bucket fellou --key eko/releases/develop.zip --acl public-read
-          aws s3api put-object-acl --bucket fellou --key eko/releases/develop/ --acl public-read --recursive
+          aws s3api put-object-acl --bucket fellou --key eko/releases/develop/ --acl public-read
 
       - name: Output S3 URLs
         run: |
