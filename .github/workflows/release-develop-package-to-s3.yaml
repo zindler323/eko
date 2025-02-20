@@ -38,4 +38,4 @@ jobs:
 
       - name: Output S3 URLs
         run: |
-          echo "Uploaded CRX to S3 URL: https://fellou.s3.us-west-1.amazonaws.com/eko/releases/develop.zip"
+          echo "Uploaded Dist to S3 URL: https://fellou.s3.us-west-1.amazonaws.com/eko/releases/develop.zip"
