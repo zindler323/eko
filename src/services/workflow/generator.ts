@@ -19,6 +19,10 @@ export class WorkflowGenerator {
     return this.doGenerateWorkflow(prompt, false, ekoConfig);
   }
 
+  async generateWorkflowFromJson(json: any, ekoConfig: EkoConfig): Promise<Workflow> {
+    return this.createWorkflowFromData(json, ekoConfig);
+  }
+
   async modifyWorkflow(prompt: string, ekoConfig: EkoConfig): Promise<Workflow> {
     return this.doGenerateWorkflow(prompt, true, ekoConfig);
   }
