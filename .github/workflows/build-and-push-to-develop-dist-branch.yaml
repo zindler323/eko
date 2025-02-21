@@ -27,8 +27,16 @@ jobs:
       - name: Build project
         run: npm run build
 
-      - name: Push
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # GitHub will automatically add this - you don't need to bother getting a token
+      - name: Add dist changes
         run: |
-          git config set advice.addIgnoredFile false && mkdir -p dist && cp package.json dist/ && git add dist/ package.json -f && git commit -m "Auto Build Dist: ({sha}) {msg}" && git push origin develop-dist -f
+          git config --global user.email "ci@eko.fellou.ai"
+          git config --global user.name "Eko CI"
+          git config set advice.addIgnoredFile false
+          git add dist/ package.json -f
+          git commit -m "Auto Build Dist: ({sha}) {msg}"
+
+      - name: Push
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: develop-dist
