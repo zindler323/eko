@@ -28,5 +28,7 @@ jobs:
         run: npm run build
 
       - name: Push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # GitHub will automatically add this - you don't need to bother getting a token
         run: |
           git config set advice.addIgnoredFile false && mkdir -p dist && cp package.json dist/ && git add dist/ package.json -f && git commit -m "Auto Build Dist: ({sha}) {msg}" && git push origin develop-dist -f
