@@ -31,7 +31,7 @@ jobs:
         uses: s0/git-publish-subdir-action@develop
         env:
           REPO: self
-          FOLDER: . # Push both package.json and dist
+          FOLDER: dist # Push both package.json and dist
           BRANCH: develop-dist # The branch name where you want to push the assets
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # GitHub will automatically add this - you don't need to bother getting a token
           MESSAGE: "Auto Build Dist: ({sha}) {msg}" # The commit message
