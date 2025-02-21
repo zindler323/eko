@@ -1,4 +1,4 @@
-name: Build and Deploy to GitHub Pages
+name: Build and Push to Develop-Dist Branch
 
 on:
   push:
