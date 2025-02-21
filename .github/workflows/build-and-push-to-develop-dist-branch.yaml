@@ -29,4 +29,4 @@ jobs:
 
       - name: Push
         run: |
-          mkdir -p dist && cp package.json dist/ && git add dist/ package.json && git commit -m "Auto Build Dist: ({sha}) {msg}" && git push origin develop-dist
+          mkdir -p dist && cp package.json dist/ && git add dist/ package.json && git commit -m "Auto Build Dist: ({sha}) {msg}" && git push origin develop-dist -f
