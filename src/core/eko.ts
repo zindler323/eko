@@ -30,8 +30,8 @@ export class Eko {
     if (ekoConfig) {
       this.ekoConfig = ekoConfig;
     } else {
-      console.warn("`ekoConfig` is missing when construct `Eko` instance, default to `{}`");
-      this.ekoConfig = {};
+      console.warn("`ekoConfig` is missing when construct `Eko` instance");
+      this.ekoConfig = { chromeProxy: chrome };
     }
     
     this.registerTools();
