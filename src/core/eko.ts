@@ -3,6 +3,7 @@ import { WorkflowGenerator } from '../services/workflow/generator';
 import {
   LLMConfig,
   EkoConfig,
+  DefaultEkoConfig,
   EkoInvokeParam,
   LLMProvider,
   Tool,
@@ -27,15 +28,18 @@ export class Eko {
   constructor(llmConfig: LLMConfig, ekoConfig?: EkoConfig) {
     console.info("using Eko@" + process.env.COMMIT_HASH);
     this.llmProvider = LLMProviderFactory.buildLLMProvider(llmConfig);
-    
-    if (ekoConfig) {
-      this.ekoConfig = ekoConfig;
-    } else {
-      console.warn("`ekoConfig` is missing when construct `Eko` instance");
-      this.ekoConfig = { chromeProxy: chrome };
-    }
-    
+    this.ekoConfig = this.buildEkoConfig();
     this.registerTools();
+  }
+
+  private buildEkoConfig(ekoConfig?: Partial<EkoConfig>): EkoConfig {
+    if (!ekoConfig) {
+      console.warn("`ekoConfig` is missing when construct `Eko` instance");
+    }
+    return {
+      ...DefaultEkoConfig,
+      ...ekoConfig,
+    };
   }
 
   private registerTools() {
