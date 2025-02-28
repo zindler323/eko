@@ -25,6 +25,7 @@ export class Eko {
   private workflowGeneratorMap = new Map<Workflow, WorkflowGenerator>();
 
   constructor(llmConfig: LLMConfig, ekoConfig?: EkoConfig) {
+    console.info("using Eko@" + process.env.COMMIT_HASH);
     this.llmProvider = LLMProviderFactory.buildLLMProvider(llmConfig);
     
     if (ekoConfig) {
