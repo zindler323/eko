@@ -28,11 +28,11 @@ export class Eko {
   constructor(llmConfig: LLMConfig, ekoConfig?: EkoConfig) {
     console.info("using Eko@" + process.env.COMMIT_HASH);
     this.llmProvider = LLMProviderFactory.buildLLMProvider(llmConfig);
-    this.ekoConfig = this.buildEkoConfig();
+    this.ekoConfig = this.buildEkoConfig(ekoConfig);
     this.registerTools();
   }
 
-  private buildEkoConfig(ekoConfig?: Partial<EkoConfig>): EkoConfig {
+  private buildEkoConfig(ekoConfig: Partial<EkoConfig> | undefined): EkoConfig {
     if (!ekoConfig) {
       console.warn("`ekoConfig` is missing when construct `Eko` instance");
     }
