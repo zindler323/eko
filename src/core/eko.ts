@@ -3,7 +3,6 @@ import { WorkflowGenerator } from '../services/workflow/generator';
 import {
   LLMConfig,
   EkoConfig,
-  DefaultEkoConfig,
   EkoInvokeParam,
   LLMProvider,
   Tool,
@@ -36,8 +35,13 @@ export class Eko {
     if (!ekoConfig) {
       console.warn("`ekoConfig` is missing when construct `Eko` instance");
     }
+    const defaultEkoConfig: EkoConfig = {
+      workingWindowId: undefined,
+      chromeProxy: chrome,
+      callback: undefined,
+    };
     return {
-      ...DefaultEkoConfig,
+      ...defaultEkoConfig,
       ...ekoConfig,
     };
   }
