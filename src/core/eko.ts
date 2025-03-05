@@ -78,6 +78,7 @@ export class Eko {
   }
 
   public async generate(prompt: string, param?: EkoInvokeParam): Promise<Workflow> {
+    prompt = `Your ultimate task is: """${prompt}""". If you achieved your ultimate task, stop everything and use the done action in the next step to complete the task. If not, continue as usual.`;
     const json = {
       "id": "workflow_id",
       "name": prompt,
