@@ -122,7 +122,6 @@ export class Eko {
               "extract_content",
               "get_all_tabs",
               "open_url",
-              "request_login",
               "screenshot",
               "tab_management",
               "web_search",
