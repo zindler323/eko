@@ -23,7 +23,7 @@ export class Eko {
   private ekoConfig: EkoConfig;
   private toolRegistry = new ToolRegistry();
   private workflowGeneratorMap = new Map<Workflow, WorkflowGenerator>();
-  private prompt: string = "";
+  public prompt: string = "";
 
   constructor(llmConfig: LLMConfig, ekoConfig?: EkoConfig) {
     console.info("using Eko@" + process.env.COMMIT_HASH);
