@@ -39,7 +39,7 @@ export class Eko {
     }
     const defaultEkoConfig: EkoConfig = {
       workingWindowId: undefined,
-      chromeProxy: chrome,
+      chromeProxy: typeof chrome === 'undefined' ? undefined : chrome,
       callback: undefined,
     };
     return {
