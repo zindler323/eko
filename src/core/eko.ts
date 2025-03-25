@@ -24,6 +24,7 @@ export class Eko {
   private toolRegistry = new ToolRegistry();
   private workflowGeneratorMap = new Map<Workflow, WorkflowGenerator>();
   public prompt: string = "";
+  public tabs: chrome.tabs.Tab[] = [];
 
   constructor(llmConfig: LLMConfig, ekoConfig?: EkoConfig) {
     console.info("using Eko@" + process.env.COMMIT_HASH);
@@ -78,8 +79,9 @@ export class Eko {
     tools.forEach(tool => this.toolRegistry.registerTool(tool));
   }
 
-  public async generate(prompt: string, param?: EkoInvokeParam): Promise<Workflow> {
+  public async generate(prompt: string, tabs: chrome.tabs.Tab[] = [], param?: EkoInvokeParam): Promise<Workflow> {
     this.prompt = prompt;
+    this.tabs = tabs;
     let toolRegistry = this.toolRegistry;
     if (param && param.tools && param.tools.length > 0) {
       toolRegistry = new ToolRegistry();
