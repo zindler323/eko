@@ -25,7 +25,7 @@ export class Eko {
   private ekoConfig: EkoConfig;
   private toolRegistry = new ToolRegistry();
   private workflowGeneratorMap = new Map<Workflow, WorkflowGenerator>();
-  public prompt: string = "";
+  public prompt: string = '';
   public tabs: chrome.tabs.Tab[] = [];
   public workflow?: Workflow = undefined;
 
@@ -66,14 +66,14 @@ export class Eko {
 
       // these tools could not work without corresponding hook
       const tool2isHookExists: { [key: string]: boolean } = {
-        "human_input_text": Boolean(hooks.onHumanInputText),
-        "human_input_single_choice": Boolean(hooks.onHumanInputSingleChoice),
-        "human_input_multiple_choice": Boolean(hooks.onHumanInputMultipleChoice),
-        "human_operate": Boolean(hooks.onHumanOperate),
+        'human_input_text': Boolean(hooks.onHumanInputText),
+        'human_input_single_choice': Boolean(hooks.onHumanInputSingleChoice),
+        'human_input_multiple_choice': Boolean(hooks.onHumanInputMultipleChoice),
+        'human_operate': Boolean(hooks.onHumanOperate),
       };
       tools = tools.filter(tool => {
         if (tool.name in tool2isHookExists) {
-          let isHookExists = tool2isHookExists[tool.name]
+          let isHookExists = tool2isHookExists[tool.name];
           return isHookExists;
         } else {
           return true;
@@ -82,7 +82,6 @@ export class Eko {
     } else {
       logger.warn("`ekoConfig.callback` is missing when construct `Eko` instance.")
     }
-    
     tools.forEach(tool => this.toolRegistry.registerTool(tool));
   }
 
@@ -113,37 +112,38 @@ export class Eko {
   public async execute(workflow: Workflow): Promise<WorkflowResult> {
     logger.info("workflow executing...");
     let prompt = this.prompt;
-    let description ="";
+    let description = '';
     workflow.nodes.forEach(node => {
-      description += node.name + "\n";
-    })
+      description += node.name + '\n';
+    });
     const json = {
-      "id": "workflow_id",
-      "name": prompt,
-      "description": prompt,
-      "nodes": [
+      'id': 'workflow_id',
+      'name': prompt,
+      'description': prompt,
+      'nodes': [
         {
-          "id": "sub_task_id",
-          "type": "action",
-          "action": {
-            "type": "prompt",
-            "name": prompt,
-            "description": description,
-            "tools": [
-              "browser_use",
-              "document_agent",
-              "export_file",
-              "extract_content",
-              "open_url",
-              "tab_management",
-              "web_search",
-              "human_input_text",
-              "human_input_single_choice",
-              "human_input_multiple_choice",
-              "human_operate",
+          'id': 'sub_task_id',
+          'type': 'action',
+          'action': {
+            'type': 'prompt',
+            'name': prompt,
+            'description': description,
+            'tools': [
+              'browser_use',
+              'document_agent',
+              'export_file',
+              'extract_content',
+              'open_url',
+              'tab_management',
+              'switch_tab',
+              'web_search',
+              'human_input_text',
+              'human_input_single_choice',
+              'human_input_multiple_choice',
+              'human_operate',
             ],
           },
-          "dependencies": []
+          'dependencies': [],
         },
       ],
     };
@@ -153,7 +153,7 @@ export class Eko {
       defaultModel: this.llmProvider.defaultModel,
     });
     
-    const generator = new WorkflowGenerator(this.llmProvider, this.toolRegistry);  
+    const generator = new WorkflowGenerator(this.llmProvider, this.toolRegistry);
     workflow = await generator.generateWorkflowFromJson(json, this.ekoConfig);
     this.workflow = workflow;
 
@@ -186,7 +186,7 @@ export class Eko {
     if (this.workflow) {
       return await this.workflow.cancel();
     } else {
-      throw Error("`Eko` instance do not have a `workflow` member");
+      throw Error('`Eko` instance do not have a `workflow` member');
     }
   }
 
@@ -214,13 +214,13 @@ export class Eko {
   public async callTool(
     tool: Tool<any, any>,
     input: object,
-    callback?: WorkflowCallback
+    callback?: WorkflowCallback,
   ): Promise<any>;
 
   public async callTool(
     tool: Tool<any, any> | string,
     input: object,
-    callback?: WorkflowCallback
+    callback?: WorkflowCallback,
   ): Promise<any> {
     if (typeof tool === 'string') {
       tool = this.getTool(tool);
