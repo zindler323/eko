@@ -1,0 +1,136 @@
+import { AgentContext, BaseBrowserLabelsAgent } from "@eko-ai/eko";
+
+export default class BrowserAgent extends BaseBrowserLabelsAgent {
+
+  protected async screenshot(
+    agentContext: AgentContext
+  ): Promise<{ imageBase64: string; imageType: "image/jpeg" | "image/png" }> {
+    let windowId = await this.getWindowId(agentContext);
+    let dataUrl = await chrome.tabs.captureVisibleTab(windowId, {
+      format: "jpeg",
+      quality: 80,
+    });
+    let data = dataUrl.substring(dataUrl.indexOf("base64,") + 7);
+    return {
+      imageBase64: data,
+      imageType: "image/jpeg",
+    };
+  }
+
+  protected async navigate_to(
+    agentContext: AgentContext,
+    url: string
+  ): Promise<{
+    url: string;
+    title?: string;
+  }> {
+    let windowId = await this.getWindowId(agentContext);
+    let tab = await chrome.tabs.create({
+      url: url,
+      windowId: windowId,
+    });
+    await this.waitForTabComplete(tab.id);
+    agentContext.variables.set("tabId", tab.id);
+    agentContext.variables.set("windowId", tab.windowId);
+    return {
+      url: tab.url,
+      title: tab.title,
+    };
+  }
+
+  protected async execute_script(
+    agentContext: AgentContext,
+    func: (...args: any[]) => void,
+    args: any[]
+  ): Promise<any> {
+    let tabId = await this.getTabId(agentContext);
+    let frameResults = await chrome.scripting.executeScript({
+      target: { tabId: tabId as number },
+      func: func,
+      args: args,
+    });
+    return frameResults[0].result;
+  }
+
+  private async getTabId(agentContext: AgentContext): Promise<number | null> {
+    let tabId = agentContext.variables.get("tabId") as number;
+    if (tabId) {
+      return tabId;
+    }
+    let tabs = (await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+      windowType: "normal",
+    })) as any[];
+    if (tabs.length == 0) {
+      tabs = (await chrome.tabs.query({
+        currentWindow: true,
+        windowType: "normal",
+      })) as any[];
+    }
+    return tabs[tabs.length - 1].id as number;
+  }
+
+  private async getWindowId(
+    agentContext: AgentContext
+  ): Promise<number | null> {
+    let windowId = agentContext.variables.get("windowId") as number;
+    if (windowId) {
+      return windowId;
+    }
+    let window = await chrome.windows.getCurrent({
+      windowTypes: ["normal"],
+    });
+    if (!window) {
+      window = await chrome.windows.getLastFocused({
+        windowTypes: ["normal"],
+      });
+    }
+    if (window) {
+      return window.id;
+    }
+    let tabs = (await chrome.tabs.query({
+      windowType: "normal",
+      currentWindow: true,
+    })) as any[];
+    if (tabs.length == 0) {
+      tabs = (await chrome.tabs.query({
+        windowType: "normal",
+        lastFocusedWindow: true,
+      })) as any[];
+    }
+    return tabs[tabs.length - 1].windowId as number;
+  }
+
+  private async waitForTabComplete(
+    tabId: number,
+    timeout: number = 30_000
+  ): Promise<chrome.tabs.Tab> {
+    return new Promise(async (resolve, reject) => {
+      const time = setTimeout(async () => {
+        chrome.tabs.onUpdated.removeListener(listener);
+        let tab = await window.chrome.tabs.get(tabId);
+        if (tab.status === "complete") {
+          resolve(tab);
+        } else {
+          resolve(tab);
+        }
+      }, timeout);
+      const listener = async (updatedTabId: any, changeInfo: any, tab: any) => {
+        if (updatedTabId == tabId && changeInfo.status === "complete") {
+          chrome.tabs.onUpdated.removeListener(listener);
+          clearTimeout(time);
+          resolve(tab);
+        }
+      };
+      let tab = await chrome.tabs.get(tabId);
+      if (tab.status === "complete") {
+        resolve(tab);
+        clearTimeout(time);
+        return;
+      }
+      chrome.tabs.onUpdated.addListener(listener);
+    });
+  }
+
+}

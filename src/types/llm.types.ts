@@ -1,55 +1,109 @@
-export interface Message {
-  role: 'user' | 'assistant' | 'system'; // openai role: system == developer
-  content: string | unknown[];
-}
+import {
+  ProviderV1,
+  LanguageModelV1CallWarning,
+  LanguageModelV1FinishReason,
+  LanguageModelV1FunctionToolCall,
+  LanguageModelV1ProviderMetadata,
+  LanguageModelV1Source,
+  LanguageModelV1StreamPart,
+  LanguageModelV1FunctionTool,
+  LanguageModelV1ToolChoice,
+  LanguageModelV1Prompt,
+} from "@ai-sdk/provider";
 
-export interface ToolDefinition {
-  name: string;
-  description: string;
-  input_schema: {
-    type: "object";
-    properties: Record<string, unknown>;
-    required?: string[];
+export type LLMprovider =
+  | "openai"
+  | "anthropic"
+  | "google"
+  | "aws"
+  | ProviderV1;
+
+export type LLMConfig = {
+  provider: LLMprovider;
+  model: string;
+  apiKey: string;
+  config?: {
+    baseURL?: string;
+    temperature?: number;
+    topP?: number;
+    topK?: number;
+    [key: string]: any;
   };
-}
+};
 
-export interface ToolCall {
-  id: string;
-  name: string;
-  input: Record<string, unknown>;
-}
+export type LLMs = {
+  default: LLMConfig;
+  [key: string]: LLMConfig;
+};
 
-export interface ToolResult {
-  tool_use_id: string;
-  content: string | Array<{ type: string; text: string }>;
-}
+export type GenerateResult = {
+  text?: string;
+  reasoning?:
+    | string
+    | Array<
+        | {
+            type: "text";
+            text: string;
+            signature?: string;
+          }
+        | {
+            type: "redacted";
+            data: string;
+          }
+      >;
+  files?: Array<{
+    data: string | Uint8Array;
+    mimeType: string;
+  }>;
+  toolCalls?: Array<LanguageModelV1FunctionToolCall>;
+  finishReason: LanguageModelV1FinishReason;
+  usage: {
+    promptTokens: number;
+    completionTokens: number;
+  };
+  rawCall: {
+    rawPrompt: unknown;
+    rawSettings: Record<string, unknown>;
+  };
+  rawResponse?: {
+    headers?: Record<string, string>;
+    body?: unknown;
+  };
+  request?: {
+    body?: string;
+  };
+  response?: {
+    id?: string;
+    timestamp?: Date;
+    modelId?: string;
+  };
+  warnings?: LanguageModelV1CallWarning[];
+  providerMetadata?: LanguageModelV1ProviderMetadata;
+  sources?: LanguageModelV1Source[];
+};
 
-export interface LLMParameters {
-  model?: string;
-  temperature?: number;
+export type StreamResult = {
+  stream: ReadableStream<LanguageModelV1StreamPart>;
+  rawCall: {
+    rawPrompt: unknown;
+    rawSettings: Record<string, unknown>;
+  };
+  rawResponse?: {
+    headers?: Record<string, string>;
+  };
+  request?: {
+    body?: string;
+  };
+  warnings?: Array<LanguageModelV1CallWarning>;
+};
+
+export type LLMRequest = {
   maxTokens?: number;
-  tools?: ToolDefinition[];
-  toolChoice?: { type: 'auto' | 'tool' | 'any'; name?: string };
-}
-
-export interface LLMResponse {
-  textContent: string | null;
-  content: string | unknown[];
-  toolCalls: ToolCall[];
-  stop_reason: string | null;
-}
-
-export interface LLMStreamHandler {
-  onStart?: () => void;
-  onContent?: (content: string) => void;
-  onToolUse?: (toolCall: ToolCall) => void;
-  onComplete?: (response: LLMResponse) => void;
-  onError?: (error: Error) => void;
-}
-
-export interface LLMProvider {
-  client: any;
-  defaultModel: string;
-  generateText(messages: Message[], params: LLMParameters): Promise<LLMResponse>;
-  generateStream(messages: Message[], params: LLMParameters, handler: LLMStreamHandler): Promise<void>;
-}
+  messages: LanguageModelV1Prompt;
+  toolChoice?: LanguageModelV1ToolChoice;
+  tools?: Array<LanguageModelV1FunctionTool>;
+  temperature?: number;
+  topP?: number;
+  topK?: number;
+  abortSignal?: AbortSignal;
+};
