@@ -15,7 +15,7 @@
 
 Eko (pronounced like ‘echo’) is a production-ready JavaScript framework that enables developers to create reliable agents, **from simple commands to complex workflows**. It provides a unified interface for running agents in both **computer and browser environments**.
 
-# Framework Comparison
+## Framework Comparison
 
 | Feature                              | Eko   | Langchain  | Browser-use  | Dify.ai  | Coze   |
 |--------------------------------------|-------|------------|--------------|----------|--------|
@@ -27,29 +27,47 @@ Eko (pronounced like ‘echo’) is a production-ready JavaScript framework that
 | **Open-source**                      | ✅    | ✅          | ✅            | ✅        | ❌      |
 | **Access to private web resources** | ✅ | ❌          | ❌            | ❌        | ❌      |
 
+## Features
+
+- [x] Pure JavaScript: Built for browsers and Node.js.🚀
+- [x] Multi-Agent: Unleash power with multiple Agents in one task.📈
+- [x] Agent Flexibility: Customize new Agents in just one line.🎉
+- [x] Native MCP: Connects seamlessly with [Awesome MCP Servers](https://mcpservers.org/).🔗
+- [x] Dynamic LLM: Balance speed and performance with flexible model choices.⚙️
+- [x] Human-in-the-loop: Intervene when it matters most.🤝
+- [x] Stream Planning: Dynamic rendering made easy.🎨
+- [x] Loop & Listener Tasks: Automate any repetitive task.🤖
+- [ ] Observable Chain
+- [ ] Native A2A
+
 ## Quickstart
+
+> Note: Please refer to the [Eko Quickstart guide](https://eko.fellou.ai/docs/getting-started/quickstart/) guide for full instructions on how to run it.
+
+```typescript
+// quickstart.ts
+const llms: LLMs = {
+  default: {
+    provider: "anthropic",
+    model: "claude-3-5-sonnet-20241022",
+    apiKey: claudeApiKey || "your-api-key",
+    config: { baseURL: claudeBaseURL },
+  },
+  openai: {
+    provider: "openai",
+    model: "gpt-4o-mini",
+    apiKey: openaiApiKey || "your-api-key",
+    config: { baseURL: openaiBaseURL },
+  },
+};
+let agents: Agent[] = [new ChatAgent(), new BrowserAgent()];
+let eko = new Eko({ llms, agents });
+let result = await eko.run("Search for the latest news about Musk");
+```
 
 ```bash
 npm install @eko-ai/eko
-```
-
-> Important Notice: The following example code cannot be executed directly. Please refer to the [Eko Quickstart guide](https://eko.fellou.ai/docs/getting-started/quickstart/) guide for instructions on how to run it.
-
-```typescript
-import { Eko } from '@eko-ai/eko';
-
-const eko = new Eko({
-  apiKey: 'your_anthropic_api_key',
-});
-
-// Example: Browser automation
-const extWorkflow = await eko.generate("Search for 'Eko framework' on Google and save the first result");
-await eko.execute(extWorkflow);
-
-// Example: System operation
-const sysWorkflow = await eko.generate("Create a new folder named 'reports' and move all PDF files there");
-await eko.execute(sysWorkflow);
-
+npx ts-node quickstart.ts
 ```
 
 ## Demos
