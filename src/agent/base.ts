@@ -4,9 +4,9 @@ import { IMcpClient } from "../mcp/client";
 import { RetryLanguageModel } from "../llm";
 import { ToolWrapper } from "../tools/wrapper";
 import { WorkflowAgent } from "../types/core.types";
-import { toImage, mergeTools, uuidv4 } from "../common/utils";
 import { AgentChain, ToolChain } from "../core/chain";
 import Context, { AgentContext } from "../core/context";
+import { toImage, mergeTools, uuidv4 } from "../common/utils";
 import {
   LanguageModelV1FunctionTool,
   LanguageModelV1Prompt,
@@ -74,7 +74,11 @@ export class Agent {
     while (loopNum < maxReactNum) {
       context.checkAborted();
       if (mcpClient) {
-        let controlMcp = await this.controlMcpTools(agentContext, messages, loopNum);
+        let controlMcp = await this.controlMcpTools(
+          agentContext,
+          messages,
+          loopNum
+        );
         if (controlMcp.mcpTools) {
           let mcpTools = await this.listTools(
             agentNode,
@@ -92,7 +96,7 @@ export class Agent {
         agentContext,
         rlm,
         messages,
-        this.convertTools(agentTools),
+        this.convertTools(agentTools)
       );
       let finalResult = await this.handleResult(
         agentContext,
@@ -115,6 +119,7 @@ export class Agent {
     results: Array<LanguageModelV1TextPart | LanguageModelV1ToolCallPart>
   ): Promise<string | null> {
     let text: string | null = null;
+    let context = agentContext.context;
     let user_messages: LanguageModelV1Prompt = [];
     let toolResults: LanguageModelV1ToolResultPart[] = [];
     results = this.removeDuplicateToolUse(results);
@@ -165,6 +170,18 @@ export class Agent {
         user_messages
       );
       toolResults.push(llmToolResult);
+      if (context.config.callback) {
+        context.config.callback.onMessage({
+          taskId: context.taskId,
+          agentName: result.toolName,
+          nodeId: agentContext.agentChain.agent.id,
+          type: "tool_result",
+          toolId: result.toolCallId,
+          toolName: result.toolName,
+          params: result.args || {},
+          toolResult: toolResult,
+        });
+      }
     }
     messages.push({
       role: "assistant",

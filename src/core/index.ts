@@ -19,10 +19,19 @@ export class Eko {
     this.taskMap = new Map();
   }
 
-  public async generate(taskPrompt: string, taskId: string = uuidv4()): Promise<Workflow> {
+  public async generate(
+    taskPrompt: string,
+    taskId: string = uuidv4(),
+    contextParams?: Record<string, any>
+  ): Promise<Workflow> {
     const agents = [...(this.config.agents || [])];
     let chain: Chain = new Chain(taskPrompt);
     let context = new Context(taskId, this.config, agents, chain);
+    if (contextParams) {
+      Object.keys(contextParams).forEach((key) =>
+        context.variables.set(key, contextParams[key])
+      );
+    }
     try {
       this.taskMap.set(taskId, context);
       if (this.config.a2aClient) {
@@ -38,7 +47,10 @@ export class Eko {
     }
   }
 
-  public async modify(taskId: string, modifyTaskPrompt: string): Promise<Workflow> {
+  public async modify(
+    taskId: string,
+    modifyTaskPrompt: string
+  ): Promise<Workflow> {
     let context = this.taskMap.get(taskId);
     if (!context) {
       return await this.generate(modifyTaskPrompt, taskId);
@@ -70,8 +82,12 @@ export class Eko {
     }
   }
 
-  public async run(taskPrompt: string, taskId: string = uuidv4()): Promise<EkoResult> {
-    await this.generate(taskPrompt, taskId);
+  public async run(
+    taskPrompt: string,
+    taskId: string = uuidv4(),
+    contextParams?: Record<string, any>
+  ): Promise<EkoResult> {
+    await this.generate(taskPrompt, taskId, contextParams);
     return await this.execute(taskId);
   }
 
