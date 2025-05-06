@@ -18,7 +18,7 @@ export type EkoConfig = {
 export type StreamCallbackMessage = {
   taskId: string;
   agentName: string;
-  nodeId?: string | null;
+  nodeId?: string | null; // agent nodeId
 } & (
   | {
       type: "workflow";
@@ -27,6 +27,7 @@ export type StreamCallbackMessage = {
     }
   | {
       type: "text" | "thinking" | "error";
+      streamId: string;
       streamDone: boolean;
       text: string;
     }
@@ -52,6 +53,7 @@ export type StreamCallbackMessage = {
       toolName: string;
       toolId: string;
       text: string;
+      streamId: string;
       streamDone: boolean;
     }
   | {

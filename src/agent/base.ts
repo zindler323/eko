@@ -4,7 +4,7 @@ import { IMcpClient } from "../mcp/client";
 import { RetryLanguageModel } from "../llm";
 import { ToolWrapper } from "../tools/wrapper";
 import { WorkflowAgent } from "../types/core.types";
-import { toImage, mergeTools } from "../common/utils";
+import { toImage, mergeTools, uuidv4 } from "../common/utils";
 import { AgentChain, ToolChain } from "../core/chain";
 import Context, { AgentContext } from "../core/context";
 import {
@@ -471,6 +471,7 @@ export class Agent {
     let streamText = "";
     let thinkText = "";
     let toolArgsText = "";
+    let streamId = uuidv4();
     let textStreamDone = false;
     let toolParts: LanguageModelV1ToolCallPart[] = [];
     const reader = result.stream.getReader();
@@ -490,6 +491,7 @@ export class Agent {
               agentName: agentNode.name,
               nodeId: agentNode.id,
               type: "text",
+              streamId,
               streamDone: false,
               text: streamText,
             });
@@ -502,6 +504,7 @@ export class Agent {
               agentName: agentNode.name,
               nodeId: agentNode.id,
               type: "thinking",
+              streamId,
               streamDone: false,
               text: thinkText,
             });
@@ -515,6 +518,7 @@ export class Agent {
                 agentName: agentNode.name,
                 nodeId: agentNode.id,
                 type: "text",
+                streamId,
                 streamDone: true,
                 text: streamText,
               });
@@ -581,6 +585,7 @@ export class Agent {
                 agentName: agentNode.name,
                 nodeId: agentNode.id,
                 type: "text",
+                streamId,
                 streamDone: true,
                 text: streamText,
               });
