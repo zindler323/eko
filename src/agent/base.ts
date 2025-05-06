@@ -1,9 +1,8 @@
 import config from "../config";
 import Log from "../common/log";
-import { IMcpClient } from "../mcp/client";
 import { RetryLanguageModel } from "../llm";
 import { ToolWrapper } from "../tools/wrapper";
-import { WorkflowAgent } from "../types/core.types";
+import { WorkflowAgent, IMcpClient } from "../types";
 import { AgentChain, ToolChain } from "../core/chain";
 import Context, { AgentContext } from "../core/context";
 import { toImage, mergeTools, uuidv4 } from "../common/utils";

@@ -1,9 +1,8 @@
 import { LanguageModelV1Prompt } from "@ai-sdk/provider";
 import { Agent } from "../base";
 import { sleep } from "../../common/utils";
-import { IMcpClient } from "../../mcp/client";
 import { AgentContext } from "../../core/context";
-import { ToolExecuter, ToolResult } from "../../types/tools.types";
+import { ToolExecuter, ToolResult, IMcpClient } from "../../types";
 
 export default abstract class BaseBrowserAgent extends Agent {
   protected abstract screenshot(agentContext: AgentContext): Promise<{

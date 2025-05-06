@@ -1,8 +1,28 @@
 import config from "./config";
 import Log from "./common/log";
-import {
+import { Eko } from "./core/index";
+import { RetryLanguageModel } from "./llm";
+import { SimpleSseMcpClient } from "./mcp";
+import Chain, { AgentChain } from "./core/chain";
+import Context, { AgentContext } from "./core/context";
+
+export default Eko;
+
+export {
+  Eko,
+  Log,
+  config,
+  Context,
+  AgentContext,
+  Chain,
+  AgentChain,
+  SimpleSseMcpClient,
+  RetryLanguageModel,
+};
+
+export {
   Agent,
-  AgentParams,
+  type AgentParams,
   BaseChatAgent,
   BaseFileAgent,
   BaseShellAgent,
@@ -12,36 +32,23 @@ import {
   BaseBrowserLabelsAgent,
   BaseBrowserScreenAgent,
 } from "./agent";
-import { Eko } from "./core/index";
-import { LLMs } from "./types/llm.types";
-import { RetryLanguageModel } from "./llm";
-import { SimpleSseMcpClient } from "./mcp";
-import Chain, { AgentChain } from "./core/chain";
-import Context, { AgentContext } from "./core/context";
-import { StreamCallbackMessage } from "./types/core.types";
-
-export default Eko;
 
 export {
-  Eko,
-  Log,
-  config,
-  Agent,
-  Context,
-  AgentContext,
-  Chain,
-  AgentChain,
-  BaseChatAgent,
-  BaseFileAgent,
-  BaseShellAgent,
-  BaseTimerAgent,
-  BaseBrowserAgent,
-  BaseComputerAgent,
-  SimpleSseMcpClient,
-  RetryLanguageModel,
-  BaseBrowserLabelsAgent,
-  BaseBrowserScreenAgent,
+  HumanInteractTool,
+  TaskNodeStatusTool,
+  VariableStorageTool,
+  ForeachTaskTool,
+  WatchTriggerTool,
+} from "./tools";
+
+export {
   type LLMs,
-  type AgentParams,
+  type LLMRequest,
+  type StreamCallback,
+  type HumanCallback,
+  type EkoConfig,
+  type Workflow,
+  type WorkflowAgent,
+  type WorkflowNode,
   type StreamCallbackMessage,
-};
+} from "./types";

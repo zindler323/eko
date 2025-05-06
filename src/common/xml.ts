@@ -86,6 +86,7 @@ function parseWorkflowNodes(
     switch (xmlNode.tagName) {
       case "node": {
         let node: WorkflowTextNode = {
+          type: "normal",
           text: xmlNode.textContent || "",
           input: xmlNode.getAttribute("input"),
           output: xmlNode.getAttribute("output"),
@@ -96,6 +97,7 @@ function parseWorkflowNodes(
       case "forEach": {
         let _nodes: WorkflowNode[] = [];
         let node: WorkflowForEachNode = {
+          type: "forEach",
           items: (xmlNode.getAttribute("items") || "list") as any,
           nodes: _nodes,
         };
@@ -109,6 +111,7 @@ function parseWorkflowNodes(
       case "watch": {
         let _nodes: (WorkflowTextNode | WorkflowForEachNode)[] = [];
         let node: WorkflowWatchNode = {
+          type: "watch",
           event: (xmlNode.getAttribute("event") || "") as any,
           loop: xmlNode.getAttribute("loop") == "true",
           description:

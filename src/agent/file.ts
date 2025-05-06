@@ -1,9 +1,8 @@
 import { Agent } from "./base";
 import { Tool } from "../tools";
-import { IMcpClient } from "../mcp/client";
 import { mergeTools } from "../common/utils";
 import { AgentContext } from "../core/context";
-import { ToolResult } from "../types/tools.types";
+import { ToolResult, IMcpClient } from "../types";
 
 export const AGENT_NAME = "File";
 

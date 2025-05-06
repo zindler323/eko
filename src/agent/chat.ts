@@ -1,6 +1,6 @@
 import { Agent } from "./base";
 import { Tool } from "../tools";
-import { IMcpClient } from "../mcp/client";
+import { IMcpClient } from "../types";
 
 export const AGENT_NAME = "Chat";
 

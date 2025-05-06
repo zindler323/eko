@@ -1,13 +1,12 @@
 import {
   EkoConfig,
   EkoResult,
-  HumanCallback,
   Workflow,
 } from "../types/core.types";
+import Context from "./context";
 import { Agent } from "../agent";
 import { Planner } from "./plan";
 import Chain, { AgentChain } from "./chain";
-import Context, { AgentContext } from "./context";
 import { mergeAgents, uuidv4 } from "../common/utils";
 
 export class Eko {
@@ -143,33 +142,5 @@ export class Eko {
   public addAgent(agent: Agent): void {
     this.config.agents = this.config.agents || [];
     this.config.agents.push(agent);
-  }
-}
-
-export class WebSimpleHumanCallback implements HumanCallback {
-  async onInitWorkflow(
-    taskId: string,
-    workflow: Workflow,
-    chain: Chain
-  ): Promise<boolean> {
-    return true;
-  }
-  async onHumanInput(
-    agentContext: AgentContext,
-    _prompt: string
-  ): Promise<string> {
-    if (typeof prompt == "function") {
-      return prompt(_prompt) || "";
-    }
-    return "";
-  }
-  async onHumanConfirm(
-    agentContext: AgentContext,
-    prompt: string
-  ): Promise<boolean> {
-    if (typeof confirm == "function") {
-      return confirm(prompt);
-    }
-    return true;
   }
 }

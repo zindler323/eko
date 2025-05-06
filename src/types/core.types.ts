@@ -1,8 +1,8 @@
 import { LanguageModelV1FinishReason } from "@ai-sdk/provider";
 import { Agent } from "../agent";
-import { IA2aClient } from "../agent/a2a";
-import { IMcpClient } from "../mcp/client";
 import { LLMs } from "./llm.types";
+import { IA2aClient } from "../agent/a2a";
+import { IMcpClient } from "./mcp.types";
 import { ToolResult } from "./tools.types";
 import { AgentContext } from "../core/context";
 
@@ -82,17 +82,20 @@ export interface StreamCallback {
 }
 
 export type WorkflowTextNode = {
+  type: "normal",
   text: string;
   input?: string | null;
   output?: string | null;
 };
 
 export type WorkflowForEachNode = {
+  type: "forEach",
   items: string; // list or variable name
   nodes: WorkflowNode[];
 };
 
 export type WorkflowWatchNode = {
+  type: "watch",
   event: "dom" | "gui" | "file";
   loop: boolean;
   description: string;

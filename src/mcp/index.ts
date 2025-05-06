@@ -1,12 +1,12 @@
 import Log from "../common/log";
 import { uuidv4 } from "../common/utils";
-import { ToolResult } from "../types/tools.types";
 import {
+  ToolResult,
   IMcpClient,
   McpCallToolParam,
   McpListToolParam,
   McpListToolResult,
-} from "./client";
+} from "../types";
 
 type SseEventData = {
   id?: string;

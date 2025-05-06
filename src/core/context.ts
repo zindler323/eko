@@ -1,6 +1,6 @@
 import { Agent } from "../agent";
 import Chain, { AgentChain } from "./chain";
-import { EkoConfig, Workflow, WorkflowAgent } from "../types/core.types";
+import { EkoConfig, Workflow } from "../types/core.types";
 
 export default class Context {
   taskId: string;
