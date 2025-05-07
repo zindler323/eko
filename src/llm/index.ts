@@ -3,11 +3,12 @@ import {
   LanguageModelV1CallOptions,
   LanguageModelV1StreamPart,
 } from "@ai-sdk/provider";
+import Log from "../common/log";
 import { createOpenAI } from "@ai-sdk/openai";
+import { call_timeout } from "../common/utils";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
-import Log from "../common/log";
 import {
   GenerateResult,
   LLMRequest,
@@ -59,7 +60,10 @@ export class RetryLanguageModel {
       try {
         let result = await llm.doGenerate(options);
         if (Log.isEnableDebug()) {
-          Log.debug(`LLM nonstream body, name: ${name} => `, result.request?.body);
+          Log.debug(
+            `LLM nonstream body, name: ${name} => `,
+            result.request?.body
+          );
         }
         return result;
       } catch (e) {
@@ -101,21 +105,20 @@ export class RetryLanguageModel {
         continue;
       }
       try {
-        const result = await llm.doStream(options);
+        const result = await call_timeout(
+          async () => await llm.doStream(options),
+          this.stream_first_timeout
+        );
         const stream = result.stream;
         const reader = stream.getReader();
-        const { done, value } = await new Promise<
-          ReadableStreamReadResult<LanguageModelV1StreamPart>
-        >(async (resolve, reject) => {
-          let timer = setTimeout(async () => {
+        const { done, value } = await call_timeout(
+          async () => await reader.read(),
+          this.stream_first_timeout,
+          (e) => {
             reader.cancel();
             reader.releaseLock();
-            reject();
-          }, this.stream_first_timeout);
-          const chunk = await reader.read();
-          clearTimeout(timer);
-          resolve(chunk);
-        });
+          }
+        );
         if (done) {
           Log.warn(`LLM stream done, name: ${name} => `, { done, value });
           reader.releaseLock();

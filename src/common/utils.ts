@@ -2,6 +2,40 @@ import { LanguageModelV1FunctionTool } from "@ai-sdk/provider";
 import { Tool, ToolSchema } from "../types/tools.types";
 import { Agent } from "../agent";
 
+export function sleep(time: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(() => resolve(), time));
+}
+
+export function uuidv4(): string {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+export function call_timeout<R extends Promise<any>>(
+  fun: () => R,
+  timeout: number,
+  error_callback?: (e: string) => void
+): Promise<R> {
+  return new Promise(async (resolve, reject) => {
+    let timer = setTimeout(() => {
+      reject(new Error("Timeout"));
+      error_callback && error_callback("Timeout");
+    }, timeout);
+    try {
+      const result = await fun();
+      clearTimeout(timer);
+      resolve(result);
+    } catch (e) {
+      clearTimeout(timer);
+      reject(e);
+      error_callback && error_callback(e + "");
+    }
+  });
+}
+
 export function convertToolSchema(
   tool: ToolSchema
 ): LanguageModelV1FunctionTool {
@@ -34,18 +68,6 @@ export function convertToolSchema(
       parameters: tool.parameters,
     };
   }
-}
-
-export function sleep(time: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(() => resolve(), time));
-}
-
-export function uuidv4(): string {
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-    const r = (Math.random() * 16) | 0;
-    const v = c === "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
 }
 
 export function toImage(imageData: string): Uint8Array | URL {

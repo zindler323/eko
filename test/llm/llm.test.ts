@@ -297,6 +297,5 @@ export async function testImageToolsPrompt(llm: "openai" | "claude") {
 }
 
 test.only("test", async () => {
-  await testImageToolsPrompt("openai");
-  // await testImageToolsPrompt("claude");
+  await testOpenaiStream();
 });
