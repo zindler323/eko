@@ -113,7 +113,7 @@ export class Eko {
       agent.result = await agent.run(context, agentChain);
       lastResult = agent.result;
     }
-    // TODO 超过2个Agent时需要引入任务调度Agent和结果输出。
+    // TODO 超过2个Agent时需要summary输出结果。
     return {
       success: true,
       stopReason: "done",

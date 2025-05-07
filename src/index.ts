@@ -52,3 +52,5 @@ export {
   type WorkflowNode,
   type StreamCallbackMessage,
 } from "./types";
+
+export { mergeTools, toImage, convertToolSchema } from "./common/utils";
