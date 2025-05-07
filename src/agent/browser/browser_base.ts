@@ -75,7 +75,7 @@ export default abstract class BaseBrowserAgent extends Agent {
         ) {
           let script = result.content[0].text;
           let params = JSON.stringify(args);
-          let runScript = `(await (function() {${script}\nreturn execute;\n})()(${params}))`;
+          let runScript = `${script};execute(${params})`;
           let scriptResult = await this.execute_mcp_script(
             agentContext,
             runScript

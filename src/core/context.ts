@@ -26,6 +26,7 @@ export default class Context {
   }
 
   checkAborted() {
+    // this.controller.signal.throwIfAborted();
     if (this.controller.signal.aborted) {
       const error = new Error("Operation was interrupted");
       error.name = "AbortError";
