@@ -6,13 +6,7 @@ import HumanInteractTool from "./human_interact";
 import TaskNodeStatusTool from "./task_node_status";
 import VariableStorageTool from "./variable_storage";
 import WatchTriggerTool from "./watch_trigger";
-import { ToolExecuter, ToolResult } from "../types/tools.types";
-
-export interface Tool extends ToolExecuter {
-  readonly name: string;
-  readonly description?: string;
-  readonly parameters: JSONSchema7;
-}
+import { Tool, ToolResult } from "../types/tools.types";
 
 export class McpTool implements Tool {
   readonly name: string;

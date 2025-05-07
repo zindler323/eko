@@ -1,7 +1,6 @@
 import { JSONSchema7 } from "json-schema";
-import { Tool } from ".";
 import { AgentContext } from "../core/context";
-import { ToolResult } from "../types/tools.types";
+import { Tool, ToolResult } from "../types/tools.types";
 
 export const TOOL_NAME = "variable_storage";
 

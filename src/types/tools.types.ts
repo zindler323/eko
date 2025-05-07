@@ -62,3 +62,9 @@ export interface ToolExecuter {
     agentContext: AgentContext
   ) => Promise<ToolResult>;
 }
+
+export interface Tool extends ToolExecuter {
+  readonly name: string;
+  readonly description?: string;
+  readonly parameters: JSONSchema7;
+}

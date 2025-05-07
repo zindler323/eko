@@ -1,8 +1,7 @@
 import { AGENT_NAME } from ".";
-import { Tool } from "../../tools";
 import BaseBrowserAgent from "./browser_base";
 import { AgentContext } from "../../core/context";
-import { ToolResult, IMcpClient } from "../../types";
+import { Tool, ToolResult, IMcpClient } from "../../types";
 import { run_build_dom_tree } from "./build_dom_tree";
 import { LanguageModelV1Prompt } from "@ai-sdk/provider";
 import { mergeTools, sleep, toImage } from "../../common/utils";

@@ -1,6 +1,5 @@
 import { Agent } from "./base";
-import { Tool } from "../tools";
-import { IMcpClient } from "../types";
+import { Tool, IMcpClient } from "../types";
 
 export const AGENT_NAME = "Chat";
 

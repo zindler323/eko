@@ -1,8 +1,7 @@
 import { JSONSchema7 } from "json-schema";
-import { Tool } from ".";
 import { AgentContext } from "../core/context";
-import { ToolResult } from "../types/tools.types";
 import { buildAgentRootXml } from "../common/xml";
+import { Tool, ToolResult } from "../types/tools.types";
 
 export const TOOL_NAME = "task_node_status";
 

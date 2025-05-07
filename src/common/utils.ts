@@ -1,6 +1,5 @@
 import { LanguageModelV1FunctionTool } from "@ai-sdk/provider";
-import { ToolSchema } from "../types/tools.types";
-import { Tool } from "../tools";
+import { Tool, ToolSchema } from "../types/tools.types";
 import { Agent } from "../agent";
 
 export function convertToolSchema(

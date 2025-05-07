@@ -1,7 +1,6 @@
 import { Agent } from "./base";
-import { Tool } from "../tools";
 import { AgentContext } from "../core/context";
-import { ToolResult, IMcpClient } from "../types";
+import { Tool, ToolResult, IMcpClient } from "../types";
 import { LanguageModelV1Prompt } from "@ai-sdk/provider";
 import { mergeTools, sleep, toImage } from "../common/utils";
 
