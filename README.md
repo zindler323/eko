@@ -128,13 +128,6 @@ Eko can be used in multiple environments:
 - Contribute tools and improvements
 - Share your use cases and feedback
 
-<h1 align="center">
-  <a href="https://github.com/FellouAI/eko" target="_blank">
-    <img width="663" alt="Screenshot 2025-02-05 at 10 49 58" src="https://github.com/user-attachments/assets/95528b0d-91e3-4540-ac3d-132774ef663d" />
-  </a>
-</h1>
-
-
 [![Star History Chart](https://api.star-history.com/svg?repos=FellouAI/eko&type=Date)](https://star-history.com/#FellouAI/eko&Date)
 
 ## License
