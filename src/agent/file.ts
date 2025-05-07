@@ -7,15 +7,24 @@ import { ToolResult, IMcpClient } from "../types";
 export const AGENT_NAME = "File";
 
 export default abstract class BaseFileAgent extends Agent {
-  constructor(llms?: string[], ext_tools?: Tool[], mcpClient?: IMcpClient) {
+  constructor(
+    work_path?: string,
+    llms?: string[],
+    ext_tools?: Tool[],
+    mcpClient?: IMcpClient
+  ) {
     const _tools_ = [] as Tool[];
+    const prompt = work_path
+      ? `Your default working path is: ${work_path}`
+      : "";
     super({
       name: AGENT_NAME,
-      description: "You are a file agent, handling file-related tasks such as creating, finding, reading, modifying files, etc.",
+      description: `You are a file agent, handling file-related tasks such as creating, finding, reading, modifying files, etc.${prompt}`,
       tools: _tools_,
       llms: llms,
       mcpClient: mcpClient,
-      planDescription: "File operation agent, handling file-related tasks such as creating, finding, reading, modifying files, etc."
+      planDescription:
+        "File operation agent, handling file-related tasks such as creating, finding, reading, modifying files, etc.",
     });
     let init_tools = this.buildInitTools();
     if (ext_tools && ext_tools.length > 0) {
@@ -80,7 +89,8 @@ export default abstract class BaseFileAgent extends Agent {
       },
       {
         name: "file_read",
-        description: "Read file content. Use to read files or check file content.",
+        description:
+          "Read file content. Use to read files or check file content.",
         parameters: {
           type: "object",
           properties: {
@@ -102,7 +112,8 @@ export default abstract class BaseFileAgent extends Agent {
       },
       {
         name: "file_write",
-        description: "Overwrite or append content to a file. Use for creating new files, appending content, or modifying existing files.",
+        description:
+          "Overwrite or append content to a file. Use for creating new files, appending content, or modifying existing files.",
         parameters: {
           type: "object",
           properties: {
@@ -138,7 +149,8 @@ export default abstract class BaseFileAgent extends Agent {
       },
       {
         name: "file_str_replace",
-        description: "Replace specified string in a file. Use for updating specific content in files.",
+        description:
+          "Replace specified string in a file. Use for updating specific content in files.",
         parameters: {
           type: "object",
           properties: {
@@ -173,7 +185,8 @@ export default abstract class BaseFileAgent extends Agent {
       },
       {
         name: "file_find_by_name",
-        description: "Find files by name pattern in specified directory. Use for locating files with specific naming patterns.",
+        description:
+          "Find files by name pattern in specified directory. Use for locating files with specific naming patterns.",
         parameters: {
           type: "object",
           properties: {
@@ -203,5 +216,4 @@ export default abstract class BaseFileAgent extends Agent {
       },
     ];
   }
-
 }
