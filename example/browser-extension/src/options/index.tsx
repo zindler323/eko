@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { createRoot } from "react-dom/client";
-import { Form, Input, Button, message, Card, Select } from "antd";
+import { Form, Input, Button, message, Card, Select, AutoComplete } from "antd";
 
 const { Option } = Select;
 
@@ -126,13 +126,13 @@ const OptionsPage = () => {
               },
             ]}
           >
-            <Select placeholder="Choose a model">
-              {modelOptions[config.llm]?.map((model) => (
-                <Option key={model.value} value={model.value}>
-                  {model.label}
-                </Option>
-              ))}
-            </Select>
+            <AutoComplete
+              placeholder="Model name"
+              options={modelOptions[config.llm]}
+              filterOption={(inputValue, option) =>
+                (option.value as string).toUpperCase().indexOf(inputValue.toUpperCase()) !== -1
+              }
+            />
           </Form.Item>
 
           <Form.Item

@@ -21,7 +21,7 @@ export function run_build_dom_tree() {
   }
 
   function remove_highlight() {
-    let highlight = document.getElementById('playwright-highlight-container');
+    let highlight = document.getElementById('eko-highlight-container');
     if (highlight) {
       highlight.remove();
     }
@@ -167,10 +167,10 @@ export function run_build_dom_tree() {
 
     function highlightElement(element, index, parentIframe = null) {
       // Create or get highlight container
-      let container = document.getElementById('playwright-highlight-container');
+      let container = document.getElementById('eko-highlight-container');
       if (!container) {
         container = document.createElement('div');
-        container.id = 'playwright-highlight-container';
+        container.id = 'eko-highlight-container';
         container.style.position = 'fixed';
         container.style.pointerEvents = 'none';
         container.style.top = '0';
@@ -230,7 +230,7 @@ export function run_build_dom_tree() {
 
       // Create label
       const label = document.createElement('div');
-      label.className = 'playwright-highlight-label';
+      label.className = 'eko-highlight-label';
       label.style.position = 'absolute';
       label.style.background = baseColor;
       label.style.color = 'white';
@@ -269,7 +269,7 @@ export function run_build_dom_tree() {
       container.appendChild(label);
 
       // Store reference for cleanup
-      element.setAttribute('browser-user-highlight-id', `playwright-highlight-${index}`);
+      element.setAttribute('eko-user-highlight-id', `eko-highlight-${index}`);
 
       return index + 1;
     }

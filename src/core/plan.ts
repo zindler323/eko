@@ -51,7 +51,7 @@ export class Planner {
       ];
     }
     let request: LLMRequest = {
-      maxTokens: 1024,
+      maxTokens: 4096,
       temperature: 0.7,
       messages: messages,
       abortSignal: this.context.controller.signal,

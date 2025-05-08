@@ -7,7 +7,7 @@ export async function getLLMConfig(name: string = "llmConfig"): Promise<any> {
   return result[name];
 }
 
-export async function main(prompt: string) {
+export async function main(prompt: string): Promise<Eko> {
   let config = await getLLMConfig();
   if (!config || !config.apiKey) {
     printLog("Please configure apiKey, configure in the eko extension options of the browser extensions.", "error");
@@ -51,6 +51,7 @@ export async function main(prompt: string) {
   } else {
     printLog(result.result || "Error", "error");
   }
+  return eko;
 }
 
 function printLog(log: string, level?: "info" | "success" | "error") {

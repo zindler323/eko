@@ -4,6 +4,7 @@ import {
   LanguageModelV1StreamPart,
 } from "@ai-sdk/provider";
 import Log from "../common/log";
+import config from "../config";
 import { createOpenAI } from "@ai-sdk/openai";
 import { call_timeout } from "../common/utils";
 import { createAnthropic } from "@ai-sdk/anthropic";
@@ -24,7 +25,7 @@ export class RetryLanguageModel {
   constructor(llms: LLMs, names?: string[], stream_first_timeout?: number) {
     this.llms = llms;
     this.names = names || [];
-    this.stream_first_timeout = stream_first_timeout || 20_000;
+    this.stream_first_timeout = stream_first_timeout || 30_000;
     if (this.names.indexOf("default") == -1) {
       this.names.push("default");
     }
@@ -39,7 +40,7 @@ export class RetryLanguageModel {
         toolChoice: request.toolChoice,
       },
       prompt: request.messages,
-      maxTokens: request.maxTokens,
+      maxTokens: request.maxTokens || config.maxTokens,
       temperature: request.temperature,
       topP: request.topP,
       topK: request.topK,
@@ -66,7 +67,10 @@ export class RetryLanguageModel {
           );
         }
         return result;
-      } catch (e) {
+      } catch (e: any) {
+        if (e?.name === "AbortError") {
+          throw e;
+        }
         if (Log.isEnableInfo()) {
           Log.info(`LLM nonstream request, name: ${name} => `, {
             tools: (options.mode as any)?.tools,
@@ -88,7 +92,7 @@ export class RetryLanguageModel {
         toolChoice: request.toolChoice,
       },
       prompt: request.messages,
-      maxTokens: request.maxTokens,
+      maxTokens: request.maxTokens || config.maxTokens,
       temperature: request.temperature,
       topP: request.topP,
       topK: request.topK,
@@ -135,7 +139,10 @@ export class RetryLanguageModel {
         }
         result.stream = this.streamWrapper([chunk], reader);
         return result;
-      } catch (e) {
+      } catch (e: any) {
+        if (e?.name === "AbortError") {
+          throw e;
+        }
         if (Log.isEnableInfo()) {
           Log.info(`LLM stream request, name: ${name} => `, {
             tools: (options.mode as any)?.tools,

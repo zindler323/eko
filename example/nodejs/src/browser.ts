@@ -55,6 +55,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
       await elementHandle.fill(text);
       if (enter) {
         await elementHandle.press("Enter");
+        await this.sleep(200);
       }
     } catch (e) {
       await super.input_text(agentContext, index, text, enter);
@@ -169,5 +170,9 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
       },
       { index, findInput }
     );
+  }
+
+  private sleep(time: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(() => resolve(), time));
   }
 }

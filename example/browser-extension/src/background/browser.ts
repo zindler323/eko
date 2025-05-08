@@ -29,11 +29,11 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
       url: url,
       windowId: windowId,
     });
-    await this.waitForTabComplete(tab.id);
+    tab = await this.waitForTabComplete(tab.id);
     agentContext.variables.set("tabId", tab.id);
     agentContext.variables.set("windowId", tab.windowId);
     return {
-      url: tab.url,
+      url: url,
       title: tab.title,
     };
   }

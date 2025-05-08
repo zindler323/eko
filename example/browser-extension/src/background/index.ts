@@ -1,4 +1,7 @@
+import { Eko } from "@eko-ai/eko";
 import { main } from "./main";
+
+var eko: Eko;
 
 chrome.storage.local.set({ running: false });
 
@@ -13,7 +16,7 @@ chrome.runtime.onMessage.addListener(async function (
       // Click the RUN button to execute the main function (workflow)
       chrome.runtime.sendMessage({ type: "log", log: "Run..." });
       // Run workflow
-      await main(request.prompt);
+      eko = await main(request.prompt);
     } catch (e) {
       console.error(e);
       chrome.runtime.sendMessage({
@@ -25,5 +28,12 @@ chrome.runtime.onMessage.addListener(async function (
       chrome.storage.local.set({ running: false });
       chrome.runtime.sendMessage({ type: "stop" });
     }
+  } else if (request.type == "stop") {
+    chrome.runtime.sendMessage({ type: "log", log: "Stop" });
+    if (eko) {
+      eko.getAllTaskId().forEach(taskId => eko.abortTask(taskId));
+    }
   }
 });
+
+(chrome as any).sidePanel && (chrome as any).sidePanel.setPanelBehavior({ openPanelOnActionClick: true });

@@ -25,7 +25,8 @@ export default abstract class BaseBrowserScreenAgent extends BaseBrowserAgent {
       tools: _tools_,
       llms: llms,
       mcpClient: mcpClient,
-      planDescription: "Browser operation agent, interact with the browser using the mouse and keyboard."
+      planDescription:
+        "Browser operation agent, interact with the browser using the mouse and keyboard.",
     });
     let init_tools = this.buildInitTools();
     if (ext_tools && ext_tools.length > 0) {
@@ -122,9 +123,7 @@ export default abstract class BaseBrowserScreenAgent extends BaseBrowserAgent {
           args: Record<string, unknown>,
           agentContext: AgentContext
         ): Promise<ToolResult> => {
-          return await this.callInnerTool(() =>
-            this.go_back(agentContext)
-          );
+          return await this.callInnerTool(() => this.go_back(agentContext));
         },
       },
       {
@@ -227,20 +226,28 @@ export default abstract class BaseBrowserScreenAgent extends BaseBrowserAgent {
           properties: {
             amount: {
               type: "number",
-              description: "Scroll amount (positive for up, negative for down)",
-              minimum: -10,
+              description: "Scroll amount (up / down)",
+              minimum: 1,
               maximum: 10,
             },
+            direction: {
+              type: "string",
+              enum: ["up", "down"],
+            },
           },
-          required: ["amount"],
+          required: ["amount", "direction"],
         },
         execute: async (
           args: Record<string, unknown>,
           agentContext: AgentContext
         ): Promise<ToolResult> => {
-          return await this.callInnerTool(() =>
-            this.scroll(agentContext, args.amount as number)
-          );
+          return await this.callInnerTool(async () => {
+            let amount = args.amount as number;
+            await this.scroll(
+              agentContext,
+              args.direction == "up" ? -amount : amount
+            );
+          });
         },
       },
       {
@@ -331,8 +338,10 @@ export default abstract class BaseBrowserScreenAgent extends BaseBrowserAgent {
           properties: {
             duration: {
               type: "number",
-              description: "Duration in seconds",
-              default: 0.5,
+              description: "Duration in millisecond",
+              default: 500,
+              minimum: 200,
+              maximum: 2000,
             },
           },
           required: ["duration"],
@@ -342,7 +351,7 @@ export default abstract class BaseBrowserScreenAgent extends BaseBrowserAgent {
           agentContext: AgentContext
         ): Promise<ToolResult> => {
           return await this.callInnerTool(() =>
-            sleep(((args.duration || 0.5) as number) * 1000)
+            sleep((args.duration || 200) as number)
           );
         },
       },
@@ -353,11 +362,8 @@ export default abstract class BaseBrowserScreenAgent extends BaseBrowserAgent {
     agentContext: AgentContext,
     messages: LanguageModelV1Prompt
   ): Promise<void> {
-    let lastMessage = messages[messages.length - 1];
-    if (
-      lastMessage.role == "tool" &&
-      lastMessage.content.filter((t) => t.type == "tool-result").length > 0
-    ) {
+    let lastTool = this.lastToolResult(messages);
+    if (lastTool && lastTool.toolName !== "extract_content") {
       await sleep(200);
       let result = await this.screenshot(agentContext);
       let image = toImage(result.imageBase64);

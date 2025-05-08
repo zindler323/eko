@@ -51,6 +51,12 @@ const AppRun = () => {
   }, [logs]);
 
   const handleClick = () => {
+    if (running) {
+      setRunning(false);
+      chrome.storage.local.set({ running: false, prompt });
+      chrome.runtime.sendMessage({ type: "stop" });
+      return;
+    }
     if (!prompt.trim()) {
       return;
     }
@@ -95,9 +101,9 @@ const AppRun = () => {
         <Button
           type="primary"
           onClick={handleClick}
-          disabled={running}
           style={{
             marginTop: "8px",
+            background: running ? "#6666" : "#1677ff"
           }}
         >
           {running ? "Running..." : "Run"}

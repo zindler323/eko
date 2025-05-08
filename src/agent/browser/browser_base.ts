@@ -1,4 +1,4 @@
-import { LanguageModelV1Prompt } from "@ai-sdk/provider";
+import { LanguageModelV1Prompt, LanguageModelV1ToolCallPart } from "@ai-sdk/provider";
 import { Agent } from "../base";
 import { sleep } from "../../common/utils";
 import { AgentContext } from "../../core/context";
@@ -19,14 +19,16 @@ export default abstract class BaseBrowserAgent extends Agent {
   }>;
 
   protected async go_back(agentContext: AgentContext): Promise<void> {
-    await this.execute_script(
-      agentContext,
-      () => {
-        return (window as any).navigation.back();
-      },
-      []
-    );
-    await sleep(200);
+    try {
+      await this.execute_script(
+        agentContext,
+        () => {
+          return (window as any).navigation.back();
+        },
+        []
+      );
+      await sleep(100);
+    } catch (e) {}
   }
 
   protected async extract_content(agentContext: AgentContext): Promise<string> {
@@ -73,7 +75,7 @@ export default abstract class BaseBrowserAgent extends Agent {
             environment: "browser",
             agent_name: agentContext.agent.Name,
             browser_url: agentContext.variables.get("lastUrl"),
-          }
+          },
         });
         if (
           result.extInfo &&
@@ -128,6 +130,53 @@ export default abstract class BaseBrowserAgent extends Agent {
       },
       []
     );
+  }
+
+  protected lastToolResult(messages: LanguageModelV1Prompt): {
+    id: string;
+    toolName: string;
+    args: unknown;
+    result: unknown;
+    isError?: boolean;
+  } | null {
+    let lastMessage = messages[messages.length - 1];
+    if (lastMessage.role != "tool") {
+      return null;
+    }
+    let toolResult = lastMessage.content.filter(
+      (t) => t.type == "tool-result"
+    )[0];
+    if (!toolResult) {
+      return null;
+    }
+    let result = toolResult.result;
+    let isError = toolResult.isError;
+    for (let i = messages.length - 2; i > 0; i--) {
+      if (
+        messages[i].role !== "assistant" ||
+        typeof messages[i].content == "string"
+      ) {
+        continue;
+      }
+      for (let j = 0; j < messages[i].content.length; j++) {
+        let content = messages[i].content[j];
+        if (typeof content !== "string" && content.type !== "tool-call") {
+          continue;
+        }
+        let toolUse = content as LanguageModelV1ToolCallPart;
+        if (toolResult.toolCallId != toolUse.toolCallId) {
+          continue;
+        }
+        return {
+          id: toolResult.toolCallId,
+          toolName: toolUse.toolName,
+          args: toolUse.args,
+          result,
+          isError,
+        };
+      }
+    }
+    return null;
   }
 
   protected abstract execute_script(

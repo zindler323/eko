@@ -65,7 +65,7 @@ export class Eko {
       throw new Error("The task does not exist");
     }
     try {
-      return this.doRunWorkflow(context);
+      return await this.doRunWorkflow(context);
     } catch (e: any) {
       return {
         success: false,
@@ -142,6 +142,10 @@ export class Eko {
 
   public getTask(taskId: string): Context | undefined {
     return this.taskMap.get(taskId);
+  }
+
+  public getAllTaskId(): string[] {
+    return [...this.taskMap.keys()];
   }
 
   public deleteTask(taskId: string): boolean {

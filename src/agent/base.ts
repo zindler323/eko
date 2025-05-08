@@ -318,7 +318,7 @@ export class Agent {
             nodeId: agentContext.agentChain.agent.id,
             environment: config.platform,
             agent_name: agentContext.agent.Name,
-          }
+          },
         });
       },
     };
@@ -399,7 +399,14 @@ export class Agent {
     } else if (!isError && text.length == 0) {
       text = "Successful";
     }
-    let result = { result: text };
+    let contentText: {
+      type: "text";
+      text: string;
+    } | null = {
+      type: "text",
+      text: text,
+    };
+    let result: unknown = text;
     if (
       text &&
       ((text.startsWith("{") && text.endsWith("}")) ||
@@ -407,6 +414,7 @@ export class Agent {
     ) {
       try {
         result = JSON.parse(text);
+        contentText = null;
       } catch (e) {}
     }
     return {
@@ -414,6 +422,7 @@ export class Agent {
       toolCallId: toolUse.toolCallId,
       toolName: toolUse.toolName,
       result: result,
+      content: contentText ? [contentText] : undefined,
       isError: isError,
     };
   }

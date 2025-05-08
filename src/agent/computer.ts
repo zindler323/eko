@@ -295,8 +295,10 @@ export default abstract class BaseComputerAgent extends Agent {
           properties: {
             duration: {
               type: "number",
-              description: "Duration in seconds",
-              default: 0.5,
+              description: "Duration in millisecond",
+              default: 500,
+              minimum: 200,
+              maximum: 2000,
             },
           },
           required: ["duration"],
@@ -306,7 +308,7 @@ export default abstract class BaseComputerAgent extends Agent {
           agentContext: AgentContext
         ): Promise<ToolResult> => {
           return await this.callInnerTool(() =>
-            sleep(((args.duration || 0.5) as number) * 1000)
+            sleep((args.duration || 200) as number)
           );
         },
       },
