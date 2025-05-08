@@ -78,6 +78,20 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     await sleep(200);
   }
 
+  protected async scroll_mouse_wheel(
+    agentContext: AgentContext,
+    amount: number
+  ): Promise<void> {
+    await this.execute_script(
+      agentContext,
+      (amount) => {
+        window.scrollBy(0, amount * 50);
+      },
+      [amount]
+    );
+    await sleep(200);
+  }
+
   protected async hover_to_element(
     agentContext: AgentContext,
     index: number
@@ -201,7 +215,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
             enter: {
               type: "boolean",
               description: "press the Enter key",
-              default: false
+              default: false,
             },
           },
           required: ["index", "text"],
@@ -275,6 +289,30 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
         ): Promise<ToolResult> => {
           return await this.callInnerTool(() =>
             this.scroll_to_element(agentContext, args.index as number)
+          );
+        },
+      },
+      {
+        name: "scroll_mouse_wheel",
+        description: "Scroll the mouse wheel at current position",
+        parameters: {
+          type: "object",
+          properties: {
+            amount: {
+              type: "number",
+              description: "Scroll amount (positive for up, negative for down)",
+              minimum: -10,
+              maximum: 10,
+            },
+          },
+          required: ["amount"],
+        },
+        execute: async (
+          args: Record<string, unknown>,
+          agentContext: AgentContext
+        ): Promise<ToolResult> => {
+          return await this.callInnerTool(() =>
+            this.scroll_mouse_wheel(agentContext, args.amount as number)
           );
         },
       },
@@ -375,7 +413,11 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
   }
 }
 
-function typing(params: { index: number; text: string, enter: boolean }): boolean {
+function typing(params: {
+  index: number;
+  text: string;
+  enter: boolean;
+}): boolean {
   let { index, text, enter } = params;
   let element = (window as any).get_highlight_element(index);
   if (!element) {
@@ -399,7 +441,8 @@ function typing(params: { index: number; text: string, enter: boolean }): boolea
     if (!input) {
       input = element.querySelector('*[contenteditable="true"]') || element;
       if (input.tagName == "DIV") {
-        input = input.querySelector("span") || input.querySelector("div") || input;
+        input =
+          input.querySelector("span") || input.querySelector("div") || input;
       }
     }
   }
