@@ -17,7 +17,12 @@ import {
 import { LLMRequest } from "../types/llm.types";
 import { McpTool, VariableStorageTool } from "../tools";
 import { getAgentSystemPrompt, getAgentUserPrompt } from "../prompt/agent";
-import { Tool, ToolExecuter, ToolResult, ToolSchema } from "../types/tools.types";
+import {
+  Tool,
+  ToolExecuter,
+  ToolResult,
+  ToolSchema,
+} from "../types/tools.types";
 
 export type AgentParams = {
   name: string;
@@ -275,7 +280,6 @@ export class Agent {
       nodeId: agentNode.id,
       environment: config.platform,
       agent_name: agentNode.name,
-      browser_url: null,
       params: {},
       prompt: agentNode.task,
       ...(mcpParams || {}),
@@ -309,6 +313,12 @@ export class Agent {
         return await mcpClient.callTool({
           name: name,
           arguments: args,
+          extInfo: {
+            taskId: agentContext.context.taskId,
+            nodeId: agentContext.agentChain.agent.id,
+            environment: config.platform,
+            agent_name: agentContext.agent.Name,
+          }
         });
       },
     };

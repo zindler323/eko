@@ -14,6 +14,13 @@ export type McpListToolParam = {
 export type McpCallToolParam = {
   name: string;
   arguments?: Record<string, unknown> | undefined;
+  extInfo?: {
+    taskId: string;
+    nodeId: string;
+    environment: "browser" | "windows" | "mac" | "linux";
+    agent_name: string;
+    browser_url?: string | null;
+  };
 };
 
 export type McpListToolResult = Array<{

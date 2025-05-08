@@ -67,6 +67,13 @@ export default abstract class BaseBrowserAgent extends Agent {
         let result = await mcpClient.callTool({
           name: name,
           arguments: args,
+          extInfo: {
+            taskId: agentContext.context.taskId,
+            nodeId: agentContext.agentChain.agent.id,
+            environment: "browser",
+            agent_name: agentContext.agent.Name,
+            browser_url: agentContext.variables.get("lastUrl"),
+          }
         });
         if (
           result.extInfo &&
