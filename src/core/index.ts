@@ -1,8 +1,4 @@
-import {
-  EkoConfig,
-  EkoResult,
-  Workflow,
-} from "../types/core.types";
+import { EkoConfig, EkoResult, Workflow } from "../types/core.types";
 import Context from "./context";
 import { Agent } from "../agent";
 import { Planner } from "./plan";
@@ -88,6 +84,22 @@ export class Eko {
   ): Promise<EkoResult> {
     await this.generate(taskPrompt, taskId, contextParams);
     return await this.execute(taskId);
+  }
+
+  public async initContext(
+    workflow: Workflow,
+    contextParams?: Record<string, any>
+  ): Promise<Context> {
+    const agents = [...(this.config.agents || [])];
+    let chain: Chain = new Chain(workflow.taskPrompt || workflow.name);
+    let context = new Context(workflow.taskId, this.config, agents, chain);
+    if (contextParams) {
+      Object.keys(contextParams).forEach((key) =>
+        context.variables.set(key, contextParams[key])
+      );
+    }
+    this.taskMap.set(workflow.taskId, context);
+    return context;
   }
 
   private async doRunWorkflow(context: Context): Promise<EkoResult> {

@@ -103,6 +103,7 @@ export class Planner {
         workflow: workflow,
       });
     }
+    workflow.taskPrompt = taskPrompt;
     return workflow;
   }
 

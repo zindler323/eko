@@ -121,6 +121,7 @@ export type Workflow = {
   thought: string;
   agents: WorkflowAgent[];
   xml: string;
+  taskPrompt?: string;
 };
 
 export interface HumanCallback {
