@@ -8,7 +8,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     let windowId = await this.getWindowId(agentContext);
     let dataUrl = await chrome.tabs.captureVisibleTab(windowId, {
       format: "jpeg",
-      quality: 80,
+      quality: 60,
     });
     let data = dataUrl.substring(dataUrl.indexOf("base64,") + 7);
     return {

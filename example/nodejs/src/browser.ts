@@ -20,7 +20,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     let screenshotBuffer = await page.screenshot({
       fullPage: false,
       type: "jpeg",
-      quality: 80,
+      quality: 60,
     });
     let base64 = screenshotBuffer.toString("base64");
     return {
