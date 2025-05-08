@@ -26,7 +26,7 @@ export type StreamCallbackMessage = {
       workflow: Workflow;
     }
   | {
-      type: "text" | "thinking" | "error";
+      type: "text" | "thinking";
       streamId: string;
       streamDone: boolean;
       text: string;
