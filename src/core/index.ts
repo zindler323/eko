@@ -90,14 +90,21 @@ export class Eko {
     workflow: Workflow,
     contextParams?: Record<string, any>
   ): Promise<Context> {
-    const agents = [...(this.config.agents || [])];
+    const agents = this.config.agents || [];
     let chain: Chain = new Chain(workflow.taskPrompt || workflow.name);
     let context = new Context(workflow.taskId, this.config, agents, chain);
+    if (this.config.a2aClient) {
+      let a2aList = await this.config.a2aClient.listAgents(
+        workflow.taskPrompt || workflow.name
+      );
+      context.agents = mergeAgents(context.agents, a2aList);
+    }
     if (contextParams) {
       Object.keys(contextParams).forEach((key) =>
         context.variables.set(key, contextParams[key])
       );
     }
+    context.workflow = workflow;
     this.taskMap.set(workflow.taskId, context);
     return context;
   }
