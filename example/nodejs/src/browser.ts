@@ -8,7 +8,6 @@ import {
 } from "playwright";
 
 export default class BrowserAgent extends BaseBrowserLabelsAgent {
-
   private browser: Browser | null = null;
   private browser_context: BrowserContext | null = null;
   private current_page: Page | null = null;
@@ -35,9 +34,49 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
   ): Promise<{
     url: string;
     title?: string;
+    tabId?: number;
   }> {
     let page = await this.open_url(agentContext, url);
     return {
+      url: page.url(),
+      title: await page.title(),
+    };
+  }
+
+  protected async get_all_tabs(
+    agentContext: AgentContext
+  ): Promise<Array<{ tabId: number; url: string; title: string }>> {
+    if (!this.browser_context) {
+      return [];
+    }
+    let result: Array<{ tabId: number; url: string; title: string }> = [];
+    const pages = await this.browser_context.pages();
+    for (let i = 0; i < pages.length; i++) {
+      let page = pages[i];
+      result.push({
+        tabId: i,
+        url: page.url(),
+        title: await page.title(),
+      });
+    }
+    return result;
+  }
+
+  protected async switch_tab(
+    agentContext: AgentContext,
+    tabId: number
+  ): Promise<{ tabId: number; url: string; title: string }> {
+    if (!this.browser_context) {
+      throw new Error("tabId does not exist: " + tabId);
+    }
+    const pages = await this.browser_context.pages();
+    const page = pages[tabId];
+    if (!page) {
+      throw new Error("tabId does not exist: " + tabId);
+    }
+    this.current_page = page;
+    return {
+      tabId: tabId,
       url: page.url(),
       title: await page.title(),
     };

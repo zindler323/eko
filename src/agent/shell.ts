@@ -39,7 +39,7 @@ export default abstract class BaseShellAgent extends Agent {
   protected abstract close_session(
     agentContext: AgentContext,
     session_id: string
-  ): Promise<string>;
+  ): Promise<void>;
 
   private buildInitTools(): Tool[] {
     return [

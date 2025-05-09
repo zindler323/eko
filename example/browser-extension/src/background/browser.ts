@@ -1,7 +1,6 @@
 import { AgentContext, BaseBrowserLabelsAgent } from "@eko-ai/eko";
 
 export default class BrowserAgent extends BaseBrowserLabelsAgent {
-
   protected async screenshot(
     agentContext: AgentContext
   ): Promise<{ imageBase64: string; imageType: "image/jpeg" | "image/png" }> {
@@ -34,6 +33,42 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     agentContext.variables.set("windowId", tab.windowId);
     return {
       url: url,
+      title: tab.title,
+    };
+  }
+
+  protected async get_all_tabs(
+    agentContext: AgentContext
+  ): Promise<Array<{ tabId: number; url: string; title: string }>> {
+    let windowId = await this.getWindowId(agentContext);
+    let tabs = await chrome.tabs.query({
+      windowId: windowId,
+    });
+    let result: Array<{ tabId: number; url: string; title: string }> = [];
+    for (let i = 0; i < tabs.length; i++) {
+      let tab = tabs[i];
+      result.push({
+        tabId: tab.id,
+        url: tab.url,
+        title: tab.title,
+      });
+    }
+    return result;
+  }
+
+  protected async switch_tab(
+    agentContext: AgentContext,
+    tabId: number
+  ): Promise<{ tabId: number; url: string; title: string }> {
+    let tab = await chrome.tabs.update(tabId, { active: true });
+    if (!tab) {
+      throw new Error("tabId does not exist: " + tabId);
+    }
+    agentContext.variables.set("tabId", tab.id);
+    agentContext.variables.set("windowId", tab.windowId);
+    return {
+      tabId: tab.id,
+      url: tab.url,
       title: tab.title,
     };
   }
@@ -132,5 +167,4 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
       chrome.tabs.onUpdated.addListener(listener);
     });
   }
-
 }

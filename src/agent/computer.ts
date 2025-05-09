@@ -1,4 +1,5 @@
 import { Agent } from "./base";
+import config from "../config";
 import { AgentContext } from "../core/context";
 import { Tool, ToolResult, IMcpClient } from "../types";
 import { LanguageModelV1Prompt } from "@ai-sdk/provider";
@@ -7,29 +8,49 @@ import { mergeTools, sleep, toImage } from "../common/utils";
 export const AGENT_NAME = "Computer";
 
 export default abstract class BaseComputerAgent extends Agent {
-  readonly keyboardKeys: string[] = [
-    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
-    'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
-    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-    'enter', 'esc', 'backspace', 'tab', 'space', 'delete',
-    'ctrl', 'alt', 'shift', 'win',
-    'up', 'down', 'left', 'right',
-    'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12',
-    'ctrl+c', 'ctrl+v', 'ctrl+x', 'ctrl+z', 'ctrl+a', 'ctrl+s',
-    'alt+tab', 'alt+f4', 'ctrl+alt+delete'
-  ];
 
-  constructor(llms?: string[], ext_tools?: Tool[], mcpClient?: IMcpClient) {
+  constructor(llms?: string[], ext_tools?: Tool[], mcpClient?: IMcpClient, keyboardKeys?: string[]) {
     const _tools_ = [] as Tool[];
     super({
       name: AGENT_NAME,
-      description: "You are a computer operation agent, who interacts with the computer using mouse and keyboard, completing specified tasks step by step based on the given tasks and screenshots. After each of your operations, you will receive the latest computer screenshot to evaluate the task execution status.",
+      description: `You are a computer operation agent, who interacts with the computer using mouse and keyboard, completing specified tasks step by step based on the given tasks and screenshots. After each of your operations, you will receive the latest computer screenshot to evaluate the task execution status.
+This is a computer GUI interface, observe the execution through screenshots, and specify action sequences to complete designated tasks.
+* COMPUTER OPERATIONS:
+  - You can operate the application using shortcuts.
+  - If stuck, try alternative approaches`,
       tools: _tools_,
       llms: llms,
       mcpClient: mcpClient,
-      planDescription: "Computer operation agent, interact with the computer using the mouse and keyboard."
+      planDescription: "Computer operation agent, interact with the computer using the mouse and keyboard, operation application."
     });
-    let init_tools = this.buildInitTools();
+    if (!keyboardKeys) {
+      if (config.platform == "windows") {
+        keyboardKeys = [
+          'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+          'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+          '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+          'enter', 'esc', 'backspace', 'tab', 'space', 'delete',
+          'ctrl', 'alt', 'shift', 'win',
+          'up', 'down', 'left', 'right',
+          'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12',
+          'ctrl+c', 'ctrl+v', 'ctrl+x', 'ctrl+z', 'ctrl+a', 'ctrl+s',
+          'alt+tab', 'alt+f4', 'ctrl+alt+delete'
+        ]
+      } else {
+        keyboardKeys = [
+          'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+          'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+          '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+          'enter', 'esc', 'backspace', 'tab', 'space', 'delete',
+          'command', 'option', 'shift', 'control',
+          'up', 'down', 'left', 'right',
+          'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12',
+          'command+c', 'command+v', 'command+x', 'command+z', 'command+a', 'command+s',
+          'command+tab', 'command+q', 'command+escape'
+        ]
+      }
+    }
+    let init_tools = this.buildInitTools(keyboardKeys);
     if (ext_tools && ext_tools.length > 0) {
       init_tools = mergeTools(init_tools, ext_tools);
     }
@@ -83,7 +104,7 @@ export default abstract class BaseComputerAgent extends Agent {
     y2: number
   ): Promise<void>;
 
-  private buildInitTools(): Tool[] {
+  private buildInitTools(keyboardKeys: string[]): Tool[] {
     return [
       {
         name: "typing",
@@ -210,7 +231,7 @@ export default abstract class BaseComputerAgent extends Agent {
             key: {
               type: "string",
               description: "Key to press",
-              enum: this.keyboardKeys,
+              enum: keyboardKeys,
             },
           },
           required: ["key"],
@@ -233,7 +254,7 @@ export default abstract class BaseComputerAgent extends Agent {
             keys: {
               type: "string",
               description: "Key combination to press",
-              enum: this.keyboardKeys,
+              enum: keyboardKeys,
             },
           },
           required: ["keys"],

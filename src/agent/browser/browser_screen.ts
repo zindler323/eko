@@ -331,6 +331,44 @@ export default abstract class BaseBrowserScreenAgent extends BaseBrowserAgent {
         },
       },
       {
+        name: "get_all_tabs",
+        description: "Get all tabs of the current browser",
+        parameters: {
+          type: "object",
+          properties: {},
+        },
+        execute: async (
+          args: Record<string, unknown>,
+          agentContext: AgentContext
+        ): Promise<ToolResult> => {
+          return await this.callInnerTool(() =>
+            this.get_all_tabs(agentContext)
+          );
+        },
+      },
+      {
+        name: "switch_tab",
+        description: "Switch to the specified tab page",
+        parameters: {
+          type: "object",
+          properties: {
+            tabId: {
+              type: "number",
+              description: "Tab ID, obtained through get_all_tabs",
+            },
+          },
+          required: ["tabId"],
+        },
+        execute: async (
+          args: Record<string, unknown>,
+          agentContext: AgentContext
+        ): Promise<ToolResult> => {
+          return await this.callInnerTool(() =>
+            this.switch_tab(agentContext, args.tabId as number)
+          );
+        },
+      },
+      {
         name: "wait",
         description: "Wait for specified duration",
         parameters: {
@@ -363,7 +401,7 @@ export default abstract class BaseBrowserScreenAgent extends BaseBrowserAgent {
     messages: LanguageModelV1Prompt
   ): Promise<void> {
     let lastTool = this.lastToolResult(messages);
-    if (lastTool && lastTool.toolName !== "extract_content") {
+    if (lastTool && lastTool.toolName !== "extract_content" && lastTool.toolName !== "get_all_tabs") {
       await sleep(200);
       let result = await this.screenshot(agentContext);
       let image = toImage(result.imageBase64);

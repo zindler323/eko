@@ -18,6 +18,18 @@ export default abstract class BaseBrowserAgent extends Agent {
     title?: string;
   }>;
 
+  protected abstract get_all_tabs(agentContext: AgentContext): Promise<Array<{
+    tabId: number;
+    url: string;
+    title: string;
+  }>>;
+
+  protected abstract switch_tab(agentContext: AgentContext, tabId: number): Promise<{
+    tabId: number;
+    url: string;
+    title: string;
+  }>;
+
   protected async go_back(agentContext: AgentContext): Promise<void> {
     try {
       await this.execute_script(
@@ -117,8 +129,7 @@ export default abstract class BaseBrowserAgent extends Agent {
   protected async get_current_page(agentContext: AgentContext): Promise<{
     url: string;
     title?: string;
-    tabId?: string;
-    windowId?: string;
+    tabId?: number;
   }> {
     return await this.execute_script(
       agentContext,
