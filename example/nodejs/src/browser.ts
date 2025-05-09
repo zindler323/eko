@@ -123,9 +123,9 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     try {
       await page.goto(url, {
         waitUntil: "networkidle",
-        timeout: 15000,
+        timeout: 10000,
       });
-      await page.waitForLoadState("load", { timeout: 10000 });
+      await page.waitForLoadState("load", { timeout: 8000 });
     } catch (e) {
       if ((e + "").indexOf("Timeout") == -1) {
         throw e;

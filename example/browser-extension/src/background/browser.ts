@@ -104,7 +104,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
 
   private async waitForTabComplete(
     tabId: number,
-    timeout: number = 30_000
+    timeout: number = 8000
   ): Promise<chrome.tabs.Tab> {
     return new Promise(async (resolve, reject) => {
       const time = setTimeout(async () => {
