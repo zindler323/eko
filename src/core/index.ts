@@ -68,12 +68,11 @@ export class Eko {
       return await this.doRunWorkflow(context);
     } catch (e: any) {
       return {
+        taskId,
         success: false,
         stopReason: e?.name == "AbortError" ? "abort" : "error",
         result: e,
       };
-    } finally {
-      this.deleteTask(taskId);
     }
   }
 
@@ -132,11 +131,11 @@ export class Eko {
       agent.result = await agent.run(context, agentChain);
       lastResult = agent.result;
     }
-    // TODO 超过2个Agent时需要summary输出结果。
     return {
       success: true,
       stopReason: "done",
       result: lastResult,
+      taskId: context.taskId,
     };
   }
 

@@ -22,7 +22,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
    - Elements marked with "[]:" are non-interactive (for context only)
 * NAVIGATION & ERROR HANDLING:
    - If no suitable elements exist, use other functions to complete the task
-   - If stuck, try alternative approaches
+   - If stuck, try alternative approaches, don't refuse tasks
    - Handle popups/cookies by accepting or closing them
    - Use scroll to find elements you are looking for`;
     const _tools_ = [] as Tool[];

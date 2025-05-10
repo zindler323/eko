@@ -44,11 +44,11 @@ export default class ForeachTaskTool implements Tool {
       varValue = agentContext.context.variables.get(items.trim());
     }
     if (varValue) {
-      // TODO 循环变量
-      // 记录当前url，重新规划成一个个独立的任务
+      // TODO Loop variable
+      // Record the current URL and re-plan it into individual tasks.
     } else {
-      // TODO 循环列表
-      // 继续执行
+      // TODO Loop list
+      // Continue execution
     }
     return null as any;
   }

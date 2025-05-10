@@ -66,5 +66,6 @@ export interface ToolExecuter {
 export interface Tool extends ToolExecuter {
   readonly name: string;
   readonly description?: string;
+  readonly planDescription?: string;
   readonly parameters: JSONSchema7;
 }

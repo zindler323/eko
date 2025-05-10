@@ -7,6 +7,7 @@ export const TOOL_NAME = "human_interact";
 export default class HumanInteractTool implements Tool {
   readonly name: string = TOOL_NAME;
   readonly description: string;
+  readonly planDescription: string;
   readonly parameters: JSONSchema7;
 
   constructor() {
@@ -15,6 +16,8 @@ confirm: Ask the user to confirm whether to execute an operation, especially whe
 input: Prompt the user to enter text; for example, when a task is ambiguous, the AI can choose to ask the user for details, and the user can respond by inputting.
 select: Allow the user to make a choice; in situations that require selection, the AI can ask the user to make a decision.
 request_help: Request assistance from the user; for instance, when an operation is blocked, the AI can ask the user for help, such as needing to log into a website or solve a CAPTCHA.`;
+    this.planDescription =
+      "AI interacts with humans, when performing dangerous operations such as deleting files, you can request confirmation from humans";
     this.parameters = {
       type: "object",
       properties: {

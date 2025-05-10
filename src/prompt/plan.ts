@@ -116,7 +116,7 @@ Output result:
     </agent>
   </agents>
 </root>`,
-`User: Access the Google team's organization page on GitHub, extract all developer accounts from the team, and compile statistics on the countries and regions where these developers are located.
+  `User: Access the Google team's organization page on GitHub, extract all developer accounts from the team, and compile statistics on the countries and regions where these developers are located.
 Output result:
 <root>
   <name>Statistics of Google Team Developers' Geographic Distribution</name>
@@ -167,6 +167,12 @@ User Platform: {platform}
 Task Description: {taskPrompt}
 `;
 
+const PLAN_USER_TASK_WEBSITE_TEMPLATE = `
+User Platform: {platform}
+Task Website: {task_website}
+Task Description: {taskPrompt}
+`;
+
 export function getPlanSystemPrompt(agents: Agent[]): string {
   let agents_prompt = agents
     .map((agent) => {
@@ -174,12 +180,12 @@ export function getPlanSystemPrompt(agents: Agent[]): string {
         `<agent name="${agent.Name}">\n` +
         `Description: ${agent.PlanDescription || agent.Description}\nTools:\n` +
         agent.Tools.map(
-          (tool) => `- ${tool.name}: ${tool.description || ""}`
+          (tool) => `- ${tool.name}: ${tool.planDescription || tool.description || ""}`
         ).join("\n") +
         `\n</agent>`
       );
     })
-    .join("\n");
+    .join("\n\n");
   let example_prompt = "";
   let hasChatAgent = agents.filter((a) => a.Name == chat_agent_name).length > 0;
   const example_list = hasChatAgent
@@ -195,8 +201,18 @@ export function getPlanSystemPrompt(agents: Agent[]): string {
     .trim();
 }
 
-export function getPlanUserPrompt(taskPrompt: string): string {
-  return PLAN_USER_TEMPLATE.replace("{taskPrompt}", taskPrompt)
-    .replace("{platform}", config.platform)
-    .trim();
+export function getPlanUserPrompt(
+  taskPrompt: string,
+  task_website?: string
+): string {
+  if (task_website) {
+    return PLAN_USER_TASK_WEBSITE_TEMPLATE.replace("{taskPrompt}", taskPrompt)
+      .replace("{platform}", config.platform)
+      .replace("{task_website}", task_website)
+      .trim();
+  } else {
+    return PLAN_USER_TEMPLATE.replace("{taskPrompt}", taskPrompt)
+      .replace("{platform}", config.platform)
+      .trim();
+  }
 }

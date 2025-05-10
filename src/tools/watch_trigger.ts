@@ -24,7 +24,7 @@ export default class WatchTriggerTool implements Tool {
   }
 
   async execute(args: Record<string, unknown>, agentContext: AgentContext): Promise<ToolResult> {
-    // TODO 监听 dom 或 文件 改变，执行节点
+    // TODO Listen for changes to the DOM or file, and execute nodes
     return null as any;
   }
 
