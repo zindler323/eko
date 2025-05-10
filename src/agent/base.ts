@@ -352,7 +352,7 @@ export class Agent {
       let message = messages[i];
       if (message.role == "tool") {
         for (let j = 0; j < message.content.length; j++) {
-          let toolName = message.content[i].toolName;
+          let toolName = message.content[j].toolName;
           if (toolNames.indexOf(toolName) > -1) {
             continue;
           }

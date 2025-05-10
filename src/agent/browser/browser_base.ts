@@ -1,4 +1,7 @@
-import { LanguageModelV1Prompt, LanguageModelV1ToolCallPart } from "@ai-sdk/provider";
+import {
+  LanguageModelV1Prompt,
+  LanguageModelV1ToolCallPart,
+} from "@ai-sdk/provider";
 import { Agent } from "../base";
 import { sleep } from "../../common/utils";
 import { AgentContext } from "../../core/context";
@@ -18,13 +21,18 @@ export default abstract class BaseBrowserAgent extends Agent {
     title?: string;
   }>;
 
-  protected abstract get_all_tabs(agentContext: AgentContext): Promise<Array<{
-    tabId: number;
-    url: string;
-    title: string;
-  }>>;
+  protected abstract get_all_tabs(agentContext: AgentContext): Promise<
+    Array<{
+      tabId: number;
+      url: string;
+      title: string;
+    }>
+  >;
 
-  protected abstract switch_tab(agentContext: AgentContext, tabId: number): Promise<{
+  protected abstract switch_tab(
+    agentContext: AgentContext,
+    tabId: number
+  ): Promise<{
     tabId: number;
     url: string;
     title: string;
@@ -63,16 +71,28 @@ export default abstract class BaseBrowserAgent extends Agent {
     messages: LanguageModelV1Prompt,
     loopNum: number
   ): Promise<{ mcpTools: boolean; mcpParams?: Record<string, unknown> }> {
-    let url = (await this.get_current_page(agentContext)).url;
-    let lastUrl = agentContext.variables.get("lastUrl");
-    agentContext.variables.set("lastUrl", url);
-    return {
-      mcpTools: loopNum == 0 || url != lastUrl,
-      mcpParams: {
-        environment: "browser",
-        browser_url: url,
-      },
-    };
+    if (loopNum > 0) {
+      let url = null;
+      try {
+        url = (await this.get_current_page(agentContext)).url;
+      } catch (e) {}
+      let lastUrl = agentContext.variables.get("lastUrl");
+      agentContext.variables.set("lastUrl", url);
+      return {
+        mcpTools: loopNum == 0 || url != lastUrl,
+        mcpParams: {
+          environment: "browser",
+          browser_url: url,
+        },
+      };
+    } else {
+      return {
+        mcpTools: true,
+        mcpParams: {
+          environment: "browser",
+        },
+      };
+    }
   }
 
   protected toolExecuter(mcpClient: IMcpClient, name: string): ToolExecuter {
