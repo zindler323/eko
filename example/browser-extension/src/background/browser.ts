@@ -144,7 +144,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     return new Promise(async (resolve, reject) => {
       const time = setTimeout(async () => {
         chrome.tabs.onUpdated.removeListener(listener);
-        let tab = await window.chrome.tabs.get(tabId);
+        let tab = await chrome.tabs.get(tabId);
         if (tab.status === "complete") {
           resolve(tab);
         } else {

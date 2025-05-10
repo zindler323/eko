@@ -72,9 +72,10 @@ export class Agent {
     let loopNum = 0;
     let context = agentContext.context;
     let agentNode = agentContext.agentChain.agent;
-    let messages = this.initMessages(agentContext);
+    const tools = [...this.tools, ...this.system_auto_tools(agentNode)];
+    let messages = this.initMessages(agentContext, tools);
     let rlm = new RetryLanguageModel(context.config.llms, this.llms);
-    let agentTools = [...this.tools, ...this.system_auto_tools(agentNode)];
+    let agentTools = tools;
     while (loopNum < maxReactNum) {
       context.checkAborted();
       if (mcpClient) {
@@ -91,7 +92,7 @@ export class Agent {
             controlMcp.mcpParams
           );
           let usedTools = this.extractUsedTool(messages, agentTools);
-          let _agentTools = mergeTools(this.tools, usedTools);
+          let _agentTools = mergeTools(tools, usedTools);
           agentTools = mergeTools(_agentTools, mcpTools);
         }
       }
@@ -207,8 +208,8 @@ export class Agent {
     let tools: Tool[] = [];
     let agentNodeXml = agentNode.xml;
     let hasVariable =
-      agentNodeXml.indexOf(" input=") > -1 ||
-      agentNodeXml.indexOf(" output=") > -1;
+      agentNodeXml.indexOf("input=") > -1 ||
+      agentNodeXml.indexOf("output=") > -1;
     if (hasVariable) {
       tools.push(new VariableStorageTool());
     }
@@ -242,14 +243,15 @@ export class Agent {
     return _results;
   }
 
-  protected initMessages(agentContext: AgentContext): LanguageModelV1Prompt {
+  protected initMessages(agentContext: AgentContext, tools?: Tool[]): LanguageModelV1Prompt {
     let messages: LanguageModelV1Prompt = [
       {
         role: "system",
         content: getAgentSystemPrompt(
           this,
           agentContext.agentChain.agent,
-          agentContext.context
+          agentContext.context,
+          tools
         ),
       },
       {
@@ -260,7 +262,8 @@ export class Agent {
             text: getAgentUserPrompt(
               this,
               agentContext.agentChain.agent,
-              agentContext.context
+              agentContext.context,
+              tools
             ),
           },
         ],

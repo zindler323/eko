@@ -109,9 +109,16 @@ export class RetryLanguageModel {
         continue;
       }
       try {
+        const controller = new AbortController();
+        const signal = options.abortSignal
+          ? AbortSignal.any([options.abortSignal, controller.signal])
+          : controller.signal;
         const result = await call_timeout(
-          async () => await llm.doStream(options),
-          this.stream_first_timeout
+          async () => await llm.doStream({ ...options, abortSignal: signal }),
+          this.stream_first_timeout,
+          (e) => {
+            controller.abort();
+          }
         );
         const stream = result.stream;
         const reader = stream.getReader();
@@ -121,6 +128,7 @@ export class RetryLanguageModel {
           (e) => {
             reader.cancel();
             reader.releaseLock();
+            controller.abort();
           }
         );
         if (done) {

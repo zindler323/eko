@@ -23,7 +23,7 @@ export default abstract class BaseFileAgent extends Agent {
       llms: llms,
       mcpClient: mcpClient,
       planDescription:
-        "File operation agent, handling file-related tasks such as creating, finding, reading, modifying files, etc.",
+        "File operation agent, handling file-related tasks such as creating, finding, reading, modifying files, etc, only text file writing is supported.",
     });
     let init_tools = this.buildInitTools();
     if (ext_tools && ext_tools.length > 0) {
@@ -112,7 +112,7 @@ export default abstract class BaseFileAgent extends Agent {
       {
         name: "file_write",
         description:
-          "Overwrite or append content to a file. Use for creating new files, appending content, or modifying existing files.",
+          "Overwrite or append content to a file. Use for creating new files, appending content, or modifying existing files, only supports txt/md/csv or other text formats.",
         parameters: {
           type: "object",
           properties: {

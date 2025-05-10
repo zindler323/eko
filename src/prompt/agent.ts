@@ -8,7 +8,7 @@ import { TOOL_NAME as watch_trigger } from "../tools/watch_trigger";
 import { TOOL_NAME as human_interact } from "../tools/human_interact";
 import { TOOL_NAME as variable_storage } from "../tools/variable_storage";
 import { TOOL_NAME as task_node_status } from "../tools/task_node_status";
-
+import { Tool } from "../types";
 
 const AGENT_SYSTEM_TEMPLATE = `
 You are {name}, an autonomous AI agent for {agent} agent.
@@ -73,15 +73,20 @@ export function getAgentSystemPrompt(
   agent: Agent,
   agentNode: WorkflowAgent,
   context: Context,
+  tools?: Tool[],
   systemPrompt?: string
 ): string {
   let prompt = "";
   let nodePrompt = "";
   let agentNodeXml = agentNode.xml;
-  let hasForEach = agentNodeXml.indexOf("</forEach>") > -1;
   let hasWatch = agentNodeXml.indexOf("</watch>") > -1;
-  let hasVariable = agentNodeXml.indexOf(" input=") > -1 || agentNodeXml.indexOf(" output=") > -1;
-  let hasHumanTool = agent.Tools.filter((tool) => tool.name == human_interact).length > 0;
+  let hasForEach = agentNodeXml.indexOf("</forEach>") > -1;
+  let hasHumanTool =
+    (tools || agent.Tools).filter((tool) => tool.name == human_interact).length > 0;
+  let hasVariable =
+    agentNodeXml.indexOf("input=") > -1 ||
+    agentNodeXml.indexOf("output=") > -1 ||
+    (tools || agent.Tools).filter((tool) => tool.name == variable_storage).length > 0;
   if (hasHumanTool) {
     prompt += HUMAN_PROMPT;
   }
@@ -109,12 +114,19 @@ export function getAgentSystemPrompt(
 export function getAgentUserPrompt(
   agent: Agent,
   agentNode: WorkflowAgent,
-  context: Context
+  context: Context,
+  tools?: Tool[]
 ): string {
-  let hasTaskNodeStatusTool = agent.Tools.filter((tool) => tool.name == task_node_status).length > 0;
-  return buildAgentRootXml(agentNode.xml, context.chain.taskPrompt, (nodeId, node) => {
-    if (hasTaskNodeStatusTool) {
-      node.setAttribute("status", "todo");
+  let hasTaskNodeStatusTool =
+    (tools || agent.Tools).filter((tool) => tool.name == task_node_status)
+      .length > 0;
+  return buildAgentRootXml(
+    agentNode.xml,
+    context.chain.taskPrompt,
+    (nodeId, node) => {
+      if (hasTaskNodeStatusTool) {
+        node.setAttribute("status", "todo");
+      }
     }
-  });
+  );
 }
