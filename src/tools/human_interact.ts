@@ -26,63 +26,29 @@ request_help: Request assistance from the user; for instance, when an operation 
           description: "The type of interaction with users.",
           enum: ["confirm", "input", "select", "request_help"],
         },
-        confirm: {
-          type: "object",
-          properties: {
-            prompt: {
-              type: "string",
-              description: "Display prompts to users",
-            },
-          },
-          required: ["prompt"],
+        prompt: {
+          type: "string",
+          description: "Display prompts to users",
         },
-        input: {
-          type: "object",
-          properties: {
-            prompt: {
-              type: "string",
-              description: "Display prompts to users",
-            },
+        selectOptions: {
+          type: "array",
+          description:
+            "Options provided to users, this parameter is required when interactType is select.",
+          items: {
+            type: "string",
           },
-          required: ["prompt"],
         },
-        select: {
-          type: "object",
-          properties: {
-            prompt: {
-              type: "string",
-              description: "Display prompts to users",
-            },
-            options: {
-              type: "array",
-              description: "Options provided to the user",
-              items: {
-                type: "string",
-              },
-            },
-            multiple: {
-              type: "boolean",
-            },
-          },
-          required: ["prompt", "options"],
+        selectMultiple: {
+          type: "boolean",
+          description: "isMultiple, used when interactType is select",
         },
-        request_help: {
-          type: "object",
-          properties: {
-            helpType: {
-              type: "string",
-              description: "Display prompts to users",
-              enum: ["request_login", "request_assistance"],
-            },
-            prompt: {
-              type: "string",
-              description: "Display prompts to users",
-            },
-          },
-          required: ["helpType", "prompt"],
+        helpType: {
+          type: "string",
+          description: "Help type, required when interactType is request_help.",
+          enum: ["request_login", "request_assistance"],
         },
       },
-      required: ["interactType"],
+      required: ["interactType", "prompt"],
     };
   }
 
@@ -91,7 +57,6 @@ request_help: Request assistance from the user; for instance, when an operation 
     agentContext: AgentContext
   ): Promise<ToolResult> {
     let interactType = args.interactType as string;
-    let interact = args[interactType] as any;
     let callback = agentContext.context.config.callback;
     let resultText = "";
     if (callback) {
@@ -100,7 +65,7 @@ request_help: Request assistance from the user; for instance, when an operation 
           if (callback.onHumanConfirm) {
             let result = await callback.onHumanConfirm(
               agentContext,
-              interact.prompt
+              args.prompt as string
             );
             resultText = `confirm result: ${result ? "Yes" : "No"}`;
           }
@@ -109,7 +74,7 @@ request_help: Request assistance from the user; for instance, when an operation 
           if (callback.onHumanInput) {
             let result = await callback.onHumanInput(
               agentContext,
-              interact.prompt
+              args.prompt as string
             );
             resultText = `input result: ${result}`;
           }
@@ -118,9 +83,9 @@ request_help: Request assistance from the user; for instance, when an operation 
           if (callback.onHumanSelect) {
             let result = await callback.onHumanSelect(
               agentContext,
-              interact.prompt,
-              interact.options,
-              interact.multiple
+              args.prompt as string,
+              (args.selectOptions || []) as string[],
+              (args.selectMultiple || false) as boolean
             );
             resultText = `select result: ${JSON.stringify(result)}`;
           }
@@ -129,8 +94,8 @@ request_help: Request assistance from the user; for instance, when an operation 
           if (callback.onHumanHelp) {
             let result = await callback.onHumanHelp(
               agentContext,
-              interact.helpType,
-              interact.prompt
+              (args.helpType || "request_assistance") as any,
+              args.prompt as string
             );
             resultText = `request_help result: ${
               result ? "Solved" : "Unresolved"

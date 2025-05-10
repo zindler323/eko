@@ -88,7 +88,12 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     await this.execute_script(
       agentContext,
       (amount) => {
-        window.scrollBy(0, amount * 50);
+        let viewportHeight =
+          window.innerHeight ||
+          document.documentElement.clientHeight ||
+          document.body.clientHeight;
+        let y = Math.max(20, Math.min(viewportHeight / 10, 200));
+        window.scrollBy(0, y * amount);
       },
       [amount]
     );
@@ -436,7 +441,11 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     messages: LanguageModelV1Prompt
   ): Promise<void> {
     let lastTool = this.lastToolResult(messages);
-    if (lastTool && lastTool.toolName !== "extract_content" && lastTool.toolName !== "get_all_tabs") {
+    if (
+      lastTool &&
+      lastTool.toolName !== "extract_content" &&
+      lastTool.toolName !== "get_all_tabs"
+    ) {
       await sleep(200);
       let result = await this.screenshot_and_html(agentContext);
       let image = toImage(result.imageBase64);

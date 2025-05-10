@@ -33,9 +33,10 @@ UTC datetime: {datetime}
 `;
 
 const HUMAN_PROMPT = `
-During the task execution process, you can use the \`${human_interact}\` tool to interact with humans. Please do not abuse this tool to harass humans. Please call it in the following situations:
+During the task execution process, you can use the \`${human_interact}\` tool to interact with humans, please call it in the following situations:
 - When performing dangerous operations such as deleting files, confirmation from humans is required
 - When encountering obstacles while accessing websites, such as requiring user login, you need to request human assistance
+- Try not to use the \`${human_interact}\` tool
 `;
 
 const VARIABLE_PROMPT = `
