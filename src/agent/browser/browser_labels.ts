@@ -16,15 +16,17 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
   - Screenshot help verify element positions and relationships. Labels may sometimes overlap, so extracted elements are used to verify the correct elements.
   - In addition to screenshot, simplified information about interactive elements is returned, with element indexes corresponding to those in the screenshot.
   - This tool can ONLY screenshot the VISIBLE content. If a complete content is required, use 'extract_content' instead.
+  - If the webpage content hasn't loaded, please use the \`wait\` tool to allow time for the content to load.
 * ELEMENT INTERACTION:
    - Only use indexes that exist in the provided element list
    - Each element has a unique index number (e.g., "[33]:<button>")
    - Elements marked with "[]:" are non-interactive (for context only)
-* NAVIGATION & ERROR HANDLING:
+* ERROR HANDLING:
    - If no suitable elements exist, use other functions to complete the task
    - If stuck, try alternative approaches, don't refuse tasks
    - Handle popups/cookies by accepting or closing them
-   - Use scroll to find elements you are looking for`;
+   - Use scroll to find elements you are looking for
+   - When extracting content, prioritize using extract_content, only scroll when you need to load more content`;
     const _tools_ = [] as Tool[];
     super({
       name: AGENT_NAME,

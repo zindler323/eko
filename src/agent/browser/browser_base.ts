@@ -43,7 +43,7 @@ export default abstract class BaseBrowserAgent extends Agent {
       await this.execute_script(
         agentContext,
         () => {
-          return (window as any).navigation.back();
+          (window as any).navigation.back();
         },
         []
       );

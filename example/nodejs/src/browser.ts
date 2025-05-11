@@ -37,6 +37,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     tabId?: number;
   }> {
     let page = await this.open_url(agentContext, url);
+    await this.sleep(200);
     return {
       url: page.url(),
       title: await page.title(),

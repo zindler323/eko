@@ -29,6 +29,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
       windowId: windowId,
     });
     tab = await this.waitForTabComplete(tab.id);
+    await this.sleep(200);
     agentContext.variables.set("tabId", tab.id);
     agentContext.variables.set("windowId", tab.windowId);
     return {
@@ -166,5 +167,9 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
       }
       chrome.tabs.onUpdated.addListener(listener);
     });
+  }
+
+  private sleep(time: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(() => resolve(), time));
   }
 }

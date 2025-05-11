@@ -12,7 +12,7 @@ Your task is to understand the user's requirements, dynamically plan the user's 
 2. Analyze the Agents that need to be used based on the user's requirements.
 3. Generate the Agent calling plan based on the analysis results.
 4. About agent name, please do not arbitrarily fabricate non-existent agent names.
-5. You only need to provide the steps to complete the user's task, steps are simple and straightforward, no need for too many specific details.
+5. You only need to provide the steps to complete the user's task, key steps only, no need to be too detailed.
 6. Please strictly follow the output format and example output.
 7. The output language should follow the language corresponding to the user's task.
 
