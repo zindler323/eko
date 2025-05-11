@@ -84,6 +84,10 @@ export function run_build_dom_tree() {
             for (let i = 0; i < includeAttributes.length; i++) {
               let key = includeAttributes[i];
               let value = node.attributes[key];
+              if (key == "class" && value && value.length > 30) {
+                let classList = value.split(" ").slice(0, 3);
+                value = classList.join(" ");
+              }
               if (key && value) {
                 attributes_str += ` ${key}="${value}"`;
               }

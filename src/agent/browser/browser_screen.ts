@@ -252,7 +252,8 @@ export default abstract class BaseBrowserScreenAgent extends BaseBrowserAgent {
       },
       {
         name: "extract_content",
-        description: "Extract the text content of the current webpage.",
+        description:
+          "Extract the text content of the current webpage, obtain webpage data through this tool.",
         parameters: {
           type: "object",
           properties: {},
@@ -370,6 +371,7 @@ export default abstract class BaseBrowserScreenAgent extends BaseBrowserAgent {
       },
       {
         name: "wait",
+        noPlan: true,
         description: "Wait for specified duration",
         parameters: {
           type: "object",
@@ -401,8 +403,13 @@ export default abstract class BaseBrowserScreenAgent extends BaseBrowserAgent {
     messages: LanguageModelV1Prompt
   ): Promise<void> {
     let lastTool = this.lastToolResult(messages);
-    if (lastTool && lastTool.toolName !== "extract_content" && lastTool.toolName !== "get_all_tabs") {
-      await sleep(200);
+    if (
+      lastTool &&
+      lastTool.toolName !== "extract_content" &&
+      lastTool.toolName !== "get_all_tabs" &&
+      lastTool.toolName !== "variable_storage"
+    ) {
+      await sleep(300);
       let result = await this.screenshot(agentContext);
       let image = toImage(result.imageBase64);
       messages.push({

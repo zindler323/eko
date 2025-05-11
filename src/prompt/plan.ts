@@ -179,9 +179,14 @@ export function getPlanSystemPrompt(agents: Agent[]): string {
       return (
         `<agent name="${agent.Name}">\n` +
         `Description: ${agent.PlanDescription || agent.Description}\nTools:\n` +
-        agent.Tools.map(
-          (tool) => `- ${tool.name}: ${tool.planDescription || tool.description || ""}`
-        ).join("\n") +
+        agent.Tools.filter((tool) => !tool.noPlan)
+          .map(
+            (tool) =>
+              `- ${tool.name}: ${
+                tool.planDescription || tool.description || ""
+              }`
+          )
+          .join("\n") +
         `\n</agent>`
       );
     })

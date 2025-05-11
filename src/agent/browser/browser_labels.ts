@@ -128,6 +128,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
           break;
         }
       }
+      await sleep(50);
       let screenshot = await this.screenshot(agentContext);
       let pseudoHtml = element_result.element_str;
       return {
@@ -356,7 +357,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       },
       {
         name: "extract_content",
-        description: "Extract the text content of the current webpage.",
+        description: "Extract the text content of the current webpage, obtain webpage data through this tool.",
         parameters: {
           type: "object",
           properties: {},
@@ -410,6 +411,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       },
       {
         name: "wait",
+        noPlan: true,
         description: "Wait for specified duration",
         parameters: {
           type: "object",
@@ -444,9 +446,10 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     if (
       lastTool &&
       lastTool.toolName !== "extract_content" &&
-      lastTool.toolName !== "get_all_tabs"
+      lastTool.toolName !== "get_all_tabs" &&
+      lastTool.toolName !== "variable_storage"
     ) {
-      await sleep(200);
+      await sleep(300);
       let result = await this.screenshot_and_html(agentContext);
       let image = toImage(result.imageBase64);
       messages.push({

@@ -310,6 +310,7 @@ This is a computer GUI interface, observe the execution through screenshots, and
       },
       {
         name: "wait",
+        noPlan: true,
         description: "Wait for specified duration",
         parameters: {
           type: "object",
@@ -345,7 +346,7 @@ This is a computer GUI interface, observe the execution through screenshots, and
       lastMessage.role == "tool" &&
       lastMessage.content.filter((t) => t.type == "tool-result").length > 0
     ) {
-      await sleep(200);
+      await sleep(300);
       let result = await this.screenshot(agentContext);
       let image = toImage(result.imageBase64);
       messages.push({

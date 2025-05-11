@@ -33,13 +33,16 @@ UTC datetime: {datetime}
 `;
 
 const HUMAN_PROMPT = `
+* HUMAN INTERACT
 During the task execution process, you can use the \`${human_interact}\` tool to interact with humans, please call it in the following situations:
 - When performing dangerous operations such as deleting files, confirmation from humans is required
 - When encountering obstacles while accessing websites, such as requiring user login, you need to request human assistance
+- When requesting login, please only call the function when a login dialog box is clearly displayed.
 - Try not to use the \`${human_interact}\` tool
 `;
 
 const VARIABLE_PROMPT = `
+* VARIABLE STORAGE
 If you need to read and write the input/output variables in the node, require the use of the \`${variable_storage}\` tool.
 `;
 
@@ -74,9 +77,9 @@ export function getAgentSystemPrompt(
   agentNode: WorkflowAgent,
   context: Context,
   tools?: Tool[],
-  systemPrompt?: string
+  extSysPrompt?: string
 ): string {
-  let prompt = "";
+  let prompt = extSysPrompt || "";
   let nodePrompt = "";
   let agentNodeXml = agentNode.xml;
   let hasWatch = agentNodeXml.indexOf("</watch>") > -1;
@@ -101,7 +104,7 @@ export function getAgentSystemPrompt(
     prompt += WATCH_PROMPT;
     nodePrompt += WATCH_NODE;
   }
-  return (systemPrompt || AGENT_SYSTEM_TEMPLATE)
+  return AGENT_SYSTEM_TEMPLATE
     .replace("{name}", config.name)
     .replace("{agent}", agent.Name)
     .replace("{description}", agent.Description)

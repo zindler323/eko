@@ -251,7 +251,8 @@ export class Agent {
           this,
           agentContext.agentChain.agent,
           agentContext.context,
-          tools
+          tools,
+          this.extSysPrompt()
         ),
       },
       {
@@ -270,6 +271,10 @@ export class Agent {
       },
     ];
     return messages;
+  }
+
+  protected extSysPrompt(): string {
+    return "";
   }
 
   private async listTools(
