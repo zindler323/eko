@@ -2,7 +2,6 @@ import html2canvas from "html2canvas";
 import { AgentContext, BaseBrowserLabelsAgent } from "@eko-ai/eko";
 
 export default class BrowserAgent extends BaseBrowserLabelsAgent {
-
   protected async screenshot(
     agentContext: AgentContext
   ): Promise<{ imageBase64: string; imageType: "image/jpeg" | "image/png" }> {
@@ -76,5 +75,23 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
 
   private sleep(time: number): Promise<void> {
     return new Promise((resolve) => setTimeout(() => resolve(), time));
+  }
+
+  protected async get_all_tabs(
+    agentContext: AgentContext
+  ): Promise<Array<{ tabId: number; url: string; title: string }>> {
+    return [
+      {
+        tabId: 0,
+        url: location.href,
+        title: document.title,
+      },
+    ];
+  }
+  protected async switch_tab(
+    agentContext: AgentContext,
+    tabId: number
+  ): Promise<{ tabId: number; url: string; title: string }> {
+    return await this.get_all_tabs(agentContext)[0];
   }
 }

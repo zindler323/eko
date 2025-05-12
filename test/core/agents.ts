@@ -31,6 +31,12 @@ export class SimpleChatAgent extends BaseChatAgent {
 }
 
 export class SimpleBrowserAgent extends BaseBrowserLabelsAgent {
+  protected get_all_tabs(agentContext: AgentContext): Promise<Array<{ tabId: number; url: string; title: string; }>> {
+    throw new Error("Method not implemented.");
+  }
+  protected switch_tab(agentContext: AgentContext, tabId: number): Promise<{ tabId: number; url: string; title: string; }> {
+    throw new Error("Method not implemented.");
+  }
   protected screenshot(agentContext: AgentContext): Promise<{ imageBase64: string; imageType: "image/jpeg" | "image/png"; }> {
     throw new Error("Method not implemented.");
   }

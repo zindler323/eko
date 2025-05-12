@@ -206,20 +206,28 @@ This is a computer GUI interface, observe the execution through screenshots, and
           properties: {
             amount: {
               type: "number",
-              description: "Scroll amount (positive for up, negative for down)",
-              minimum: -10,
+              description: "Scroll amount (up / down)",
+              minimum: 1,
               maximum: 10,
             },
+            direction: {
+              type: "string",
+              enum: ["up", "down"],
+            },
           },
-          required: ["amount"],
+          required: ["amount", "direction"],
         },
         execute: async (
           args: Record<string, unknown>,
           agentContext: AgentContext
         ): Promise<ToolResult> => {
-          return await this.callInnerTool(() =>
-            this.scroll(agentContext, args.amount as number)
-          );
+          return await this.callInnerTool(async () => {
+            let amount = args.amount as number;
+            await this.scroll(
+              agentContext,
+              args.direction == "up" ? -amount : amount
+            );
+          });
         },
       },
       {

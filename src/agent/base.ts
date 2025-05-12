@@ -73,7 +73,7 @@ export class Agent {
     let context = agentContext.context;
     let agentNode = agentContext.agentChain.agent;
     const tools = [...this.tools, ...this.system_auto_tools(agentNode)];
-    let messages = this.initMessages(agentContext, tools);
+    let messages = await this.initMessages(agentContext, tools);
     let rlm = new RetryLanguageModel(context.config.llms, this.llms);
     let agentTools = tools;
     while (loopNum < maxReactNum) {
@@ -243,7 +243,7 @@ export class Agent {
     return _results;
   }
 
-  protected initMessages(agentContext: AgentContext, tools?: Tool[]): LanguageModelV1Prompt {
+  protected async initMessages(agentContext: AgentContext, tools?: Tool[]): Promise<LanguageModelV1Prompt> {
     let messages: LanguageModelV1Prompt = [
       {
         role: "system",
@@ -252,7 +252,7 @@ export class Agent {
           agentContext.agentChain.agent,
           agentContext.context,
           tools,
-          this.extSysPrompt()
+          await this.extSysPrompt()
         ),
       },
       {
@@ -273,7 +273,7 @@ export class Agent {
     return messages;
   }
 
-  protected extSysPrompt(): string {
+  protected async extSysPrompt(): Promise<string> {
     return "";
   }
 
