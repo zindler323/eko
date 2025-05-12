@@ -118,7 +118,7 @@ export class Eko {
       map[item.Name] = item;
       return map;
     }, {} as { [key: string]: Agent & { result?: any } });
-    let lastResult;
+    let results: string[] = [];
     for (let i = 0; i < workflow.agents.length; i++) {
       context.checkAborted();
       let agentNode = workflow.agents[i];
@@ -129,12 +129,12 @@ export class Eko {
       let agentChain = new AgentChain(agentNode);
       context.chain.push(agentChain);
       agent.result = await agent.run(context, agentChain);
-      lastResult = agent.result;
+      results.push(agent.result);
     }
     return {
       success: true,
       stopReason: "done",
-      result: lastResult,
+      result: results[results.length - 1],
       taskId: context.taskId,
     };
   }

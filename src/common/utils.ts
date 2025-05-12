@@ -142,6 +142,20 @@ export function mergeAgents(agents1: Agent[], agents2: Agent[]): Agent[] {
   return tools;
 }
 
+export function sub(
+  str: string,
+  maxLength: number,
+  appendPoint: boolean = true
+): string {
+  if (!str) {
+    return "";
+  }
+  if (str.length > maxLength) {
+    return str.substring(0, maxLength) + (appendPoint ? "..." : "");
+  }
+  return str;
+}
+
 export function fixXmlTag(code: string) {
   function fixDoubleChar(code: string) {
     const stack: string[] = [];

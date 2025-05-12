@@ -10,12 +10,11 @@ export default abstract class BaseFileAgent extends Agent {
     work_path?: string,
     llms?: string[],
     ext_tools?: Tool[],
-    mcpClient?: IMcpClient
+    mcpClient?: IMcpClient,
+    planDescription?: string
   ) {
     const _tools_ = [] as Tool[];
-    const prompt = work_path
-      ? `Your default working path is: ${work_path}`
-      : "";
+    const prompt = work_path ? `Your default working path is: ${work_path}` : "";
     super({
       name: AGENT_NAME,
       description: `You are a file agent, handling file-related tasks such as creating, finding, reading, modifying files, etc.${prompt}`,
@@ -23,6 +22,7 @@ export default abstract class BaseFileAgent extends Agent {
       llms: llms,
       mcpClient: mcpClient,
       planDescription:
+        planDescription ||
         "File operation agent, handling file-related tasks such as creating, finding, reading, modifying files, etc, only text file writing is supported.",
     });
     let init_tools = this.buildInitTools();

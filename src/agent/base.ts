@@ -53,7 +53,7 @@ export class Agent {
   public async run(
     context: Context,
     agentChain: AgentChain
-  ): Promise<string | null> {
+  ): Promise<string> {
     let mcpClient = this.mcpClient || context.config.defaultMcpClient;
     let agentContext = new AgentContext(context, this, agentChain);
     try {
@@ -68,7 +68,7 @@ export class Agent {
     agentContext: AgentContext,
     mcpClient?: IMcpClient,
     maxReactNum: number = 100
-  ): Promise<string | null> {
+  ): Promise<string> {
     let loopNum = 0;
     let context = agentContext.context;
     let agentNode = agentContext.agentChain.agent;
@@ -114,7 +114,7 @@ export class Agent {
       }
       loopNum++;
     }
-    return null;
+    return "Unfinished";
   }
 
   protected async handleResult(

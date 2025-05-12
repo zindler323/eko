@@ -109,6 +109,25 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     await this.execute_script(agentContext, hover_to, [{ index }]);
   }
 
+  protected async get_select_options(
+    agentContext: AgentContext,
+    index: number
+  ): Promise<any> {
+    return await this.execute_script(agentContext, get_select_options, [
+      { index },
+    ]);
+  }
+
+  protected async select_option(
+    agentContext: AgentContext,
+    index: number,
+    option: string
+  ): Promise<any> {
+    return await this.execute_script(agentContext, select_option, [
+      { index, option },
+    ]);
+  }
+
   protected async screenshot_and_html(agentContext: AgentContext): Promise<{
     imageBase64: string;
     imageType: "image/jpeg" | "image/png";
@@ -360,7 +379,8 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       },
       {
         name: "extract_content",
-        description: "Extract the text content of the current webpage, obtain webpage data through this tool.",
+        description:
+          "Extract the text content of the current webpage, obtain webpage data through this tool.",
         parameters: {
           type: "object",
           properties: {},
@@ -371,6 +391,58 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
         ): Promise<ToolResult> => {
           return await this.callInnerTool(() =>
             this.extract_content(agentContext)
+          );
+        },
+      },
+      {
+        name: "get_select_options",
+        description: "Get all options from a native dropdown element",
+        parameters: {
+          type: "object",
+          properties: {
+            index: {
+              type: "number",
+              description: "The index of the element to select",
+            },
+          },
+          required: ["index"],
+        },
+        execute: async (
+          args: Record<string, unknown>,
+          agentContext: AgentContext
+        ): Promise<ToolResult> => {
+          return await this.callInnerTool(() =>
+            this.get_select_options(agentContext, args.index as number)
+          );
+        },
+      },
+      {
+        name: "select_option",
+        description: "Select the native dropdown option",
+        parameters: {
+          type: "object",
+          properties: {
+            index: {
+              type: "number",
+              description: "The index of the element to select",
+            },
+            option: {
+              type: "string",
+              description: "Text option",
+            },
+          },
+          required: ["index", "option"],
+        },
+        execute: async (
+          args: Record<string, unknown>,
+          agentContext: AgentContext
+        ): Promise<ToolResult> => {
+          return await this.callInnerTool(() =>
+            this.select_option(
+              agentContext,
+              args.index as number,
+              args.option as string
+            )
           );
         },
       },
@@ -586,4 +658,51 @@ function hover_to(params: { index: number }): boolean {
   });
   element.dispatchEvent(event);
   return true;
+}
+
+function get_select_options(params: { index: number }) {
+  let element = (window as any).get_highlight_element(params.index);
+  if (!element || element.tagName.toUpperCase() !== "SELECT") {
+    return "Error: Not a select element";
+  }
+  return {
+    options: Array.from(element.options).map((opt: any) => ({
+      index: opt.index,
+      text: opt.text.trim(),
+      value: opt.value,
+    })),
+    name: element.name,
+  };
+}
+
+function select_option(params: { index: number; option: string }) {
+  let element = (window as any).get_highlight_element(params.index);
+  if (!element || element.tagName.toUpperCase() !== "SELECT") {
+    return "Error: Not a select element";
+  }
+  let text = params.option.trim();
+  let option = Array.from(element.options).find(
+    (opt: any) => opt.text.trim() === text
+  ) as any;
+  if (!option) {
+    option = Array.from(element.options).find(
+      (opt: any) => opt.value.trim() === text
+    ) as any;
+  }
+  if (!option) {
+    return {
+      success: false,
+      error: "Select Option not found",
+      availableOptions: Array.from(element.options).map((o: any) =>
+        o.text.trim()
+      ),
+    };
+  }
+  element.value = option.value;
+  element.dispatchEvent(new Event("change"));
+  return {
+    success: true,
+    selectedValue: option.value,
+    selectedText: option.text.trim(),
+  };
 }

@@ -6,7 +6,12 @@ import { Tool, ToolResult, IMcpClient } from "../types";
 export const AGENT_NAME = "Shell";
 
 export default abstract class BaseShellAgent extends Agent {
-  constructor(llms?: string[], ext_tools?: Tool[], mcpClient?: IMcpClient) {
+  constructor(
+    llms?: string[],
+    ext_tools?: Tool[],
+    mcpClient?: IMcpClient,
+    planDescription?: string
+  ) {
     const _tools_ = [] as Tool[];
     super({
       name: AGENT_NAME,
@@ -14,7 +19,7 @@ export default abstract class BaseShellAgent extends Agent {
       tools: _tools_,
       llms: llms,
       mcpClient: mcpClient,
-      planDescription: "Shell command agent, use to execute shell commands.",
+      planDescription: planDescription || "Shell command agent, use to execute shell commands.",
     });
     let init_tools = this.buildInitTools();
     if (ext_tools && ext_tools.length > 0) {
@@ -51,7 +56,8 @@ export default abstract class BaseShellAgent extends Agent {
           properties: {
             exec_dir: {
               type: "string",
-              description: "Working directory for command execution (absolute path)",
+              description:
+                "Working directory for command execution (absolute path)",
             },
           },
           required: ["exec_dir"],
@@ -119,5 +125,4 @@ export default abstract class BaseShellAgent extends Agent {
       },
     ];
   }
-
 }

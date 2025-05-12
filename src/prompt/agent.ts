@@ -1,14 +1,14 @@
 import { Agent } from "../agent";
 import config from "../config";
 import Context from "../core/context";
+import { sub } from "../common/utils";
+import { WorkflowAgent, Tool } from "../types";
 import { buildAgentRootXml } from "../common/xml";
-import { WorkflowAgent } from "../types/core.types";
 import { TOOL_NAME as foreach_task } from "../tools/foreach_task";
 import { TOOL_NAME as watch_trigger } from "../tools/watch_trigger";
 import { TOOL_NAME as human_interact } from "../tools/human_interact";
 import { TOOL_NAME as variable_storage } from "../tools/variable_storage";
 import { TOOL_NAME as task_node_status } from "../tools/task_node_status";
-import { Tool } from "../types";
 
 const AGENT_SYSTEM_TEMPLATE = `
 You are {name}, an autonomous AI agent for {agent} agent.
@@ -85,11 +85,13 @@ export function getAgentSystemPrompt(
   let hasWatch = agentNodeXml.indexOf("</watch>") > -1;
   let hasForEach = agentNodeXml.indexOf("</forEach>") > -1;
   let hasHumanTool =
-    (tools || agent.Tools).filter((tool) => tool.name == human_interact).length > 0;
+    (tools || agent.Tools).filter((tool) => tool.name == human_interact)
+      .length > 0;
   let hasVariable =
     agentNodeXml.indexOf("input=") > -1 ||
     agentNodeXml.indexOf("output=") > -1 ||
-    (tools || agent.Tools).filter((tool) => tool.name == variable_storage).length > 0;
+    (tools || agent.Tools).filter((tool) => tool.name == variable_storage)
+      .length > 0;
   if (hasHumanTool) {
     prompt += HUMAN_PROMPT;
   }
@@ -104,8 +106,19 @@ export function getAgentSystemPrompt(
     prompt += WATCH_PROMPT;
     nodePrompt += WATCH_NODE;
   }
-  return AGENT_SYSTEM_TEMPLATE
-    .replace("{name}", config.name)
+  if (context.chain.agents.length > 1) {
+    prompt += "\n Main task: " + context.chain.taskPrompt;
+    prompt += "\n# Pre-task execution results";
+    for (let i = 0; i < context.chain.agents.length; i++) {
+      let agentChain = context.chain.agents[i];
+      if (agentChain.agentResult) {
+        prompt += `\n## ${
+          agentChain.agent.task || agentChain.agent.name
+        }\n${sub(agentChain.agentResult, 500)}`;
+      }
+    }
+  }
+  return AGENT_SYSTEM_TEMPLATE.replace("{name}", config.name)
     .replace("{agent}", agent.Name)
     .replace("{description}", agent.Description)
     .replace("{datetime}", new Date().toISOString())

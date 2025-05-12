@@ -1,6 +1,6 @@
 import { AgentContext } from "../../src";
-import { BaseBrowserLabelsAgent, BaseChatAgent } from "../../src/agent";
 import { ToolResult } from "../../src/types/tools.types";
+import { BaseBrowserLabelsAgent, BaseChatAgent } from "../../src/agent";
 
 export class SimpleChatAgent extends BaseChatAgent {
   constructor(llms?: string[]) {
@@ -31,12 +31,6 @@ export class SimpleChatAgent extends BaseChatAgent {
 }
 
 export class SimpleBrowserAgent extends BaseBrowserLabelsAgent {
-  protected get_all_tabs(agentContext: AgentContext): Promise<Array<{ tabId: number; url: string; title: string; }>> {
-    throw new Error("Method not implemented.");
-  }
-  protected switch_tab(agentContext: AgentContext, tabId: number): Promise<{ tabId: number; url: string; title: string; }> {
-    throw new Error("Method not implemented.");
-  }
   protected screenshot(agentContext: AgentContext): Promise<{ imageBase64: string; imageType: "image/jpeg" | "image/png"; }> {
     throw new Error("Method not implemented.");
   }
@@ -44,6 +38,12 @@ export class SimpleBrowserAgent extends BaseBrowserLabelsAgent {
     throw new Error("Method not implemented.");
   }
   protected execute_script(agentContext: AgentContext, func: (...args: any[]) => void, args: any[]): Promise<any> {
+    throw new Error("Method not implemented.");
+  }
+  protected get_all_tabs(agentContext: AgentContext): Promise<Array<{ tabId: number; url: string; title: string; }>> {
+    throw new Error("Method not implemented.");
+  }
+  protected switch_tab(agentContext: AgentContext, tabId: number): Promise<{ tabId: number; url: string; title: string; }> {
     throw new Error("Method not implemented.");
   }
 }
