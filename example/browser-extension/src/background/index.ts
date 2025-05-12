@@ -21,7 +21,7 @@ chrome.runtime.onMessage.addListener(async function (
       console.error(e);
       chrome.runtime.sendMessage({
         type: "log",
-        log: e.message,
+        log: e + "",
         level: "error",
       });
     } finally {

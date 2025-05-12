@@ -22,6 +22,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
   ): Promise<{
     url: string;
     title?: string;
+    tabId?: number;
   }> {
     let windowId = await this.getWindowId(agentContext);
     let tab = await chrome.tabs.create({
@@ -30,11 +31,11 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     });
     tab = await this.waitForTabComplete(tab.id);
     await this.sleep(200);
-    agentContext.variables.set("tabId", tab.id);
     agentContext.variables.set("windowId", tab.windowId);
     return {
       url: url,
       title: tab.title,
+      tabId: tab.id
     };
   }
 
@@ -65,7 +66,6 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     if (!tab) {
       throw new Error("tabId does not exist: " + tabId);
     }
-    agentContext.variables.set("tabId", tab.id);
     agentContext.variables.set("windowId", tab.windowId);
     return {
       tabId: tab.id,
@@ -89,18 +89,15 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
   }
 
   private async getTabId(agentContext: AgentContext): Promise<number | null> {
-    let tabId = agentContext.variables.get("tabId") as number;
-    if (tabId) {
-      return tabId;
-    }
+    let windowId = await this.getWindowId(agentContext);
     let tabs = (await chrome.tabs.query({
+      windowId,
       active: true,
-      currentWindow: true,
       windowType: "normal",
     })) as any[];
     if (tabs.length == 0) {
       tabs = (await chrome.tabs.query({
-        currentWindow: true,
+        windowId,
         windowType: "normal",
       })) as any[];
     }
