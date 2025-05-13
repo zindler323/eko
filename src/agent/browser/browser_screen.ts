@@ -98,7 +98,7 @@ export default abstract class BaseBrowserScreenAgent extends BaseBrowserAgent {
       },
       {
         name: "current_page",
-        description: "Get the information of the current webpage",
+        description: "Get the information of the current webpage (url, title)",
         parameters: {
           type: "object",
           properties: {},
@@ -251,9 +251,9 @@ export default abstract class BaseBrowserScreenAgent extends BaseBrowserAgent {
         },
       },
       {
-        name: "extract_content",
+        name: "extract_page_content",
         description:
-          "Extract the text content of the current webpage, obtain webpage data through this tool.",
+          "Extract the text content of the current webpage, please use this tool to obtain webpage data.",
         parameters: {
           type: "object",
           properties: {},
@@ -263,7 +263,7 @@ export default abstract class BaseBrowserScreenAgent extends BaseBrowserAgent {
           agentContext: AgentContext
         ): Promise<ToolResult> => {
           return await this.callInnerTool(() =>
-            this.extract_content(agentContext)
+            this.extract_page_content(agentContext)
           );
         },
       },
@@ -405,7 +405,7 @@ export default abstract class BaseBrowserScreenAgent extends BaseBrowserAgent {
     let lastTool = this.lastToolResult(messages);
     if (
       lastTool &&
-      lastTool.toolName !== "extract_content" &&
+      lastTool.toolName !== "extract_page_content" &&
       lastTool.toolName !== "get_all_tabs" &&
       lastTool.toolName !== "variable_storage"
     ) {

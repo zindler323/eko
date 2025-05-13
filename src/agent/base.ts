@@ -128,6 +128,9 @@ export class Agent {
     let user_messages: LanguageModelV1Prompt = [];
     let toolResults: LanguageModelV1ToolResultPart[] = [];
     results = this.removeDuplicateToolUse(results);
+    if (results.length == 0) {
+      return null;
+    }
     for (let i = 0; i < results.length; i++) {
       let result = results[i];
       if (result.type == "text") {

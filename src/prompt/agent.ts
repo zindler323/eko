@@ -79,7 +79,10 @@ export function getAgentSystemPrompt(
   tools?: Tool[],
   extSysPrompt?: string
 ): string {
-  let prompt = extSysPrompt || "";
+  let prompt = "";
+  if (extSysPrompt) {
+    prompt += "\n" + extSysPrompt.trim() + "\n";
+  }
   let nodePrompt = "";
   let agentNodeXml = agentNode.xml;
   let hasWatch = agentNodeXml.indexOf("</watch>") > -1;

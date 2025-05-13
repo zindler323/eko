@@ -15,7 +15,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
   - Screenshot are used to understand page layouts, with labeled bounding boxes corresponding to element indexes. Each bounding box and its label share the same color, with labels typically positioned in the top-right corner of the box.
   - Screenshot help verify element positions and relationships. Labels may sometimes overlap, so extracted elements are used to verify the correct elements.
   - In addition to screenshot, simplified information about interactive elements is returned, with element indexes corresponding to those in the screenshot.
-  - This tool can ONLY screenshot the VISIBLE content. If a complete content is required, use 'extract_content' instead.
+  - This tool can ONLY screenshot the VISIBLE content. If a complete content is required, use 'extract_page_content' instead.
   - If the webpage content hasn't loaded, please use the \`wait\` tool to allow time for the content to load.
 * ELEMENT INTERACTION:
    - Only use indexes that exist in the provided element list
@@ -25,8 +25,8 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
    - If no suitable elements exist, use other functions to complete the task
    - If stuck, try alternative approaches, don't refuse tasks
    - Handle popups/cookies by accepting or closing them
-   - Use scroll to find elements you are looking for
-   - When extracting content, prioritize using extract_content, only scroll when you need to load more content`;
+* BROWSER OPERATION:
+   - Use scroll to find elements you are looking for, When extracting content, prioritize using extract_page_content, only scroll when you need to load more content`;
     const _tools_ = [] as Tool[];
     super({
       name: AGENT_NAME,
@@ -201,7 +201,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       },
       {
         name: "current_page",
-        description: "Get the information of the current webpage",
+        description: "Get the information of the current webpage (url, title)",
         parameters: {
           type: "object",
           properties: {},
@@ -325,7 +325,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       },
       {
         name: "scroll_mouse_wheel",
-        description: "Scroll the mouse wheel at current position",
+        description: "Scroll the mouse wheel at current position, prioritize using extract_page_content, only scroll when you need to load more content",
         parameters: {
           type: "object",
           properties: {
@@ -378,9 +378,9 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
         },
       },
       {
-        name: "extract_content",
+        name: "extract_page_content",
         description:
-          "Extract the text content of the current webpage, obtain webpage data through this tool.",
+          "Extract the text content of the current webpage, please use this tool to obtain webpage data.",
         parameters: {
           type: "object",
           properties: {},
@@ -390,7 +390,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
           agentContext: AgentContext
         ): Promise<ToolResult> => {
           return await this.callInnerTool(() =>
-            this.extract_content(agentContext)
+            this.extract_page_content(agentContext)
           );
         },
       },
@@ -520,7 +520,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     let lastTool = this.lastToolResult(messages);
     if (
       lastTool &&
-      lastTool.toolName !== "extract_content" &&
+      lastTool.toolName !== "extract_page_content" &&
       lastTool.toolName !== "get_all_tabs" &&
       lastTool.toolName !== "variable_storage"
     ) {

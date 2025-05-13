@@ -51,7 +51,7 @@ export default abstract class BaseBrowserAgent extends Agent {
     } catch (e) {}
   }
 
-  protected async extract_content(agentContext: AgentContext, variable_name?: string): Promise<string> {
+  protected async extract_page_content(agentContext: AgentContext, variable_name?: string): Promise<string> {
     let content = await this.execute_script(
       agentContext,
       () => {
