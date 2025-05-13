@@ -252,7 +252,7 @@ export class Agent {
           agentContext.agentChain.agent,
           agentContext.context,
           tools,
-          await this.extSysPrompt()
+          await this.extSysPrompt(agentContext)
         ),
       },
       {
@@ -273,7 +273,7 @@ export class Agent {
     return messages;
   }
 
-  protected async extSysPrompt(): Promise<string> {
+  protected async extSysPrompt(agentContext: AgentContext): Promise<string> {
     return "";
   }
 
