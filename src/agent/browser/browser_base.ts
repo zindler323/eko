@@ -55,10 +55,14 @@ export default abstract class BaseBrowserAgent extends Agent {
     let content = await this.execute_script(
       agentContext,
       () => {
-        return (window as any).document.body.innerText
+        let str = (window as any).document.body.innerText
           .replaceAll(/\n+/g, "\n")
           .replaceAll(/ +/g, " ")
           .trim();
+        if (str.length > 20000) {
+          str = str.substring(0, 20000) + "...";
+        }
+        return str;
       },
       []
     );

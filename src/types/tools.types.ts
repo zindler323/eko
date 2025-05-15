@@ -1,5 +1,6 @@
 import { JSONSchema7 } from "json-schema";
 import { AgentContext } from "../core/context";
+import { LanguageModelV1ToolCallPart } from "@ai-sdk/provider";
 
 export type ToolSchema =
   | {
@@ -59,7 +60,8 @@ export type ToolResult = {
 export interface ToolExecuter {
   execute: (
     args: Record<string, unknown>,
-    agentContext: AgentContext
+    agentContext: AgentContext,
+    toolCall: LanguageModelV1ToolCallPart
   ) => Promise<ToolResult>;
 }
 

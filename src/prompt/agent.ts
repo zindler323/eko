@@ -80,9 +80,6 @@ export function getAgentSystemPrompt(
   extSysPrompt?: string
 ): string {
   let prompt = "";
-  if (extSysPrompt) {
-    prompt += "\n" + extSysPrompt.trim() + "\n";
-  }
   let nodePrompt = "";
   let agentNodeXml = agentNode.xml;
   let hasWatch = agentNodeXml.indexOf("</watch>") > -1;
@@ -108,6 +105,9 @@ export function getAgentSystemPrompt(
   if (hasWatch) {
     prompt += WATCH_PROMPT;
     nodePrompt += WATCH_NODE;
+  }
+  if (extSysPrompt) {
+    prompt += "\n" + extSysPrompt.trim() + "\n";
   }
   if (context.chain.agents.length > 1) {
     prompt += "\n Main task: " + context.chain.taskPrompt;

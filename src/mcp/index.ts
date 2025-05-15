@@ -217,7 +217,6 @@ async function connectSse(sseUrl: string, hander: SseHandler) {
       }
       const text = decoder.decode(value);
       str += text;
-      console.log("str: ", str);
       if (str.indexOf("\n\n") > -1) {
         let chunks = str.split("\n\n");
         for (let i = 0; i < chunks.length - 1; i++) {

@@ -7,6 +7,7 @@ import TaskNodeStatusTool from "./task_node_status";
 import VariableStorageTool from "./variable_storage";
 import WatchTriggerTool from "./watch_trigger";
 import { Tool, ToolResult } from "../types/tools.types";
+import { LanguageModelV1ToolCallPart } from "@ai-sdk/provider";
 
 export class McpTool implements Tool {
   readonly name: string;
@@ -23,9 +24,10 @@ export class McpTool implements Tool {
 
   async execute(
     args: Record<string, unknown>,
-    agentContext: AgentContext
+    agentContext: AgentContext,
+    toolCall: LanguageModelV1ToolCallPart
   ): Promise<ToolResult> {
-    return this.toolWrapper.callTool(args, agentContext);
+    return this.toolWrapper.callTool(args, agentContext, toolCall);
   }
 }
 

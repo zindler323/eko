@@ -153,7 +153,7 @@ export class Agent {
         if (!tool) {
           throw new Error(result.toolName + " tool does not exist");
         }
-        toolResult = await tool.execute(args, agentContext);
+        toolResult = await tool.execute(args, agentContext, result);
         toolChain.updateToolResult(toolResult);
         agentContext.consecutiveErrorNum = 0;
       } catch (e) {
