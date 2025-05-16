@@ -16,6 +16,7 @@ export type LLMprovider =
   | "anthropic"
   | "google"
   | "aws"
+  | "openrouter"
   | ProviderV1;
 
 export type LLMConfig = {

@@ -10,6 +10,7 @@ import { call_timeout } from "../common/utils";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
+import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import {
   GenerateResult,
   LLMRequest,
@@ -174,7 +175,7 @@ export class RetryLanguageModel {
         baseURL: llm.config?.baseURL,
       }).languageModel(llm.model, {
         // disable_parallel_tool_use
-        parallelToolCalls: false,
+        parallelToolCalls: llm.config?.parallelToolCalls || false,
       });
     } else if (llm.provider == "anthropic") {
       return createAnthropic({
@@ -189,10 +190,15 @@ export class RetryLanguageModel {
     } else if (llm.provider == "aws") {
       let keys = llm.apiKey.split("=");
       return createAmazonBedrock({
-        region: llm.config?.region || "us-east-2",
-        baseURL: llm.config?.baseURL,
         accessKeyId: keys[0],
         secretAccessKey: keys[1],
+        baseURL: llm.config?.baseURL,
+        region: llm.config?.region || "us-east-1",
+      }).languageModel(llm.model);
+    } else if (llm.provider == "openrouter") {
+      return createOpenRouter({
+        apiKey: llm.apiKey,
+        baseURL: llm.config?.baseURL,
       }).languageModel(llm.model);
     } else {
       return llm.provider.languageModel(llm.model);
