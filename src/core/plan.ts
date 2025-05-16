@@ -91,7 +91,7 @@ export class Planner {
         if (config.callback) {
           let workflow = parseWorkflow(this.taskId, streamText, false);
           if (workflow) {
-            config.callback.onMessage({
+            await config.callback.onMessage({
               taskId: this.taskId,
               agentName: "Planer",
               type: "workflow",
@@ -109,7 +109,7 @@ export class Planner {
     chain.planResult = streamText;
     let workflow = parseWorkflow(this.taskId, streamText, true) as Workflow;
     if (config.callback) {
-      config.callback.onMessage({
+      await config.callback.onMessage({
         taskId: this.taskId,
         agentName: "Planer",
         type: "workflow",

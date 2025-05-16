@@ -26,7 +26,7 @@ export async function main(prompt: string): Promise<Eko> {
   };
 
   let callback: StreamCallback & HumanCallback = {
-    onMessage: (message: StreamCallbackMessage) => {
+    onMessage: async (message: StreamCallbackMessage) => {
       if (message.type == "workflow" && message.streamDone) {
         printLog("Plan\n" + message.workflow.xml);
       } else if (message.type == "text" && message.streamDone) {

@@ -38,7 +38,7 @@ const llms: LLMs = {
 async function run() {
   Log.setLevel(0);
   let callback = {
-    onMessage: (message: StreamCallbackMessage) => {
+    onMessage: async (message: StreamCallbackMessage) => {
       if (message.type == "workflow" && !message.streamDone) {
         return;
       }

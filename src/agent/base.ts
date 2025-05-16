@@ -179,7 +179,7 @@ export class Agent {
       );
       toolResults.push(llmToolResult);
       if (context.config.callback) {
-        context.config.callback.onMessage({
+        await context.config.callback.onMessage({
           taskId: context.taskId,
           agentName: result.toolName,
           nodeId: agentContext.agentChain.agent.id,
@@ -505,7 +505,7 @@ export class Agent {
     let agentChain = agentContext.agentChain;
     let agentNode = agentChain.agent;
     let streamCallback = context.config.callback || {
-      onMessage: () => {},
+      onMessage: async () => {},
     };
     let request: LLMRequest = {
       tools: tools,
@@ -532,7 +532,7 @@ export class Agent {
         switch (chunk.type) {
           case "text-delta": {
             streamText += chunk.textDelta || "";
-            streamCallback.onMessage({
+            await streamCallback.onMessage({
               taskId: context.taskId,
               agentName: agentNode.name,
               nodeId: agentNode.id,
@@ -545,7 +545,7 @@ export class Agent {
           }
           case "reasoning": {
             thinkText += chunk.textDelta || "";
-            streamCallback.onMessage({
+            await streamCallback.onMessage({
               taskId: context.taskId,
               agentName: agentNode.name,
               nodeId: agentNode.id,
@@ -559,7 +559,7 @@ export class Agent {
           case "tool-call-delta": {
             if (!textStreamDone) {
               textStreamDone = true;
-              streamCallback.onMessage({
+              await streamCallback.onMessage({
                 taskId: context.taskId,
                 agentName: agentNode.name,
                 nodeId: agentNode.id,
@@ -570,7 +570,7 @@ export class Agent {
               });
             }
             toolArgsText += chunk.argsTextDelta || "";
-            streamCallback.onMessage({
+            await streamCallback.onMessage({
               taskId: context.taskId,
               agentName: agentNode.name,
               nodeId: agentNode.id,
@@ -584,7 +584,7 @@ export class Agent {
           case "tool-call": {
             toolArgsText = "";
             let args = chunk.args ? JSON.parse(chunk.args) : {};
-            streamCallback.onMessage({
+            await streamCallback.onMessage({
               taskId: context.taskId,
               agentName: agentNode.name,
               nodeId: agentNode.id,
@@ -602,7 +602,7 @@ export class Agent {
             break;
           }
           case "file": {
-            streamCallback.onMessage({
+            await streamCallback.onMessage({
               taskId: context.taskId,
               agentName: agentNode.name,
               nodeId: agentNode.id,
@@ -614,7 +614,7 @@ export class Agent {
           }
           case "error": {
             Log.error(`${this.name} agent error: `, chunk);
-            streamCallback.onMessage({
+            await streamCallback.onMessage({
               taskId: context.taskId,
               agentName: agentNode.name,
               nodeId: agentNode.id,
@@ -626,7 +626,7 @@ export class Agent {
           case "finish": {
             if (!textStreamDone) {
               textStreamDone = true;
-              streamCallback.onMessage({
+              await streamCallback.onMessage({
                 taskId: context.taskId,
                 agentName: agentNode.name,
                 nodeId: agentNode.id,
@@ -636,7 +636,7 @@ export class Agent {
                 text: streamText,
               });
             }
-            streamCallback.onMessage({
+            await streamCallback.onMessage({
               taskId: context.taskId,
               agentName: agentNode.name,
               nodeId: agentNode.id,

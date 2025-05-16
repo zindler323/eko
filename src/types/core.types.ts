@@ -78,7 +78,7 @@ export type StreamCallbackMessage = {
 );
 
 export interface StreamCallback {
-  onMessage: (message: StreamCallbackMessage) => void;
+  onMessage: (message: StreamCallbackMessage) => Promise<void>;
 }
 
 export type WorkflowTextNode = {
