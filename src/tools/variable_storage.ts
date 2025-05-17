@@ -87,3 +87,5 @@ export default class VariableStorageTool implements Tool {
     };
   }
 }
+
+export { VariableStorageTool };

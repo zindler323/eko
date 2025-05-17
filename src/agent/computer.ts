@@ -388,3 +388,5 @@ This is a computer GUI interface, observe the execution through screenshots, and
   }
 
 }
+
+export { BaseComputerAgent };

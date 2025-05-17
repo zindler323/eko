@@ -26,6 +26,9 @@ const AppRun = () => {
       }
     });
     const messageListener = (message: any) => {
+      if (!message) {
+        return;
+      }
       if (message.type === "stop") {
         setRunning(false);
         chrome.storage.local.set({ running: false });

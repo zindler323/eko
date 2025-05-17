@@ -11,7 +11,10 @@ export default abstract class BaseChatAgent extends Agent {
       tools: ext_tools || [],
       llms: llms,
       mcpClient: mcpClient,
-      planDescription: "Chat assistant, handles non-task related conversations. Please use it to reply when the task does not involve operations with other agents.",
+      planDescription:
+        "Chat assistant, handles non-task related conversations. Please use it to reply when the task does not involve operations with other agents.",
     });
   }
 }
+
+export { BaseChatAgent };

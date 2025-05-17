@@ -216,3 +216,5 @@ export default abstract class BaseFileAgent extends Agent {
     ];
   }
 }
+
+export { BaseFileAgent };

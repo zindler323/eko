@@ -33,7 +33,9 @@ export async function main(prompt: string): Promise<Eko> {
         printLog(message.text);
       } else if (message.type == "tool_use") {
         printLog(
-          `${message.agentName} > ${message.toolName}\n${JSON.stringify(message.params)}`
+          `${message.agentName} > ${message.toolName}\n${JSON.stringify(
+            message.params
+          )}`
         );
       }
       console.log("message: ", JSON.stringify(message, null, 2));
@@ -45,15 +47,20 @@ export async function main(prompt: string): Promise<Eko> {
 
   let agents = [new BrowserAgent()];
   let eko = new Eko({ llms, agents, callback });
-  let result = await eko.run(prompt);
-  if (result.success) {
-    printLog(result.result || "Success", "success");
-  } else {
-    printLog(result.result || "Error", "error");
-  }
+  eko
+    .run(prompt)
+    .then((res) => {
+      printLog(res.result, res.success ? "success" : "error");
+    })
+    .catch((error) => {
+      printLog(error, "error");
+    }).finally(() => {
+      chrome.storage.local.set({ running: false });
+      chrome.runtime.sendMessage({ type: "stop" });
+    });
   return eko;
 }
 
-function printLog(log: string, level?: "info" | "success" | "error") {
-  chrome.runtime.sendMessage({ type: "log", log, level: level || "info" });
+function printLog(message: string, level?: "info" | "success" | "error") {
+  chrome.runtime.sendMessage({ type: "log", log: message + "", level: level || "info" });
 }

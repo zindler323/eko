@@ -126,3 +126,5 @@ export default abstract class BaseShellAgent extends Agent {
     ];
   }
 }
+
+export { BaseShellAgent };

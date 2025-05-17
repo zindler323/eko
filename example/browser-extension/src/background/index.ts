@@ -24,15 +24,13 @@ chrome.runtime.onMessage.addListener(async function (
         log: e + "",
         level: "error",
       });
-    } finally {
-      chrome.storage.local.set({ running: false });
-      chrome.runtime.sendMessage({ type: "stop" });
     }
   } else if (request.type == "stop") {
+    eko && eko.getAllTaskId().forEach(taskId => {
+      eko.abortTask(taskId);
+      chrome.runtime.sendMessage({ type: "log", log: "Abort taskId: " + taskId });
+    });
     chrome.runtime.sendMessage({ type: "log", log: "Stop" });
-    if (eko) {
-      eko.getAllTaskId().forEach(taskId => eko.abortTask(taskId));
-    }
   }
 });
 

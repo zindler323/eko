@@ -29,3 +29,5 @@ export default class WatchTriggerTool implements Tool {
   }
 
 }
+
+export { WatchTriggerTool };

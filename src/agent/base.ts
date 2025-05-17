@@ -1,28 +1,31 @@
 import config from "../config";
 import Log from "../common/log";
+import * as memory from "../memory";
 import { RetryLanguageModel } from "../llm";
 import { ToolWrapper } from "../tools/wrapper";
-import { WorkflowAgent, IMcpClient } from "../types";
 import { AgentChain, ToolChain } from "../core/chain";
 import Context, { AgentContext } from "../core/context";
+import { McpTool, VariableStorageTool } from "../tools";
 import { toImage, mergeTools, uuidv4 } from "../common/utils";
+import { getAgentSystemPrompt, getAgentUserPrompt } from "../prompt/agent";
+import {
+  WorkflowAgent,
+  IMcpClient,
+  LLMRequest,
+  Tool,
+  ToolExecuter,
+  ToolResult,
+  ToolSchema,
+} from "../types";
 import {
   LanguageModelV1FunctionTool,
   LanguageModelV1Prompt,
   LanguageModelV1StreamPart,
   LanguageModelV1TextPart,
   LanguageModelV1ToolCallPart,
+  LanguageModelV1ToolChoice,
   LanguageModelV1ToolResultPart,
 } from "@ai-sdk/provider";
-import { LLMRequest } from "../types/llm.types";
-import { McpTool, VariableStorageTool } from "../tools";
-import { getAgentSystemPrompt, getAgentUserPrompt } from "../prompt/agent";
-import {
-  Tool,
-  ToolExecuter,
-  ToolResult,
-  ToolSchema,
-} from "../types/tools.types";
 
 export type AgentParams = {
   name: string;
@@ -50,10 +53,7 @@ export class Agent {
     this.planDescription = params.planDescription;
   }
 
-  public async run(
-    context: Context,
-    agentChain: AgentChain
-  ): Promise<string> {
+  public async run(context: Context, agentChain: AgentChain): Promise<string> {
     let mcpClient = this.mcpClient || context.config.defaultMcpClient;
     let agentContext = new AgentContext(context, this, agentChain);
     try {
@@ -91,13 +91,13 @@ export class Agent {
             mcpClient,
             controlMcp.mcpParams
           );
-          let usedTools = this.extractUsedTool(messages, agentTools);
+          let usedTools = memory.extractUsedTool(messages, agentTools);
           let _agentTools = mergeTools(tools, usedTools);
           agentTools = mergeTools(_agentTools, mcpTools);
         }
       }
       await this.handleMessages(agentContext, messages);
-      let results = await this.callLLM(
+      let results = await callLLM(
         agentContext,
         rlm,
         messages,
@@ -127,7 +127,7 @@ export class Agent {
     let context = agentContext.context;
     let user_messages: LanguageModelV1Prompt = [];
     let toolResults: LanguageModelV1ToolResultPart[] = [];
-    results = this.removeDuplicateToolUse(results);
+    results = memory.removeDuplicateToolUse(results);
     if (results.length == 0) {
       return null;
     }
@@ -220,33 +220,10 @@ export class Agent {
     return tools.filter((tool) => toolNames.indexOf(tool.name) == -1);
   }
 
-  private removeDuplicateToolUse(
-    results: Array<LanguageModelV1TextPart | LanguageModelV1ToolCallPart>
-  ): Array<LanguageModelV1TextPart | LanguageModelV1ToolCallPart> {
-    if (
-      results.length <= 1 ||
-      results.filter((r) => r.type == "tool-call").length <= 1
-    ) {
-      return results;
-    }
-    let _results = [];
-    let tool_uniques = [];
-    for (let i = 0; i < results.length; i++) {
-      if (results[i].type === "tool-call") {
-        let tool = results[i] as LanguageModelV1ToolCallPart;
-        let key = tool.toolName + tool.args;
-        if (tool_uniques.indexOf(key) == -1) {
-          _results.push(results[i]);
-          tool_uniques.push(key);
-        }
-      } else {
-        _results.push(results[i]);
-      }
-    }
-    return _results;
-  }
-
-  protected async initMessages(agentContext: AgentContext, tools?: Tool[]): Promise<LanguageModelV1Prompt> {
+  protected async initMessages(
+    agentContext: AgentContext,
+    tools?: Tool[]
+  ): Promise<LanguageModelV1Prompt> {
     let messages: LanguageModelV1Prompt = [
       {
         role: "system",
@@ -353,31 +330,6 @@ export class Agent {
     return null;
   }
 
-  private extractUsedTool(
-    messages: LanguageModelV1Prompt,
-    agentTools: Tool[]
-  ): Tool[] {
-    let tools: Tool[] = [];
-    let toolNames: string[] = [];
-    for (let i = 0; i < messages.length; i++) {
-      let message = messages[i];
-      if (message.role == "tool") {
-        for (let j = 0; j < message.content.length; j++) {
-          let toolName = message.content[j].toolName;
-          if (toolNames.indexOf(toolName) > -1) {
-            continue;
-          }
-          toolNames.push(toolName);
-          let tool = agentTools.filter((tool) => tool.name === toolName)[0];
-          if (tool) {
-            tools.push(tool);
-          }
-        }
-      }
-    }
-    return tools;
-  }
-
   protected convertToolResult(
     toolUse: LanguageModelV1ToolCallPart,
     toolResult: ToolResult,
@@ -443,221 +395,7 @@ export class Agent {
     messages: LanguageModelV1Prompt
   ): Promise<void> {
     // Only keep the last image / file
-    let imageNum = 0;
-    let fileNum = 0;
-    for (let i = messages.length - 1; i >= 0; i--) {
-      let message = messages[i];
-      if (message.role == "user") {
-        for (let j = 0; j < message.content.length; j++) {
-          let content = message.content[j];
-          if (content.type == "image") {
-            if (++imageNum == 1) {
-              break;
-            }
-            content = {
-              type: "text",
-              text: "[image]",
-            };
-            message.content[j] = content;
-          } else if (content.type == "file") {
-            if (++fileNum == 1) {
-              break;
-            }
-            content = {
-              type: "text",
-              text: "[file]",
-            };
-            message.content[j] = content;
-          }
-        }
-      } else if (message.role == "tool") {
-        for (let j = 0; j < message.content.length; j++) {
-          let content = message.content[j];
-          let tool_content = content.content;
-          if (!tool_content || tool_content.length == 0) {
-            continue;
-          }
-          for (let r = 0; r < tool_content.length; r++) {
-            let _content = tool_content[r];
-            if (_content.type == "image") {
-              if (++imageNum == 1) {
-                break;
-              }
-              _content = {
-                type: "text",
-                text: "[image]",
-              };
-              tool_content[r] = _content;
-            }
-          }
-        }
-      }
-    }
-  }
-
-  private async callLLM(
-    agentContext: AgentContext,
-    rlm: RetryLanguageModel,
-    messages: LanguageModelV1Prompt,
-    tools: LanguageModelV1FunctionTool[]
-  ): Promise<Array<LanguageModelV1TextPart | LanguageModelV1ToolCallPart>> {
-    let context = agentContext.context;
-    let agentChain = agentContext.agentChain;
-    let agentNode = agentChain.agent;
-    let streamCallback = context.config.callback || {
-      onMessage: async () => {},
-    };
-    let request: LLMRequest = {
-      tools: tools,
-      messages: messages,
-      abortSignal: context.controller.signal,
-    };
-    agentChain.agentRequest = request;
-    let result = await rlm.callStream(request);
-    let streamText = "";
-    let thinkText = "";
-    let toolArgsText = "";
-    let streamId = uuidv4();
-    let textStreamDone = false;
-    let toolParts: LanguageModelV1ToolCallPart[] = [];
-    const reader = result.stream.getReader();
-    try {
-      while (true) {
-        context.checkAborted();
-        const { done, value } = await reader.read();
-        if (done) {
-          break;
-        }
-        let chunk = value as LanguageModelV1StreamPart;
-        switch (chunk.type) {
-          case "text-delta": {
-            streamText += chunk.textDelta || "";
-            await streamCallback.onMessage({
-              taskId: context.taskId,
-              agentName: agentNode.name,
-              nodeId: agentNode.id,
-              type: "text",
-              streamId,
-              streamDone: false,
-              text: streamText,
-            });
-            break;
-          }
-          case "reasoning": {
-            thinkText += chunk.textDelta || "";
-            await streamCallback.onMessage({
-              taskId: context.taskId,
-              agentName: agentNode.name,
-              nodeId: agentNode.id,
-              type: "thinking",
-              streamId,
-              streamDone: false,
-              text: thinkText,
-            });
-            break;
-          }
-          case "tool-call-delta": {
-            if (!textStreamDone) {
-              textStreamDone = true;
-              await streamCallback.onMessage({
-                taskId: context.taskId,
-                agentName: agentNode.name,
-                nodeId: agentNode.id,
-                type: "text",
-                streamId,
-                streamDone: true,
-                text: streamText,
-              });
-            }
-            toolArgsText += chunk.argsTextDelta || "";
-            await streamCallback.onMessage({
-              taskId: context.taskId,
-              agentName: agentNode.name,
-              nodeId: agentNode.id,
-              type: "tool_streaming",
-              toolId: chunk.toolCallId,
-              toolName: chunk.toolName,
-              paramsText: toolArgsText,
-            });
-            break;
-          }
-          case "tool-call": {
-            toolArgsText = "";
-            let args = chunk.args ? JSON.parse(chunk.args) : {};
-            await streamCallback.onMessage({
-              taskId: context.taskId,
-              agentName: agentNode.name,
-              nodeId: agentNode.id,
-              type: "tool_use",
-              toolId: chunk.toolCallId,
-              toolName: chunk.toolName,
-              params: args,
-            });
-            toolParts.push({
-              type: "tool-call",
-              toolCallId: chunk.toolCallId,
-              toolName: chunk.toolName,
-              args: args,
-            });
-            break;
-          }
-          case "file": {
-            await streamCallback.onMessage({
-              taskId: context.taskId,
-              agentName: agentNode.name,
-              nodeId: agentNode.id,
-              type: "file",
-              mimeType: chunk.mimeType,
-              data: chunk.data as string,
-            });
-            break;
-          }
-          case "error": {
-            Log.error(`${this.name} agent error: `, chunk);
-            await streamCallback.onMessage({
-              taskId: context.taskId,
-              agentName: agentNode.name,
-              nodeId: agentNode.id,
-              type: "error",
-              error: chunk.error,
-            });
-            throw new Error("Plan Error");
-          }
-          case "finish": {
-            if (!textStreamDone) {
-              textStreamDone = true;
-              await streamCallback.onMessage({
-                taskId: context.taskId,
-                agentName: agentNode.name,
-                nodeId: agentNode.id,
-                type: "text",
-                streamId,
-                streamDone: true,
-                text: streamText,
-              });
-            }
-            await streamCallback.onMessage({
-              taskId: context.taskId,
-              agentName: agentNode.name,
-              nodeId: agentNode.id,
-              type: "finish",
-              finishReason: chunk.finishReason,
-              usage: chunk.usage,
-            });
-            break;
-          }
-        }
-      }
-    } finally {
-      reader.releaseLock();
-    }
-    agentChain.agentResult = streamText;
-    return streamText
-      ? [
-          { type: "text", text: streamText } as LanguageModelV1TextPart,
-          ...toolParts,
-        ]
-      : toolParts;
+    memory.handleMultiImageFileMessage(messages);
   }
 
   protected async callInnerTool(fun: () => Promise<any>): Promise<ToolResult> {
@@ -695,4 +433,175 @@ export class Agent {
   get McpClient() {
     return this.mcpClient;
   }
+}
+
+export async function callLLM(
+  agentContext: AgentContext,
+  rlm: RetryLanguageModel,
+  messages: LanguageModelV1Prompt,
+  tools: LanguageModelV1FunctionTool[],
+  noCompress?: boolean,
+  toolChoice?: LanguageModelV1ToolChoice
+): Promise<Array<LanguageModelV1TextPart | LanguageModelV1ToolCallPart>> {
+  if (messages.length >= config.compressThreshold && !noCompress) {
+    await memory.compressAgentMessages(agentContext, rlm, messages, tools);
+  }
+  let context = agentContext.context;
+  let agentChain = agentContext.agentChain;
+  let agentNode = agentChain.agent;
+  let streamCallback = context.config.callback || {
+    onMessage: async () => {},
+  };
+  let request: LLMRequest = {
+    tools: tools,
+    toolChoice,
+    messages: messages,
+    abortSignal: context.controller.signal,
+  };
+  agentChain.agentRequest = request;
+  let result = await rlm.callStream(request);
+  let streamText = "";
+  let thinkText = "";
+  let toolArgsText = "";
+  let streamId = uuidv4();
+  let textStreamDone = false;
+  let toolParts: LanguageModelV1ToolCallPart[] = [];
+  const reader = result.stream.getReader();
+  try {
+    while (true) {
+      context.checkAborted();
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      let chunk = value as LanguageModelV1StreamPart;
+      switch (chunk.type) {
+        case "text-delta": {
+          streamText += chunk.textDelta || "";
+          await streamCallback.onMessage({
+            taskId: context.taskId,
+            agentName: agentNode.name,
+            nodeId: agentNode.id,
+            type: "text",
+            streamId,
+            streamDone: false,
+            text: streamText,
+          });
+          break;
+        }
+        case "reasoning": {
+          thinkText += chunk.textDelta || "";
+          await streamCallback.onMessage({
+            taskId: context.taskId,
+            agentName: agentNode.name,
+            nodeId: agentNode.id,
+            type: "thinking",
+            streamId,
+            streamDone: false,
+            text: thinkText,
+          });
+          break;
+        }
+        case "tool-call-delta": {
+          if (!textStreamDone) {
+            textStreamDone = true;
+            await streamCallback.onMessage({
+              taskId: context.taskId,
+              agentName: agentNode.name,
+              nodeId: agentNode.id,
+              type: "text",
+              streamId,
+              streamDone: true,
+              text: streamText,
+            });
+          }
+          toolArgsText += chunk.argsTextDelta || "";
+          await streamCallback.onMessage({
+            taskId: context.taskId,
+            agentName: agentNode.name,
+            nodeId: agentNode.id,
+            type: "tool_streaming",
+            toolId: chunk.toolCallId,
+            toolName: chunk.toolName,
+            paramsText: toolArgsText,
+          });
+          break;
+        }
+        case "tool-call": {
+          toolArgsText = "";
+          let args = chunk.args ? JSON.parse(chunk.args) : {};
+          await streamCallback.onMessage({
+            taskId: context.taskId,
+            agentName: agentNode.name,
+            nodeId: agentNode.id,
+            type: "tool_use",
+            toolId: chunk.toolCallId,
+            toolName: chunk.toolName,
+            params: args,
+          });
+          toolParts.push({
+            type: "tool-call",
+            toolCallId: chunk.toolCallId,
+            toolName: chunk.toolName,
+            args: args,
+          });
+          break;
+        }
+        case "file": {
+          await streamCallback.onMessage({
+            taskId: context.taskId,
+            agentName: agentNode.name,
+            nodeId: agentNode.id,
+            type: "file",
+            mimeType: chunk.mimeType,
+            data: chunk.data as string,
+          });
+          break;
+        }
+        case "error": {
+          Log.error(`${agentNode.name} agent error: `, chunk);
+          await streamCallback.onMessage({
+            taskId: context.taskId,
+            agentName: agentNode.name,
+            nodeId: agentNode.id,
+            type: "error",
+            error: chunk.error,
+          });
+          throw new Error("Plan Error");
+        }
+        case "finish": {
+          if (!textStreamDone) {
+            textStreamDone = true;
+            await streamCallback.onMessage({
+              taskId: context.taskId,
+              agentName: agentNode.name,
+              nodeId: agentNode.id,
+              type: "text",
+              streamId,
+              streamDone: true,
+              text: streamText,
+            });
+          }
+          await streamCallback.onMessage({
+            taskId: context.taskId,
+            agentName: agentNode.name,
+            nodeId: agentNode.id,
+            type: "finish",
+            finishReason: chunk.finishReason,
+            usage: chunk.usage,
+          });
+          break;
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  agentChain.agentResult = streamText;
+  return streamText
+    ? [
+        { type: "text", text: streamText } as LanguageModelV1TextPart,
+        ...toolParts,
+      ]
+    : toolParts;
 }

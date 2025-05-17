@@ -53,3 +53,5 @@ export default class ForeachTaskTool implements Tool {
     return null as any;
   }
 }
+
+export { ForeachTaskTool };

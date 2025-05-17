@@ -92,12 +92,12 @@ export function toImage(imageData: string): Uint8Array | URL {
   return image;
 }
 
-export function mergeTools(tools1: Tool[], tools2: Tool[]): Tool[] {
-  let tools: Tool[] = [];
+export function mergeTools<T extends Tool | LanguageModelV1FunctionTool>(tools1: T[], tools2: T[]): T[] {
+  let tools: T[] = [];
   let toolMap2 = tools2.reduce((map, tool) => {
     map[tool.name] = tool;
     return map;
-  }, {} as Record<string, Tool>);
+  }, {} as Record<string, T>);
   for (let i = 0; i < tools1.length; i++) {
     let tool1 = tools1[i];
     let tool2 = toolMap2[tool1.name];

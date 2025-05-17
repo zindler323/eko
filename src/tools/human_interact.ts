@@ -124,3 +124,5 @@ request_help: Request assistance from the user; for instance, when an operation 
     }
   }
 }
+
+export { HumanInteractTool };
