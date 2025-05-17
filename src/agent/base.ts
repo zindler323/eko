@@ -394,8 +394,8 @@ export class Agent {
     agentContext: AgentContext,
     messages: LanguageModelV1Prompt
   ): Promise<void> {
-    // Only keep the last image / file
-    memory.handleMultiImageFileMessage(messages);
+    // Only keep the last image / file, large tool-text-result
+    memory.handleLargeContextMessages(messages);
   }
 
   protected async callInnerTool(fun: () => Promise<any>): Promise<ToolResult> {

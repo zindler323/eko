@@ -53,8 +53,9 @@ export class RetryLanguageModel {
   async doGenerate(
     options: LanguageModelV1CallOptions
   ): Promise<GenerateResult> {
-    for (let i = 0; i < this.names.length; i++) {
-      const name = this.names[i];
+    const names = [...this.names, ...this.names];
+    for (let i = 0; i < names.length; i++) {
+      const name = names[i];
       const llm = this.getLLM(name);
       if (!llm) {
         continue;
@@ -103,8 +104,9 @@ export class RetryLanguageModel {
   }
 
   async doStream(options: LanguageModelV1CallOptions): Promise<StreamResult> {
-    for (let i = 0; i < this.names.length; i++) {
-      const name = this.names[i];
+    const names = [...this.names, ...this.names];
+    for (let i = 0; i < names.length; i++) {
+      const name = names[i];
       const llm = this.getLLM(name);
       if (!llm) {
         continue;

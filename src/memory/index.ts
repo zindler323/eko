@@ -11,57 +11,29 @@ import { RetryLanguageModel } from "../llm";
 import { mergeTools } from "../common/utils";
 import { AgentContext } from "../core/context";
 
-export function handleMultiImageFileMessage(messages: LanguageModelV1Prompt) {
-  let imageNum = 0;
-  let fileNum = 0;
-  for (let i = messages.length - 1; i >= 0; i--) {
+export function extractUsedTool<T extends Tool | LanguageModelV1FunctionTool>(
+  messages: LanguageModelV1Prompt,
+  agentTools: T[]
+): T[] {
+  let tools: T[] = [];
+  let toolNames: string[] = [];
+  for (let i = 0; i < messages.length; i++) {
     let message = messages[i];
-    if (message.role == "user") {
+    if (message.role == "tool") {
       for (let j = 0; j < message.content.length; j++) {
-        let content = message.content[j];
-        if (content.type == "image") {
-          if (++imageNum == 1) {
-            break;
-          }
-          content = {
-            type: "text",
-            text: "[image]",
-          };
-          message.content[j] = content;
-        } else if (content.type == "file") {
-          if (++fileNum == 1) {
-            break;
-          }
-          content = {
-            type: "text",
-            text: "[file]",
-          };
-          message.content[j] = content;
-        }
-      }
-    } else if (message.role == "tool") {
-      for (let j = 0; j < message.content.length; j++) {
-        let content = message.content[j];
-        let tool_content = content.content;
-        if (!tool_content || tool_content.length == 0) {
+        let toolName = message.content[j].toolName;
+        if (toolNames.indexOf(toolName) > -1) {
           continue;
         }
-        for (let r = 0; r < tool_content.length; r++) {
-          let _content = tool_content[r];
-          if (_content.type == "image") {
-            if (++imageNum == 1) {
-              break;
-            }
-            _content = {
-              type: "text",
-              text: "[image]",
-            };
-            tool_content[r] = _content;
-          }
+        toolNames.push(toolName);
+        let tool = agentTools.filter((tool) => tool.name === toolName)[0];
+        if (tool) {
+          tools.push(tool);
         }
       }
     }
   }
+  return tools;
 }
 
 export function removeDuplicateToolUse(
@@ -88,31 +60,6 @@ export function removeDuplicateToolUse(
     }
   }
   return _results;
-}
-
-export function extractUsedTool<T extends Tool | LanguageModelV1FunctionTool>(
-  messages: LanguageModelV1Prompt,
-  agentTools: T[]
-): T[] {
-  let tools: T[] = [];
-  let toolNames: string[] = [];
-  for (let i = 0; i < messages.length; i++) {
-    let message = messages[i];
-    if (message.role == "tool") {
-      for (let j = 0; j < message.content.length; j++) {
-        let toolName = message.content[j].toolName;
-        if (toolNames.indexOf(toolName) > -1) {
-          continue;
-        }
-        toolNames.push(toolName);
-        let tool = agentTools.filter((tool) => tool.name === toolName)[0];
-        if (tool) {
-          tools.push(tool);
-        }
-      }
-    }
-  }
-  return tools;
 }
 
 export async function compressAgentMessages(
@@ -194,4 +141,74 @@ export async function compressAgentMessages(
       text: string;
     }>,
   });
+}
+
+export function handleLargeContextMessages(messages: LanguageModelV1Prompt, largeTextLength: number = 5000) {
+  let imageNum = 0;
+  let fileNum = 0;
+  let longTextTools: Record<string, number> = {};
+  for (let i = messages.length - 1; i >= 0; i--) {
+    let message = messages[i];
+    if (message.role == "user") {
+      for (let j = 0; j < message.content.length; j++) {
+        let content = message.content[j];
+        if (content.type == "image") {
+          if (++imageNum == 1) {
+            break;
+          }
+          content = {
+            type: "text",
+            text: "[image]",
+          };
+          message.content[j] = content;
+        } else if (content.type == "file") {
+          if (++fileNum == 1) {
+            break;
+          }
+          content = {
+            type: "text",
+            text: "[file]",
+          };
+          message.content[j] = content;
+        }
+      }
+    } else if (message.role == "tool") {
+      for (let j = 0; j < message.content.length; j++) {
+        let toolResult = message.content[j];
+        let toolContent = toolResult.content;
+        if (!toolContent || toolContent.length == 0) {
+          continue;
+        }
+        for (let r = 0; r < toolContent.length; r++) {
+          let _content = toolContent[r];
+          if (_content.type == "image") {
+            if (++imageNum == 1) {
+              break;
+            }
+            _content = {
+              type: "text",
+              text: "[image]",
+            };
+            toolContent[r] = _content;
+          }
+        }
+        for (let r = 0; r < toolContent.length; r++) {
+          let _content = toolContent[r];
+          if (_content.type == "text" && _content.text?.length > largeTextLength) {
+            if (!longTextTools[toolResult.toolName]) {
+              longTextTools[toolResult.toolName] = 1;
+              break;
+            } else {
+              longTextTools[toolResult.toolName]++;
+            }
+            _content = {
+              type: "text",
+              text: _content.text.substring(0, 500) + "...",
+            };
+            toolContent[r] = _content;
+          }
+        }
+      }
+    }
+  }
 }
