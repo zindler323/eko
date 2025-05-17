@@ -4,6 +4,7 @@ import {
   LanguageModelV1TextPart,
   LanguageModelV1ToolCallPart,
 } from "@ai-sdk/provider";
+import config from "../config";
 import { Tool } from "../types";
 import TaskSnapshotTool from "./snapshot";
 import { callLLM } from "../agent/base";
@@ -143,7 +144,7 @@ export async function compressAgentMessages(
   });
 }
 
-export function handleLargeContextMessages(messages: LanguageModelV1Prompt, largeTextLength: number = 5000) {
+export function handleLargeContextMessages(messages: LanguageModelV1Prompt) {
   let imageNum = 0;
   let fileNum = 0;
   let longTextTools: Record<string, number> = {};
@@ -194,7 +195,7 @@ export function handleLargeContextMessages(messages: LanguageModelV1Prompt, larg
         }
         for (let r = 0; r < toolContent.length; r++) {
           let _content = toolContent[r];
-          if (_content.type == "text" && _content.text?.length > largeTextLength) {
+          if (_content.type == "text" && _content.text?.length > config.largeTextLength) {
             if (!longTextTools[toolResult.toolName]) {
               longTextTools[toolResult.toolName] = 1;
               break;
@@ -203,7 +204,7 @@ export function handleLargeContextMessages(messages: LanguageModelV1Prompt, larg
             }
             _content = {
               type: "text",
-              text: _content.text.substring(0, 500) + "...",
+              text: _content.text.substring(0, config.shortTextLength) + "...",
             };
             toolContent[r] = _content;
           }
