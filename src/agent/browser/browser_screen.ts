@@ -400,7 +400,8 @@ export default abstract class BaseBrowserScreenAgent extends BaseBrowserAgent {
 
   protected async handleMessages(
     agentContext: AgentContext,
-    messages: LanguageModelV1Prompt
+    messages: LanguageModelV1Prompt,
+    tools: Tool[]
   ): Promise<void> {
     let lastTool = this.lastToolResult(messages);
     if (
@@ -427,6 +428,6 @@ export default abstract class BaseBrowserScreenAgent extends BaseBrowserAgent {
         ],
       });
     }
-    super.handleMessages(agentContext, messages);
+    super.handleMessages(agentContext, messages, tools);
   }
 }

@@ -347,7 +347,8 @@ This is a computer GUI interface, observe the execution through screenshots, and
 
   protected async handleMessages(
     agentContext: AgentContext,
-    messages: LanguageModelV1Prompt
+    messages: LanguageModelV1Prompt,
+    tools: Tool[]
   ): Promise<void> {
     let lastMessage = messages[messages.length - 1];
     if (
@@ -384,7 +385,7 @@ This is a computer GUI interface, observe the execution through screenshots, and
         mimeType: result.imageType,
       });
     }
-    super.handleMessages(agentContext, messages);
+    super.handleMessages(agentContext, messages, tools);
   }
 
 }

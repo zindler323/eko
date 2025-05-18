@@ -107,7 +107,7 @@ export class Agent {
           agentTools = mergeTools(_agentTools, mcpTools);
         }
       }
-      await this.handleMessages(agentContext, messages);
+      await this.handleMessages(agentContext, messages, tools);
       let results = await callLLM(
         agentContext,
         rlm,
@@ -233,20 +233,20 @@ export class Agent {
 
   protected async buildSystemPrompt(
     agentContext: AgentContext,
-    tools?: Tool[]
+    tools: Tool[]
   ): Promise<string> {
     return getAgentSystemPrompt(
       this,
       agentContext.agentChain.agent,
       agentContext.context,
       tools,
-      await this.extSysPrompt(agentContext)
+      await this.extSysPrompt(agentContext, tools)
     );
   }
 
   protected async buildUserPrompt(
     agentContext: AgentContext,
-    tools?: Tool[]
+    tools: Tool[]
   ): Promise<
     Array<
       | LanguageModelV1TextPart
@@ -267,7 +267,7 @@ export class Agent {
     ];
   }
 
-  protected async extSysPrompt(agentContext: AgentContext): Promise<string> {
+  protected async extSysPrompt(agentContext: AgentContext, tools: Tool[]): Promise<string> {
     return "";
   }
 
@@ -406,7 +406,8 @@ export class Agent {
 
   protected async handleMessages(
     agentContext: AgentContext,
-    messages: LanguageModelV1Prompt
+    messages: LanguageModelV1Prompt,
+    tools: Tool[]
   ): Promise<void> {
     // Only keep the last image / file, large tool-text-result
     memory.handleLargeContextMessages(messages);

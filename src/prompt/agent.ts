@@ -50,11 +50,11 @@ const FOR_EACH_NODE = `
     <!-- duplicate task node, items support list and variable -->
     <forEach items="list or variable name">
       <node>forEach item step node</node>
-    </forEach>
-`;
+    </forEach>`;
 
 const FOR_EACH_PROMPT = `
-\`forEach\`: repetitive tasks, when executing to the forEach node, require the use of the \`${foreach_task}\` tool.
+* forEach node
+repetitive tasks, when executing to the forEach node, require the use of the \`${foreach_task}\` tool.
 `;
 
 const WATCH_NODE = `
@@ -65,11 +65,11 @@ const WATCH_NODE = `
         <node>Trigger step node</node>
         <node>...</node>
       </trigger>
-    </watch>
-`;
+    </watch>`;
 
 const WATCH_PROMPT = `
-\`watch\`: monitor changes in webpage DOM or file content, when executing to the watch node, require the use of the \`${watch_trigger}\` tool.
+* watch node
+monitor changes in webpage DOM or file content, when executing to the watch node, require the use of the \`${watch_trigger}\` tool.
 `;
 
 export function getAgentSystemPrompt(
@@ -81,32 +81,34 @@ export function getAgentSystemPrompt(
 ): string {
   let prompt = "";
   let nodePrompt = "";
+  tools = tools || agent.Tools;
   let agentNodeXml = agentNode.xml;
-  let hasWatch = agentNodeXml.indexOf("</watch>") > -1;
-  let hasForEach = agentNodeXml.indexOf("</forEach>") > -1;
-  let hasHumanTool =
-    (tools || agent.Tools).filter((tool) => tool.name == human_interact)
-      .length > 0;
+  let hasWatchNode = agentNodeXml.indexOf("</watch>") > -1;
+  let hasForEachNode = agentNodeXml.indexOf("</forEach>") > -1;
+  let hasHumanTool = tools.filter((tool) => tool.name == human_interact).length > 0;
   let hasVariable =
     agentNodeXml.indexOf("input=") > -1 ||
     agentNodeXml.indexOf("output=") > -1 ||
-    (tools || agent.Tools).filter((tool) => tool.name == variable_storage)
-      .length > 0;
+    tools.filter((tool) => tool.name == variable_storage).length > 0;
   if (hasHumanTool) {
     prompt += HUMAN_PROMPT;
   }
   if (hasVariable) {
     prompt += VARIABLE_PROMPT;
   }
-  if (hasForEach) {
-    prompt += FOR_EACH_PROMPT;
+  if (hasForEachNode) {
+    if (tools.filter((tool) => tool.name == foreach_task).length > 0) {
+      prompt += FOR_EACH_PROMPT;
+    }
     nodePrompt += FOR_EACH_NODE;
   }
-  if (hasWatch) {
-    prompt += WATCH_PROMPT;
+  if (hasWatchNode) {
+    if (tools.filter((tool) => tool.name == watch_trigger).length > 0) {
+      prompt += WATCH_PROMPT;
+    }
     nodePrompt += WATCH_NODE;
   }
-  if (extSysPrompt) {
+  if (extSysPrompt && extSysPrompt.trim()) {
     prompt += "\n" + extSysPrompt.trim() + "\n";
   }
   if (context.chain.agents.length > 1) {
@@ -120,6 +122,9 @@ export function getAgentSystemPrompt(
         }\n${sub(agentChain.agentResult, 500)}`;
       }
     }
+  }
+  if (prompt) {
+    prompt = "\n" + prompt.trim();
   }
   return AGENT_SYSTEM_TEMPLATE.replace("{name}", config.name)
     .replace("{agent}", agent.Name)
