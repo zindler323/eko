@@ -18,7 +18,9 @@ import {
   ToolSchema,
 } from "../types";
 import {
+  LanguageModelV1FilePart,
   LanguageModelV1FunctionTool,
+  LanguageModelV1ImagePart,
   LanguageModelV1Prompt,
   LanguageModelV1StreamPart,
   LanguageModelV1TextPart,
@@ -73,7 +75,16 @@ export class Agent {
     let context = agentContext.context;
     let agentNode = agentContext.agentChain.agent;
     const tools = [...this.tools, ...this.system_auto_tools(agentNode)];
-    let messages = await this.initMessages(agentContext, tools);
+    let messages: LanguageModelV1Prompt = [
+      {
+        role: "system",
+        content: await this.buildSystemPrompt(agentContext, tools),
+      },
+      {
+        role: "user",
+        content: await this.buildUserPrompt(agentContext, tools),
+      },
+    ];
     let rlm = new RetryLanguageModel(context.config.llms, this.llms);
     let agentTools = tools;
     while (loopNum < maxReactNum) {
@@ -103,7 +114,7 @@ export class Agent {
         messages,
         this.convertTools(agentTools)
       );
-      let finalResult = await this.handleResult(
+      let finalResult = await this.handleCallResult(
         agentContext,
         messages,
         agentTools,
@@ -117,7 +128,7 @@ export class Agent {
     return "Unfinished";
   }
 
-  protected async handleResult(
+  protected async handleCallResult(
     agentContext: AgentContext,
     messages: LanguageModelV1Prompt,
     agentTools: Tool[],
@@ -220,37 +231,40 @@ export class Agent {
     return tools.filter((tool) => toolNames.indexOf(tool.name) == -1);
   }
 
-  protected async initMessages(
+  protected async buildSystemPrompt(
     agentContext: AgentContext,
     tools?: Tool[]
-  ): Promise<LanguageModelV1Prompt> {
-    let messages: LanguageModelV1Prompt = [
+  ): Promise<string> {
+    return getAgentSystemPrompt(
+      this,
+      agentContext.agentChain.agent,
+      agentContext.context,
+      tools,
+      await this.extSysPrompt(agentContext)
+    );
+  }
+
+  protected async buildUserPrompt(
+    agentContext: AgentContext,
+    tools?: Tool[]
+  ): Promise<
+    Array<
+      | LanguageModelV1TextPart
+      | LanguageModelV1ImagePart
+      | LanguageModelV1FilePart
+    >
+  > {
+    return [
       {
-        role: "system",
-        content: getAgentSystemPrompt(
+        type: "text",
+        text: getAgentUserPrompt(
           this,
           agentContext.agentChain.agent,
           agentContext.context,
-          tools,
-          await this.extSysPrompt(agentContext)
+          tools
         ),
       },
-      {
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text: getAgentUserPrompt(
-              this,
-              agentContext.agentChain.agent,
-              agentContext.context,
-              tools
-            ),
-          },
-        ],
-      },
     ];
-    return messages;
   }
 
   protected async extSysPrompt(agentContext: AgentContext): Promise<string> {
