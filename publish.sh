@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
+npm run build
 npm config get registry 
 npm config set registry=https://registry.npmjs.org
 

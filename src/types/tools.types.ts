@@ -1,180 +1,74 @@
-export interface ComputerUseParam {
-  action: string;
-  coordinate?: [number, number];
-  text?: string;
+import { JSONSchema7 } from "json-schema";
+import { AgentContext } from "../core/context";
+import { LanguageModelV1ToolCallPart } from "@ai-sdk/provider";
+
+export type ToolSchema =
+  | {
+      name: string;
+      description?: string;
+      parameters: JSONSchema7;
+    }
+  | {
+      name: string;
+      description?: string;
+      input_schema: JSONSchema7;
+    }
+  | {
+      name: string;
+      description?: string;
+      inputSchema: JSONSchema7;
+    }
+  | {
+      type: "function";
+      function: {
+        name: string;
+        description?: string;
+        parameters: JSONSchema7;
+      };
+    };
+
+export type ToolResult = {
+  content:
+    | [
+        {
+          type: "text";
+          text: string;
+        }
+      ]
+    | [
+        {
+          type: "image";
+          data: string;
+          mimeType?: string;
+        }
+      ]
+    | [
+        {
+          type: "text";
+          text: string;
+        },
+        {
+          type: "image";
+          data: string;
+          mimeType?: string;
+        }
+      ];
+  isError?: boolean;
+  extInfo?: Record<string, unknown>;
+};
+
+export interface ToolExecuter {
+  execute: (
+    args: Record<string, unknown>,
+    agentContext: AgentContext,
+    toolCall: LanguageModelV1ToolCallPart
+  ) => Promise<ToolResult>;
 }
 
-export interface ComputerUseResult {
-  success: boolean;
-  image?: ScreenshotImage;
-  [key: string]: any;
-}
-
-export interface BrowserActionParam {
-  action: string;
-  index?: number;
-  text?: string;
-}
-
-export interface BrowserActionResult {
-  success: boolean;
-  image?: ScreenshotImage;
-  text?: string;
-  [key: string]: any;
-}
-
-export interface ExportFileParam {
-  content: string;
-  fileType: 'txt' | 'csv' | 'md' | 'html' | 'js' | 'xml' | 'json' | 'yml' | 'sql';
-  filename?: string;
-}
-
-export interface ExtractContentResult {
-  tabId: number;
-  result: {
-    title?: string;
-    url?: string;
-    content: string;
-  };
-}
-
-export interface OpenUrlParam {
-  url: string;
-  newWindow?: boolean;
-}
-
-export interface OpenUrlResult {
-  tabId: number;
-  windowId: number;
-  title?: string;
-}
-
-export interface BrowserTab {
-  id: number,
-  url?: string,
-  title?: string,
-  content: string,
-  description: string,
-}
-
-export interface ScreenshotResult {
-  image: ScreenshotImage;
-}
-
-export interface ScreenshotImage {
-  type: 'base64';
-  media_type: 'image/png' | 'image/jpeg';
-  data: string;
-}
-
-export interface TabManagementParam {
-  command: string;
-  tabId: number;
-}
-
-export interface SwitchTabParam {
-  tabId: number;
-}
-
-export type TabManagementResult = string;
-
-export interface TabInfo {
-  tabId?: number;
-  windowId?: number;
-  title?: string;
-  url?: string;
-  active?: boolean;
-}
-
-export interface CloseTabInfo {
-  closedTabId: number;
-  newTabId?: number;
-  newTabTitle?: string;
-}
-
-export interface WebSearchParam {
-  url?: string;
-  query: string;
-  maxResults?: number;
-}
-
-export interface WebSearchResult {
-  title: string;
-  url: string;
-  content: string;
-}
-
-export interface TaskPrompt {
-  task_prompt: string;
-}
-
-export interface ElementRect {
-  left: number;
-  top: number;
-  right?: number;
-  bottom?: number;
-  width?: number;
-  height?: number;
-}
-
-export interface CancelWorkflowInput {
-  reason: string;
-}
-
-export interface HumanInputTextInput {
-  question: string;
-}
-
-export interface HumanInputTextResult {
-  status: string;
-  answer: string;
-}
-
-export interface HumanInputSingleChoiceInput {
-  question: string;
-  choices: {choice: string}[];
-}
-
-export interface HumanInputSingleChoiceResult {
-  status: string;
-  answer: string;
-}
-
-export interface HumanInputMultipleChoiceInput {
-  question: string;
-  choices: {choice: string}[];
-}
-
-export interface HumanInputMultipleChoiceResult {
-  status: string;
-  answer: string[];
-}
-
-export interface HumanOperateInput {
-  reason: string,
-}
-
-export interface HumanOperateResult {
-  status: string,
-  userOperation: string,
-}
-
-export interface WorkflowSummary {
-  isSuccessful: boolean,
-  summary: string,
-  payload: string | undefined,
-}
-
-export interface DocumentAgentToolInput {
-  type: string,
-  title: string,
-  background: string,
-  keypoints: string,
-  style?: string,
-  references?: any,
-}
-
-export interface DocumentAgentToolOutput {
-  status: string,
-  content: string,
+export interface Tool extends ToolExecuter {
+  readonly name: string;
+  readonly description?: string;
+  readonly parameters: JSONSchema7;
+  readonly noPlan?: boolean;
+  readonly planDescription?: string;
 }

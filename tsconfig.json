@@ -1,20 +1,22 @@
 {
   "compilerOptions": {
-    "target": "ES2018",
+    "target": "ES2020",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
     "module": "ESNext",
-    "moduleResolution": "node",
-    "strict": true,
-    "allowJs": true,
-    "esModuleInterop": true,
+    "moduleResolution": "Bundler",
     "skipLibCheck": true,
+    "strict": true,
+    "allowJs": false,
     "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
     "outDir": "./dist",
     "declaration": true,
-    "declarationDir": "dist/types",
+    "declarationMap": true,
     "sourceMap": true,
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"]
-    }
-  }
+    "resolveJsonModule": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

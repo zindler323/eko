@@ -1,9 +1,11 @@
 export default {
-  preset: 'ts-jest',
-  testEnvironment: 'node',
-  roots: ['<rootDir>/src', '<rootDir>/test'],
-  testMatch: ['**/*.test.ts'],
+  preset: "ts-jest",
+  testEnvironment: "node",
+  roots: ["<rootDir>/src", "<rootDir>/test"],
+  setupFiles: ['dotenv/config'],
+  testMatch: ["**/*.test.ts"],
+  testTimeout: 60000,
   moduleNameMapper: {
-      '^@/(.*)$': '<rootDir>/src/$1'
-  }
+    "^@/(.*)$": "<rootDir>/src/$1",
+  },
 };
