@@ -42,7 +42,17 @@ Eko (pronounced like ‘echo’) is a production-ready JavaScript framework that
 
 ## Quickstart
 
-> Note: Please refer to the [Eko Quickstart guide](https://eko.fellou.ai/docs/getting-started/quickstart/) guide for full instructions on how to run it.
+> **Note**: Please refer to the [Eko Quickstart guide](https://eko.fellou.ai/docs/getting-started/quickstart/) guide for full instructions on how to run it.
+
+> **Security Warning**
+> 
+> DO NOT use API Keys in browser/frontend code!
+>
+> This will expose your credentials and may lead to unauthorized usage.
+>
+> Best Practices: Configure backend API proxy request through baseURL and request headers.
+>
+> Please refer to the link: https://eko.fellou.ai/docs/getting-started/configuration#web-environment
 
 ```typescript
 // quickstart.ts
