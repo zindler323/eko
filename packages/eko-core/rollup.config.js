@@ -22,7 +22,7 @@ export default [
       typescript(),
       copy({
         targets: [
-          { src: '../../README.md', dest: 'dist/' }
+          { src: '../../README.md', dest: './' }
         ]
       })
     ]
@@ -46,7 +46,7 @@ export default [
       typescript(),
       copy({
         targets: [
-          { src: '../../README.md', dest: 'dist/' }
+          { src: '../../README.md', dest: './' }
         ]
       })
     ]
