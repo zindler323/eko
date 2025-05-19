@@ -80,46 +80,6 @@ $ npm install @eko-ai/eko
 $ npx ts-node quickstart.ts
 ```
 
-## Demos
-
-**Prompt:** `Collect the latest NASDAQ data on Yahoo Finance, including price changes, market capitalization, trading volume of major stocks, analyze the data and generate visualization reports`.
-
-https://github.com/user-attachments/assets/4087b370-8eb8-4346-a549-c4ce4d1efec3
-
-Click [here](https://github.com/FellouAI/eko-demos/tree/main/browser-extension-stock) to get the source code.
-
----
-
-**Prompt:** `Based on the README of FellouAI/eko on github, search for competitors, highlight the key contributions of Eko, write a blog post advertising Eko, and post it on Write.as.`
-
-https://github.com/user-attachments/assets/6feaea86-2fb9-4e5c-b510-479c2473d810
-
-Click [here](https://github.com/FellouAI/eko-demos/tree/main/browser-extension-blog) to get the source code.
-
----
-
-**Prompt:** `Clean up all files in the current directory larger than 1MB`
-
-https://github.com/user-attachments/assets/ef7feb58-3ddd-4296-a1de-bb8b6c66e48b
-
-Click [here](https://eko.fellou.ai/docs/computeruse/computer-node/#example-file-cleanup-workflow) to Learn more.
-
----
-
-**Prompt:** Automatic software testing
-```
-    Current login page automation test:
-    1. Correct account and password are: admin / 666666 
-    2. Please randomly combine usernames and passwords for testing to verify if login validation works properly, such as: username cannot be empty, password cannot be empty, incorrect username, incorrect password
-    3. Finally, try to login with the correct account and password to verify if login is successful
-    4. Generate test report and export
-```
-
-https://github.com/user-attachments/assets/7716300a-c51d-41f1-8d4f-e3f593c1b6d5
-
-
-Click [here](https://eko.fellou.ai/docs/browseruse/browser-web#example-login-automation-testing) to Learn more.
-
 ## Use Cases
 
 - Browser automation and web scraping
