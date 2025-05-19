@@ -31,14 +31,14 @@ Eko (pronounced like ‘echo’) is a production-ready JavaScript framework that
 
 - [x] Pure JavaScript: Built for browsers and Node.js.🚀
 - [x] Multi-Agent: Unleash power with multiple Agents in one task.📈
-- [x] Agent Flexibility: Customize new Agents in just one line.🎉
+- [x] Agent/Tool Flexibility: Customize new Agents and Tools in just one line.🎉
 - [x] Native MCP: Connects seamlessly with [Awesome MCP Servers](https://mcpservers.org/).🔗
 - [x] Dynamic LLM: Balance speed and performance with flexible model choices.⚙️
 - [x] Human-in-the-loop: Intervene when it matters most.🤝
 - [x] Stream Planning: Dynamic rendering made easy.🎨
 - [x] Loop & Listener Tasks: Automate any repetitive task.🤖
-- [ ] Observable Chain
-- [ ] Native A2A
+- [ ] Observable Chain: *Coming soon*
+- [ ] Native A2A: *Coming soon*
 
 ## Quickstart
 
