@@ -66,7 +66,7 @@ let result = await eko.run("Search for the latest news about Musk");
 ```
 
 ```bash
-npm install @eko-ai/eko
+pnpm install @eko-ai/eko
 npx ts-node quickstart.ts
 ```
 

@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 import ChatAgent from "./chat";
-import BrowserAgent from "./browser";
+import { BrowserAgent } from "@eko-ai/eko-nodejs";
 import { Eko, Agent, Log, LLMs, StreamCallbackMessage } from "@eko-ai/eko";
 
 dotenv.config();
