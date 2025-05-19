@@ -1,14 +1,13 @@
 {
-  "name": "@eko-ai/eko-example-nodejs",
+  "name": "@eko-ai/eko-nodejs-example",
   "version": "1.0.0",
-  "description": "eko-example-nodejs",
   "type": "module",
   "main": "dist/index.cjs",
   "scripts": {
     "build": "rollup -c",
     "start": "node dist/index.cjs",
     "dev": "npm run build && npm run start",
-    "install": "npx playwright install"
+    "playwright": "npx playwright install"
   },
   "author": "FellouAI",
   "license": "MIT",
@@ -17,15 +16,15 @@
     "eko"
   ],
   "dependencies": {
-    "@eko-ai/eko": "file:../../",
-    "playwright": "^1.52.0",
-    "chromium-bidi": "^0.12.0"
+    "@eko-ai/eko": "file:../../packages/eko-core",
+    "@eko-ai/eko-nodejs": "file:../../packages/eko-nodejs"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^28.0.3",
     "@rollup/plugin-json": "^6.1.0",
     "@rollup/plugin-node-resolve": "^16.0.1",
     "@rollup/plugin-typescript": "^12.1.2",
+    "@types/node": "^22.15.19",
     "dotenv": "^16.5.0",
     "rollup": "^4.40.0",
     "tslib": "^2.8.1",
