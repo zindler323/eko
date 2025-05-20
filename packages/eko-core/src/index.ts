@@ -53,4 +53,10 @@ export {
   type StreamCallbackMessage,
 } from "./types";
 
-export { mergeTools, toImage, convertToolSchema } from "./common/utils";
+export {
+  mergeTools,
+  toImage,
+  convertToolSchema,
+  uuidv4,
+  call_timeout,
+} from "./common/utils";
