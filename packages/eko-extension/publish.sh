@@ -9,7 +9,7 @@ echo 'Login'
 pnpm login
 
 echo "Publish..."
-pnpm publish --access=public
+pnpm publish --access=public --no-git-checks
 
 echo -e "\successful\n"
 exit

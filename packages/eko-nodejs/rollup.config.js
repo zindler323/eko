@@ -2,6 +2,7 @@ import typescript from '@rollup/plugin-typescript';
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import json from '@rollup/plugin-json';
+import copy from 'rollup-plugin-copy';
 
 export default [
   {
@@ -13,14 +14,19 @@ export default [
         sourcemap: true
       }
     ],
-    external: ["dotenv"],
+    external: ["dotenv", "@eko-ai/eko", "playwright"],
     plugins: [
       json(),
       commonjs(),
       resolve({
         preferBuiltins: true,
       }),
-      typescript()
+      typescript(),
+      copy({
+        targets: [
+          { src: '../../README.md', dest: './' }
+        ]
+      })
     ]
   },
   {
@@ -32,7 +38,7 @@ export default [
         sourcemap: true
       }
     ],
-    external: ["dotenv"],
+    external: ["dotenv", "@eko-ai/eko", "playwright"],
     plugins: [
       json(),
       commonjs(),
@@ -40,7 +46,12 @@ export default [
         browser: true,
         preferBuiltins: true,
       }),
-      typescript()
+      typescript(),
+      copy({
+        targets: [
+          { src: '../../README.md', dest: './' }
+        ]
+      })
     ]
   }
 ];

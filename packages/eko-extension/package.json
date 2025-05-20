@@ -1,6 +1,6 @@
 {
   "name": "@eko-ai/eko-extension",
-  "version": "2.0.4",
+  "version": "2.0.8",
   "description": "Empowering language to transform human words into action.",
   "main": "dist/index.cjs.js",
   "module": "dist/index.esm.js",
@@ -9,16 +9,14 @@
   "files": [
     "dist/",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "package.json"
   ],
   "exports": {
     ".": {
       "require": "./dist/index.cjs.js",
       "import": "./dist/index.esm.js",
       "types": "./dist/index.d.ts"
-    },
-    "./types": {
-      "types": "./dist/types/index.d.ts"
     }
   },
   "scripts": {
@@ -47,6 +45,7 @@
     "@rollup/plugin-node-resolve": "^16.0.1",
     "@rollup/plugin-typescript": "^12.1.2",
     "rollup": "^4.40.0",
+    "rollup-plugin-copy": "^3.5.0",
     "tslib": "^2.8.1",
     "typescript": "^5.8.3"
   }

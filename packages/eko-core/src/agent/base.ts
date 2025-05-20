@@ -16,6 +16,7 @@ import {
   ToolExecuter,
   ToolResult,
   ToolSchema,
+  StreamCallbackMessage,
 } from "../types";
 import {
   LanguageModelV1FilePart,
@@ -183,12 +184,6 @@ export class Agent {
           throw e;
         }
       }
-      let llmToolResult = this.convertToolResult(
-        result,
-        toolResult,
-        user_messages
-      );
-      toolResults.push(llmToolResult);
       if (context.config.callback) {
         await context.config.callback.onMessage({
           taskId: context.taskId,
@@ -201,6 +196,12 @@ export class Agent {
           toolResult: toolResult,
         });
       }
+      let llmToolResult = this.convertToolResult(
+        result,
+        toolResult,
+        user_messages
+      );
+      toolResults.push(llmToolResult);
     }
     messages.push({
       role: "assistant",
@@ -545,7 +546,7 @@ export async function callLLM(
         case "tool-call": {
           toolArgsText = "";
           let args = chunk.args ? JSON.parse(chunk.args) : {};
-          await streamCallback.onMessage({
+          let message: StreamCallbackMessage = {
             taskId: context.taskId,
             agentName: agentNode.name,
             nodeId: agentNode.id,
@@ -553,12 +554,13 @@ export async function callLLM(
             toolId: chunk.toolCallId,
             toolName: chunk.toolName,
             params: args,
-          });
+          };
+          await streamCallback.onMessage(message);
           toolParts.push({
             type: "tool-call",
             toolCallId: chunk.toolCallId,
             toolName: chunk.toolName,
-            args: args,
+            args: message.params || args,
           });
           break;
         }

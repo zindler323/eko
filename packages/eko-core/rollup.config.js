@@ -1,6 +1,7 @@
 import typescript from '@rollup/plugin-typescript';
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
+import copy from 'rollup-plugin-copy';
 
 export default [
   {
@@ -18,7 +19,12 @@ export default [
       resolve({
         preferBuiltins: true,
       }),
-      typescript()
+      typescript(),
+      copy({
+        targets: [
+          { src: '../../README.md', dest: './' }
+        ]
+      })
     ]
   },
   {
@@ -37,7 +43,12 @@ export default [
         browser: true,
         preferBuiltins: true,
       }),
-      typescript()
+      typescript(),
+      copy({
+        targets: [
+          { src: '../../README.md', dest: './' }
+        ]
+      })
     ]
   }
 ];
