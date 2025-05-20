@@ -14,7 +14,7 @@ export default [
         sourcemap: true
       }
     ],
-    external: ["dotenv", "@eko-ai/eko"],
+    external: ["dotenv", "@eko-ai/eko", "playwright"],
     plugins: [
       json(),
       commonjs(),
@@ -26,12 +26,7 @@ export default [
         targets: [
           { src: '../../README.md', dest: './' }
         ]
-      }),
-      {
-        transform(code) {
-          return code.replace(/\.\.\/\.\.\/\.\.\/package\.json/g, '../package.json')
-        }
-      }
+      })
     ]
   },
   {
@@ -43,7 +38,7 @@ export default [
         sourcemap: true
       }
     ],
-    external: ["dotenv", "@eko-ai/eko"],
+    external: ["dotenv", "@eko-ai/eko", "playwright"],
     plugins: [
       json(),
       commonjs(),
@@ -56,12 +51,7 @@ export default [
         targets: [
           { src: '../../README.md', dest: './' }
         ]
-      }),
-      {
-        transform(code) {
-          return code.replace(/\.\.\/\.\.\/\.\.\/package\.json/g, '../package.json')
-        }
-      }
+      })
     ]
   }
 ];

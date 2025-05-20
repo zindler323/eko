@@ -16,6 +16,7 @@
     "eko"
   ],
   "dependencies": {
+    "playwright": "^1.52.0",
     "@eko-ai/eko": "file:../../packages/eko-core",
     "@eko-ai/eko-nodejs": "file:../../packages/eko-nodejs"
   },
