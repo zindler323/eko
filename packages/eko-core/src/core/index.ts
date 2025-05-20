@@ -155,6 +155,7 @@ export class Eko {
     let context = this.taskMap.get(taskId);
     if (context) {
       context.controller.abort();
+      context.controller = new AbortController();
       return true;
     } else {
       return false;

@@ -26,7 +26,12 @@ export default [
         targets: [
           { src: '../../README.md', dest: './' }
         ]
-      })
+      }),
+      {
+        transform(code) {
+          return code.replace(/\.\.\/\.\.\/\.\.\/package\.json/g, '../package.json')
+        }
+      }
     ]
   },
   {
@@ -51,7 +56,12 @@ export default [
         targets: [
           { src: '../../README.md', dest: './' }
         ]
-      })
+      }),
+      {
+        transform(code) {
+          return code.replace(/\.\.\/\.\.\/\.\.\/package\.json/g, '../package.json')
+        }
+      }
     ]
   }
 ];

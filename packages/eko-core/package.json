@@ -1,6 +1,6 @@
 {
   "name": "@eko-ai/eko",
-  "version": "2.0.6",
+  "version": "2.0.7",
   "description": "Empowering language to transform human words into action.",
   "main": "dist/index.cjs.js",
   "module": "dist/index.esm.js",
@@ -9,7 +9,8 @@
   "files": [
     "dist/",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "package.json"
   ],
   "exports": {
     ".": {
