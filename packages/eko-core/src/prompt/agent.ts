@@ -24,7 +24,7 @@ UTC datetime: {datetime}
   <mainTask>main task</mainTask>
   <!-- The tasks that the current agent needs to complete, the current agent only needs to complete the currentTask -->
   <currentTask>specific task</currentTask>
-  <!-- Complete the corresponding step nodes of the task -->
+  <!-- Complete the corresponding step nodes of the task, Only for reference -->
   <nodes>
     <!-- node supports input/output variables to pass dependencies -->
     <node input="variable name" output="variable name" status="todo / done">task step node</node>{nodePrompt}

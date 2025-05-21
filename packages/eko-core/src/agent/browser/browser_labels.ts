@@ -395,7 +395,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       },
       {
         name: "get_select_options",
-        description: "Get all options from a native dropdown element",
+        description: "Get all options from a native dropdown element (<select>).",
         parameters: {
           type: "object",
           properties: {
@@ -417,7 +417,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       },
       {
         name: "select_option",
-        description: "Select the native dropdown option",
+        description: "Select the native dropdown option, Use this after get_select_options and when you need to select an option from a dropdown.",
         parameters: {
           type: "object",
           properties: {
