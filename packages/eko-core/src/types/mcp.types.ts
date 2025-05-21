@@ -2,11 +2,11 @@ import { JSONSchema7 } from "json-schema";
 import { ToolResult } from "../types/tools.types";
 
 export type McpListToolParam = {
-  taskId: string;
-  nodeId: string;
   environment: "browser" | "windows" | "mac" | "linux";
   agent_name: string;
   prompt: string;
+  taskId?: string;
+  nodeId?: string;
   browser_url?: string | null;
   params?: Record<string, unknown> | undefined;
 };

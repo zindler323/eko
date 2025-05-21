@@ -15,7 +15,10 @@ export default abstract class BaseShellAgent extends Agent {
     const _tools_ = [] as Tool[];
     super({
       name: AGENT_NAME,
-      description: "Shell command agent, use to execute shell commands.\nYou must first call create_session to create a new session when using it for the first time.",
+      description: `Run commands in a bash shell,
+* You must first call create_session to create a new session when using it for the first time.
+* Please execute delete commands with caution, and never perform dangerous operations like \`rm -rf /\`.
+* Please avoid commands that may produce a very large amount of output.`,
       tools: _tools_,
       llms: llms,
       mcpClient: mcpClient,

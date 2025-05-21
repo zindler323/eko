@@ -7,7 +7,15 @@ export default class FileAgent extends BaseFileAgent {
   protected async file_list(
     agentContext: AgentContext,
     directoryPath: string
-  ): Promise<string[]> {
+  ): Promise<
+    Array<{
+      path: string;
+      name?: string;
+      isDirectory?: boolean;
+      size?: string;
+      modified?: string;
+    }>
+  > {
     const files = await fs.readdir(directoryPath);
     const fileDetails = await Promise.all(
       files.map(async (file) => {
@@ -17,12 +25,12 @@ export default class FileAgent extends BaseFileAgent {
           name: file,
           path: filePath,
           isDirectory: stats.isDirectory(),
-          size: stats.size,
-          modified: stats.mtime,
+          size: this.formatFileSize(stats.size),
+          modified: stats.mtime.toLocaleString(),
         };
       })
     );
-    return fileDetails.map((s) => s.path);
+    return fileDetails;
   }
 
   protected async file_read(
@@ -37,7 +45,7 @@ export default class FileAgent extends BaseFileAgent {
     filePath: string,
     content: string,
     append: boolean
-  ): Promise<void> {
+  ): Promise<any> {
     const directory = path.dirname(filePath);
     await fs.mkdir(directory, { recursive: true });
     if (append) {
@@ -52,7 +60,7 @@ export default class FileAgent extends BaseFileAgent {
     filePath: string,
     oldStr: string,
     newStr: string
-  ): Promise<void> {
+  ): Promise<any> {
     let content = await fs.readFile(filePath, "utf-8");
     const originalContent = content;
     content = content.replace(new RegExp(oldStr, "g"), newStr);
@@ -66,7 +74,15 @@ export default class FileAgent extends BaseFileAgent {
     agentContext: AgentContext,
     directoryPath: string,
     globPattern: string
-  ): Promise<string[]> {
+  ): Promise<
+    Array<{
+      path: string;
+      name?: string;
+      isDirectory?: boolean;
+      size?: string;
+      modified?: string;
+    }>
+  > {
     const pattern = path.join(directoryPath, globPattern);
     const files = await glob.glob(pattern);
     const fileDetails = await Promise.all(
@@ -76,12 +92,22 @@ export default class FileAgent extends BaseFileAgent {
           name: path.basename(file),
           path: file,
           isDirectory: stats.isDirectory(),
-          size: stats.size,
-          modified: stats.mtime,
+          size: this.formatFileSize(stats.size),
+          modified: stats.mtime.toLocaleString(),
         };
       })
     );
-    return fileDetails.map((s) => s.path);
+    return fileDetails;
+  }
+
+  protected formatFileSize(size: number): string {
+    if (size < 1024) {
+      return size + " B";
+    }
+    if (size < 1024 * 1024) {
+      return (size / 1024).toFixed(1) + " KB";
+    }
+    return (size / 1024 / 1024).toFixed(1) + " MB";
   }
 }
 

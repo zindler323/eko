@@ -21,7 +21,7 @@ This is a computer GUI interface, observe the execution through screenshots, and
       tools: _tools_,
       llms: llms,
       mcpClient: mcpClient,
-      planDescription: "Computer operation agent, interact with the computer using the mouse and keyboard, operation application."
+      planDescription: "Computer operation agent, interact with the computer using the mouse and keyboard."
     });
     if (!keyboardKeys) {
       if (config.platform == "windows") {

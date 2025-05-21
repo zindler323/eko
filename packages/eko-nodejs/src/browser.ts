@@ -8,9 +8,14 @@ import {
 } from "playwright";
 
 export default class BrowserAgent extends BaseBrowserLabelsAgent {
-  private browser: Browser | null = null;
+  protected browser: Browser | null = null;
   private browser_context: BrowserContext | null = null;
   private current_page: Page | null = null;
+  private headless: boolean = false;
+
+  public setHeadless(headless: boolean) {
+    this.headless = headless;
+  }
 
   protected async screenshot(
     agentContext: AgentContext
@@ -145,19 +150,8 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     agentContext: AgentContext,
     url: string
   ): Promise<Page> {
-    if (!this.browser) {
-      this.current_page = null;
-      this.browser_context = null;
-      this.browser = await chromium.launch({
-        headless: false,
-        args: ["--no-sandbox"],
-      });
-    }
-    if (!this.browser_context) {
-      this.current_page = null;
-      this.browser_context = await this.browser.newContext();
-    }
-    const page: Page = await this.browser_context.newPage();
+    let browser_context = await this.getBrowserContext();
+    const page: Page = await browser_context.newPage();
     // await page.setViewportSize({ width: 1920, height: 1080 });
     await page.setViewportSize({ width: 1536, height: 864 });
     try {
@@ -175,7 +169,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     return page;
   }
 
-  private async currentPage(): Promise<Page> {
+  protected async currentPage(): Promise<Page> {
     if (this.current_page == null) {
       throw new Error("There is no page, please call navigate_to first");
     }
@@ -214,6 +208,64 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
 
   private sleep(time: number): Promise<void> {
     return new Promise((resolve) => setTimeout(() => resolve(), time));
+  }
+
+  protected async getBrowserContext() {
+    if (!this.browser) {
+      this.current_page = null;
+      this.browser_context = null;
+      this.browser = await chromium.launch({
+        headless: this.headless,
+        args: ["--no-sandbox"],
+      });
+    }
+    if (!this.browser_context) {
+      this.current_page = null;
+      this.browser_context = await this.browser.newContext();
+      // Anti-crawling detection website:
+      // https://bot.sannysoft.com/
+      let init_script = await this.initScript();
+      this.browser_context.addInitScript(init_script);
+    }
+    return this.browser_context;
+  }
+
+  protected async initScript(): Promise<{ path?: string; content?: string }> {
+    return {
+      content: `
+      // Webdriver property
+			Object.defineProperty(navigator, 'webdriver', {
+				get: () => undefined
+			});
+
+			// Languages
+			Object.defineProperty(navigator, 'languages', {
+				get: () => ['en-US']
+			});
+
+			// Plugins
+			Object.defineProperty(navigator, 'plugins', {
+				get: () => [{name:"1"}, {name:"2"}, {name:"3"}, {name:"4"}, {name:"5"}]
+			});
+
+			// Chrome runtime
+			window.chrome = { runtime: {} };
+
+			// Permissions
+			const originalQuery = window.navigator.permissions.query;
+			window.navigator.permissions.query = (parameters) => (
+				parameters.name === 'notifications' ?
+					Promise.resolve({ state: Notification.permission }) :
+					originalQuery(parameters)
+			);
+			(function () {
+				const originalAttachShadow = Element.prototype.attachShadow;
+				Element.prototype.attachShadow = function attachShadow(options) {
+					return originalAttachShadow.call(this, { ...options, mode: "open" });
+				};
+			})();
+      `,
+    };
   }
 }
 

@@ -1,5 +1,5 @@
 import config from "../config";
-import { Agent } from "../agent";
+import Context from "../core/context";
 import { AGENT_NAME as chat_agent_name } from "../agent/chat";
 
 const PLAN_SYSTEM_TEMPLATE = `
@@ -173,26 +173,25 @@ Task Website: {task_website}
 Task Description: {taskPrompt}
 `;
 
-export function getPlanSystemPrompt(agents: Agent[]): string {
-  let agents_prompt = agents
-    .map((agent) => {
-      return (
-        `<agent name="${agent.Name}">\n` +
-        `Description: ${agent.PlanDescription || agent.Description}\nTools:\n` +
-        agent.Tools.filter((tool) => !tool.noPlan)
-          .map(
-            (tool) =>
-              `- ${tool.name}: ${
-                tool.planDescription || tool.description || ""
-              }`
-          )
-          .join("\n") +
-        `\n</agent>`
-      );
-    })
-    .join("\n\n");
+export async function getPlanSystemPrompt(context: Context): Promise<string> {
+  let agents_prompt = "";
+  let agents = context.agents;
+  for (let i = 0; i < agents.length; i++) {
+    let agent = agents[i];
+    let tools = await agent.loadTools(context);
+    agents_prompt +=
+      `<agent name="${agent.Name}">\n` +
+      `Description: ${agent.PlanDescription || agent.Description}\n` +
+      "Tools:\n" +
+      tools
+        .filter((tool) => !tool.noPlan)
+        .map((tool) => `  - ${tool.name}: ${tool.planDescription || tool.description || ""}`)
+        .join("\n") +
+      "\n</agent>\n\n";
+  }
   let example_prompt = "";
-  let hasChatAgent = agents.filter((a) => a.Name == chat_agent_name).length > 0;
+  let hasChatAgent =
+    context.agents.filter((a) => a.Name == chat_agent_name).length > 0;
   const example_list = hasChatAgent
     ? [PLAN_CHAT_EXAMPLE, ...PLAN_EXAMPLE_LIST]
     : [...PLAN_EXAMPLE_LIST];
@@ -200,7 +199,7 @@ export function getPlanSystemPrompt(agents: Agent[]): string {
     example_prompt += `## Example ${i + 1}\n${example_list[i]}\n\n`;
   }
   return PLAN_SYSTEM_TEMPLATE.replace("{name}", config.name)
-    .replace("{agents}", agents_prompt)
+    .replace("{agents}", agents_prompt.trim())
     .replace("{datetime}", new Date().toISOString())
     .replace("{example_prompt}", example_prompt)
     .trim();

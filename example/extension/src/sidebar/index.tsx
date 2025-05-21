@@ -11,9 +11,10 @@ interface LogMessage {
 const AppRun = () => {
   const [running, setRunning] = useState(false);
   const [logs, setLogs] = useState<LogMessage[]>([]);
+  const [streamLog, setStreamLog] = useState<LogMessage | null>();
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const [prompt, setPrompt] = useState(
-    "Open Twitter, search for \"Fellou AI\" and follow"
+    'Open Twitter, search for "Fellou AI" and follow'
   );
 
   useEffect(() => {
@@ -34,10 +35,17 @@ const AppRun = () => {
         chrome.storage.local.set({ running: false });
       } else if (message.type === "log") {
         const time = new Date().toLocaleTimeString();
-        setLogs((prev) => [
-          ...prev,
-          { time, log: message.log, level: message.level || "info" },
-        ]);
+        const log_message = {
+          time,
+          log: message.log,
+          level: message.level || "info",
+        };
+        if (message.stream) {
+          setStreamLog(log_message);
+        } else {
+          setStreamLog(null);
+          setLogs((prev) => [...prev, log_message]);
+        }
       }
     };
     chrome.runtime.onMessage.addListener(messageListener);
@@ -48,10 +56,10 @@ const AppRun = () => {
 
   useEffect(() => {
     window.scrollTo({
-      behavior: 'smooth',
-      top: document.body.scrollHeight
+      behavior: "smooth",
+      top: document.body.scrollHeight,
     });
-  }, [logs]);
+  }, [logs, streamLog]);
 
   const handleClick = () => {
     if (running) {
@@ -106,7 +114,7 @@ const AppRun = () => {
           onClick={handleClick}
           style={{
             marginTop: "8px",
-            background: running ? "#6666" : "#1677ff"
+            background: running ? "#6666" : "#1677ff",
           }}
         >
           {running ? "Running..." : "Run"}
@@ -132,10 +140,26 @@ const AppRun = () => {
                 margin: "2px 0",
                 fontSize: "12px",
                 fontFamily: "monospace",
+                whiteSpace: "pre-wrap",
                 ...getLogStyle(log.level || "info"),
               }}
-            >[{log.time}] {log.log}</pre>
+            >
+              [{log.time}] {log.log}
+            </pre>
           ))}
+          {streamLog && (
+            <pre
+              style={{
+                margin: "2px 0",
+                fontSize: "12px",
+                fontFamily: "monospace",
+                whiteSpace: "pre-wrap",
+                ...getLogStyle(streamLog.level || "info"),
+              }}
+            >
+              [{streamLog.time}] {streamLog.log}
+            </pre>
+          )}
         </div>
       )}
     </div>

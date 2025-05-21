@@ -11,6 +11,9 @@ export async function main(prompt: string): Promise<Eko> {
   let config = await getLLMConfig();
   if (!config || !config.apiKey) {
     printLog("Please configure apiKey, configure in the eko extension options of the browser extensions.", "error");
+    chrome.runtime.openOptionsPage();
+    chrome.storage.local.set({ running: false });
+    chrome.runtime.sendMessage({ type: "stop" });
     return;
   }
 
@@ -27,10 +30,12 @@ export async function main(prompt: string): Promise<Eko> {
 
   let callback: StreamCallback & HumanCallback = {
     onMessage: async (message: StreamCallbackMessage) => {
-      if (message.type == "workflow" && message.streamDone) {
-        printLog("Plan\n" + message.workflow.xml);
-      } else if (message.type == "text" && message.streamDone) {
-        printLog(message.text);
+      if (message.type == "workflow") {
+        printLog("Plan\n" + message.workflow.xml, "info", !message.streamDone);
+      } else if (message.type == "text") {
+        printLog(message.text, "info", !message.streamDone);
+      } else if (message.type == "tool_streaming") {
+        printLog(`${message.agentName} > ${message.toolName}\n${message.paramsText}`, "info", true);
       } else if (message.type == "tool_use") {
         printLog(
           `${message.agentName} > ${message.toolName}\n${JSON.stringify(
@@ -54,13 +59,23 @@ export async function main(prompt: string): Promise<Eko> {
     })
     .catch((error) => {
       printLog(error, "error");
-    }).finally(() => {
+    })
+    .finally(() => {
       chrome.storage.local.set({ running: false });
       chrome.runtime.sendMessage({ type: "stop" });
     });
   return eko;
 }
 
-function printLog(message: string, level?: "info" | "success" | "error") {
-  chrome.runtime.sendMessage({ type: "log", log: message + "", level: level || "info" });
+function printLog(
+  message: string,
+  level?: "info" | "success" | "error",
+  stream?: boolean
+) {
+  chrome.runtime.sendMessage({
+    type: "log",
+    log: message + "",
+    level: level || "info",
+    stream,
+  });
 }
