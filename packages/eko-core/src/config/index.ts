@@ -9,7 +9,7 @@ type GlobalConfig = {
 }
 
 const config: GlobalConfig = {
-  name: "Fellou",
+  name: "Eko",
   platform: "mac",
   maxReactNum: 200,
   maxTokens: 16000,

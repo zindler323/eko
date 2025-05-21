@@ -10,7 +10,7 @@ const OptionsPage = () => {
   const [config, setConfig] = useState({
     llm: "anthropic",
     apiKey: "",
-    modelName: "claude-3-5-sonnet-20241022",
+    modelName: "claude-3-7-sonnet-20250219",
     options: {
       baseURL: "https://api.anthropic.com/v1",
     },
@@ -50,31 +50,43 @@ const OptionsPage = () => {
   const modelLLMs = [
     { value: "anthropic", label: "Claude (default)" },
     { value: "openai", label: "OpenAI" },
+    { value: "openrouter", label: "OpenRouter" },
   ];
 
   const modelOptions = {
     anthropic: [
-      { value: "claude-3-5-sonnet-20241022", label: "Claude 3.5 Sonnet (default)" },
-      { value: "claude-3-7-sonnet-20250219", label: "Claude 3.7 Sonnet" },
-      { value: "claude-3-opus-20240229", label: "Claude 3 Opus" },
+      { value: "claude-3-7-sonnet-20250219", label: "Claude 3.7 Sonnet (default)" },
+      { value: "claude-3-5-sonnet-20241022", label: "Claude 3.5 Sonnet" }
     ],
     openai: [
       { value: "gpt-4o", label: "gpt-4o (default)" },
+      { value: "gpt-4.1", label: "gpt-4.1" },
+      { value: "gpt-4.1-mini", label: "gpt-4.1-mini" },
       { value: "gpt-4o-mini", label: "gpt-4o-mini" },
-      { value: "gpt-4", label: "gpt-4" },
+    ],
+    openrouter: [
+      { value: "anthropic/claude-3.7-sonnet", label: "claude-3.7-sonnet (default)" },
+      { value: "anthropic/claude-3.5-sonnet", label: "claude-3.5-sonnet" },
+      { value: "openai/gpt-4.1", label: "gpt-4.1" },
+      { value: "openai/gpt-4.1-mini", label: "gpt-4.1-mini" },
+      { value: "openai/gpt-4o", label: "gpt-4o" },
+      { value: "google/gemini-2.5-flash-preview-05-20", label: "gemini-2.5-flash-preview-05-20" },
+      { value: "google/gemini-2.5-pro-preview", label: "gemini-2.5-pro-preview" },
     ],
   };
 
   const handleLLMChange = (value: string) => {
+    const baseURLMap = {
+      openai: "https://api.openai.com/v1",
+      anthropic: "https://api.anthropic.com/v1",
+      openrouter: "https://openrouter.ai/api/v1"
+    };
     const newConfig = {
       llm: value,
       apiKey: "",
       modelName: modelOptions[value][0].value,
       options: {
-        baseURL:
-          value === "openai"
-            ? "https://api.openai.com/v1"
-            : "https://api.anthropic.com/v1",
+        baseURL: baseURLMap[value]
       },
     };
     setConfig(newConfig);

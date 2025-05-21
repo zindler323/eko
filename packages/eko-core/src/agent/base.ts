@@ -98,9 +98,9 @@ export class Agent {
         );
         if (controlMcp.mcpTools) {
           let mcpTools = await this.listTools(
-            agentNode,
             context,
             mcpClient,
+            agentNode,
             controlMcp.mcpParams
           );
           let usedTools = memory.extractUsedTool(messages, agentTools);
@@ -268,33 +268,44 @@ export class Agent {
     ];
   }
 
-  protected async extSysPrompt(agentContext: AgentContext, tools: Tool[]): Promise<string> {
+  protected async extSysPrompt(
+    agentContext: AgentContext,
+    tools: Tool[]
+  ): Promise<string> {
     return "";
   }
 
   private async listTools(
-    agentNode: WorkflowAgent,
     context: Context,
     mcpClient: IMcpClient,
+    agentNode?: WorkflowAgent,
     mcpParams?: Record<string, unknown>
   ): Promise<Tool[]> {
-    let list = await mcpClient.listTools({
-      taskId: context.taskId,
-      nodeId: agentNode.id,
-      environment: config.platform,
-      agent_name: agentNode.name,
-      params: {},
-      prompt: agentNode.task,
-      ...(mcpParams || {}),
-    });
-    let mcpTools: Tool[] = [];
-    for (let i = 0; i < list.length; i++) {
-      let toolSchema: ToolSchema = list[i];
-      let execute = this.toolExecuter(mcpClient, toolSchema.name);
-      let toolWrapper = new ToolWrapper(toolSchema, execute);
-      mcpTools.push(new McpTool(toolWrapper));
+    try {
+      if (!mcpClient.isConnected()) {
+        await mcpClient.connect();
+      }
+      let list = await mcpClient.listTools({
+        taskId: context.taskId,
+        nodeId: agentNode?.id,
+        environment: config.platform,
+        agent_name: agentNode?.name || this.name,
+        params: {},
+        prompt: agentNode?.task || context.chain.taskPrompt,
+        ...(mcpParams || {}),
+      });
+      let mcpTools: Tool[] = [];
+      for (let i = 0; i < list.length; i++) {
+        let toolSchema: ToolSchema = list[i];
+        let execute = this.toolExecuter(mcpClient, toolSchema.name);
+        let toolWrapper = new ToolWrapper(toolSchema, execute);
+        mcpTools.push(new McpTool(toolWrapper));
+      }
+      return mcpTools;
+    } catch (e) {
+      Log.error("Mcp listTools error", e);
+      return [];
     }
-    return mcpTools;
   }
 
   protected async controlMcpTools(
@@ -430,6 +441,16 @@ export class Agent {
     };
   }
 
+  public async loadTools(context: Context): Promise<Tool[]> {
+    if (this.mcpClient) {
+      let mcpTools = await this.listTools(context, this.mcpClient);
+      if (mcpTools && mcpTools.length > 0) {
+        return mergeTools(this.tools, mcpTools);
+      }
+    }
+    return this.tools;
+  }
+
   get Name(): string {
     return this.name;
   }
@@ -457,7 +478,8 @@ export async function callLLM(
   messages: LanguageModelV1Prompt,
   tools: LanguageModelV1FunctionTool[],
   noCompress?: boolean,
-  toolChoice?: LanguageModelV1ToolChoice
+  toolChoice?: LanguageModelV1ToolChoice,
+  retry?: boolean,
 ): Promise<Array<LanguageModelV1TextPart | LanguageModelV1ToolCallPart>> {
   if (messages.length >= config.compressThreshold && !noCompress) {
     await memory.compressAgentMessages(agentContext, rlm, messages, tools);
@@ -607,6 +629,10 @@ export async function callLLM(
             finishReason: chunk.finishReason,
             usage: chunk.usage,
           });
+          if (chunk.finishReason === "length" && messages.length >= 10 && !noCompress && !retry) {
+            await memory.compressAgentMessages(agentContext, rlm, messages, tools);
+            return callLLM(agentContext, rlm, messages, tools, noCompress, toolChoice, true);
+          }
           break;
         }
       }

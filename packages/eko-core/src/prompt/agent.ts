@@ -30,6 +30,8 @@ UTC datetime: {datetime}
     <node input="variable name" output="variable name" status="todo / done">task step node</node>{nodePrompt}
   </nodes>
 </root>
+
+The output language should follow the language corresponding to the user's task.
 `;
 
 const HUMAN_PROMPT = `

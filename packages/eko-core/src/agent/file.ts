@@ -14,7 +14,9 @@ export default abstract class BaseFileAgent extends Agent {
     planDescription?: string
   ) {
     const _tools_ = [] as Tool[];
-    const prompt = work_path ? `Your default working path is: ${work_path}` : "";
+    const prompt = work_path
+      ? `Your default working path is: ${work_path}`
+      : "";
     super({
       name: AGENT_NAME,
       description: `You are a file agent, handling file-related tasks such as creating, finding, reading, modifying files, etc.${prompt}`,
@@ -35,7 +37,15 @@ export default abstract class BaseFileAgent extends Agent {
   protected abstract file_list(
     agentContext: AgentContext,
     path: string
-  ): Promise<string[]>;
+  ): Promise<
+    Array<{
+      path: string;
+      name?: string;
+      isDirectory?: boolean;
+      size?: string;
+      modified?: string;
+    }>
+  >;
 
   protected abstract file_read(
     agentContext: AgentContext,
@@ -47,20 +57,28 @@ export default abstract class BaseFileAgent extends Agent {
     path: string,
     content: string,
     append: boolean
-  ): Promise<void>;
+  ): Promise<any>;
 
   protected abstract file_str_replace(
     agentContext: AgentContext,
     path: string,
     old_str: string,
     new_str: string
-  ): Promise<void>;
+  ): Promise<any>;
 
   protected abstract file_find_by_name(
     agentContext: AgentContext,
     path: string,
     glob: string
-  ): Promise<string[]>;
+  ): Promise<
+    Array<{
+      path: string;
+      name?: string;
+      isDirectory?: boolean;
+      size?: string;
+      modified?: string;
+    }>
+  >;
 
   private buildInitTools(): Tool[] {
     return [
