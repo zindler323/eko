@@ -15,7 +15,7 @@
 
 Eko (pronounced like ‘echo’) is a production-ready JavaScript framework that enables developers to create reliable agents, **from simple commands to complex workflows**. It provides a unified interface for running agents in both **computer and browser environments**.
 
-# Framework Comparison
+## Framework Comparison
 
 | Feature                              | Eko   | Langchain  | Browser-use  | Dify.ai  | Coze   |
 |--------------------------------------|-------|------------|--------------|----------|--------|
@@ -27,70 +27,58 @@ Eko (pronounced like ‘echo’) is a production-ready JavaScript framework that
 | **Open-source**                      | ✅    | ✅          | ✅            | ✅        | ❌      |
 | **Access to private web resources** | ✅ | ❌          | ❌            | ❌        | ❌      |
 
+## Features
+
+- [x] Pure JavaScript: Built for browsers and Node.js.🚀
+- [x] Multi-Agent: Unleash power with multiple Agents in one task.📈
+- [x] Agent/Tool Flexibility: Customize new Agents and Tools in just one line.🎉
+- [x] Native MCP: Connects seamlessly with [Awesome MCP Servers](https://mcpservers.org/).🔗
+- [x] Dynamic LLM: Balance speed and performance with flexible model choices.⚙️
+- [x] Human-in-the-loop: Intervene when it matters most.🤝
+- [x] Stream Planning: Dynamic rendering made easy.🎨
+- [x] Loop & Listener Tasks: Automate any repetitive task.🤖
+- [ ] Observable Chain: *Coming soon*
+- [ ] Native A2A: *Coming soon*
+
 ## Quickstart
 
-```bash
-npm install @eko-ai/eko
-```
+> **Note**: Please refer to the [Eko Quickstart guide](https://eko.fellou.ai/docs/getting-started/quickstart/) guide for full instructions on how to run it.
 
-> Important Notice: The following example code cannot be executed directly. Please refer to the [Eko Quickstart guide](https://eko.fellou.ai/docs/getting-started/quickstart/) guide for instructions on how to run it.
+> **Security Warning**
+> 
+> DO NOT use API Keys in browser/frontend code!
+>
+> This will expose your credentials and may lead to unauthorized usage.
+>
+> Best Practices: Configure backend API proxy request through baseURL and request headers.
+>
+> Please refer to the link: https://eko.fellou.ai/docs/getting-started/configuration#web-environment
 
 ```typescript
-import { Eko } from '@eko-ai/eko';
-
-const eko = new Eko({
-  apiKey: 'your_anthropic_api_key',
-});
-
-// Example: Browser automation
-const extWorkflow = await eko.generate("Search for 'Eko framework' on Google and save the first result");
-await eko.execute(extWorkflow);
-
-// Example: System operation
-const sysWorkflow = await eko.generate("Create a new folder named 'reports' and move all PDF files there");
-await eko.execute(sysWorkflow);
-
+// quickstart.ts
+const llms: LLMs = {
+  default: {
+    provider: "anthropic",
+    model: "claude-3-5-sonnet-20241022",
+    apiKey: claudeApiKey || "your-api-key",
+    config: { baseURL: claudeBaseURL },
+  },
+  openai: {
+    provider: "openai",
+    model: "gpt-4o-mini",
+    apiKey: openaiApiKey || "your-api-key",
+    config: { baseURL: openaiBaseURL },
+  },
+};
+let agents: Agent[] = [new ChatAgent(), new BrowserAgent()];
+let eko = new Eko({ llms, agents });
+let result = await eko.run("Search for the latest news about Musk");
 ```
 
-## Demos
-
-**Prompt:** `Collect the latest NASDAQ data on Yahoo Finance, including price changes, market capitalization, trading volume of major stocks, analyze the data and generate visualization reports`.
-
-https://github.com/user-attachments/assets/4087b370-8eb8-4346-a549-c4ce4d1efec3
-
-Click [here](https://github.com/FellouAI/eko-demos/tree/main/browser-extension-stock) to get the source code.
-
----
-
-**Prompt:** `Based on the README of FellouAI/eko on github, search for competitors, highlight the key contributions of Eko, write a blog post advertising Eko, and post it on Write.as.`
-
-https://github.com/user-attachments/assets/6feaea86-2fb9-4e5c-b510-479c2473d810
-
-Click [here](https://github.com/FellouAI/eko-demos/tree/main/browser-extension-blog) to get the source code.
-
----
-
-**Prompt:** `Clean up all files in the current directory larger than 1MB`
-
-https://github.com/user-attachments/assets/ef7feb58-3ddd-4296-a1de-bb8b6c66e48b
-
-Click [here](https://eko.fellou.ai/docs/computeruse/computer-node/#example-file-cleanup-workflow) to Learn more.
-
----
-
-**Prompt:** Automatic software testing
+```bash
+$ pnpm install @eko-ai/eko
+$ npx ts-node quickstart.ts
 ```
-    Current login page automation test:
-    1. Correct account and password are: admin / 666666 
-    2. Please randomly combine usernames and passwords for testing to verify if login validation works properly, such as: username cannot be empty, password cannot be empty, incorrect username, incorrect password
-    3. Finally, try to login with the correct account and password to verify if login is successful
-    4. Generate test report and export
-```
-
-https://github.com/user-attachments/assets/7716300a-c51d-41f1-8d4f-e3f593c1b6d5
-
-
-Click [here](https://eko.fellou.ai/docs/browseruse/browser-web#example-login-automation-testing) to Learn more.
 
 ## Use Cases
 
