@@ -521,6 +521,8 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     messages: LanguageModelV1Prompt,
     tools: Tool[]
   ): Promise<void> {
+    const pseudoHtmlDescription =
+      "This is the latest screenshot and page element information.\nindex and element:\n";
     let lastTool = this.lastToolResult(messages);
     if (
       lastTool &&
@@ -541,14 +543,61 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
           },
           {
             type: "text",
-            text:
-              "This is the latest screenshot and page element information.\nindex and element:\n" +
-              result.pseudoHtml,
+            text: pseudoHtmlDescription + result.pseudoHtml,
           },
         ],
       });
     }
+
+    if (messages.length > 10) {
+      // compressed pseudoHtml
+      for (let i = 2; i < messages.length - 3; i++) {
+        let message = messages[i];
+        if (message.role == "user" && message.content.length == 2) {
+          let content = message.content;
+          for (let j = 0; j < content.length; j++) {
+            let _content = content[j];
+            if (
+              _content.type == "text" &&
+              _content.text.startsWith(pseudoHtmlDescription)
+            ) {
+              _content.text = this.removePseudoHtmlAttr(_content.text, [
+                "class",
+                "src",
+                "href",
+              ]);
+            }
+          }
+        }
+      }
+    }
     super.handleMessages(agentContext, messages, tools);
+  }
+
+  private removePseudoHtmlAttr(
+    pseudoHtml: string,
+    remove_attrs: string[]
+  ): string {
+    return pseudoHtml
+      .split("\n")
+      .map((line) => {
+        if (!line.startsWith("[") || line.indexOf("]:<") == -1) {
+          return line;
+        }
+        for (let i = 0; i < remove_attrs.length; i++) {
+          let sIdx = line.indexOf(remove_attrs[i] + '="');
+          if (sIdx == -1) {
+            continue;
+          }
+          let eIdx = line.indexOf('"', sIdx + remove_attrs[i].length + 3);
+          if (eIdx == -1) {
+            continue;
+          }
+          line = line.substring(0, sIdx) + line.substring(eIdx + 1).trim().replace('" >', '">');
+        }
+        return line;
+      })
+      .join("\n");
   }
 }
 

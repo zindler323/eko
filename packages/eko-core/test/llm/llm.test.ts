@@ -17,7 +17,7 @@ const claudeApiKey = process.env.ANTHROPIC_API_KEY;
 const llms: LLMs = {
   default: {
     provider: "openai",
-    model: "gpt-4o-mini",
+    model: "gpt-4.1-mini",
     apiKey: openaiApiKey || "",
     config: {
       baseURL: openaiBaseURL,
@@ -41,7 +41,7 @@ const llms: LLMs = {
   },
   openai: {
     provider: "openai",
-    model: "gpt-4o-mini",
+    model: "gpt-4.1-mini",
     apiKey: openaiApiKey || "",
     config: {
       baseURL: openaiBaseURL,

@@ -36,8 +36,8 @@ export function run_build_dom_tree() {
         'name',
         'role',
         'class',
-        // 'href',
-        'tabindex',
+        'src',
+        'href',
         'aria-label',
         'placeholder',
         'value',
@@ -87,6 +87,10 @@ export function run_build_dom_tree() {
               if (key == "class" && value && value.length > 30) {
                 let classList = value.split(" ").slice(0, 3);
                 value = classList.join(" ");
+              } else if ((key == "src" || key == "href") && value && value.length > 200) {
+                continue;
+              } else if ((key == "src" || key == "href") && value && value.startsWith("/")) {
+                value = window.location.origin + value;
               }
               if (key && value) {
                 attributes_str += ` ${key}="${value}"`;
