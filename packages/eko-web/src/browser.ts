@@ -8,7 +8,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     const [width, height] = this.size();
     const scrollX = window.scrollX || window.pageXOffset;
     const scrollY = window.scrollY || window.pageYOffset;
-    const canvas = await html2canvas(document.body, {
+    const canvas = await html2canvas(document.documentElement || document.body, {
       width,
       height,
       windowWidth: width,
@@ -59,17 +59,17 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     func: (...args: any[]) => void,
     args: any[]
   ): Promise<any> {
-    return func(args);
+    return func(args[0]);
   }
 
   private size(): [number, number] {
     return [
       window.innerWidth ||
         document.documentElement.clientWidth ||
-        document.body.clientWidth,
+        (document.documentElement || document.body).clientWidth,
       window.innerHeight ||
         document.documentElement.clientHeight ||
-        document.body.clientHeight,
+        (document.documentElement || document.body).clientHeight,
     ];
   }
 

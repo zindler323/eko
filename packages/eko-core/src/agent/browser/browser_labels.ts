@@ -131,6 +131,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       for (let i = 0; i < 5; i++) {
         await sleep(200);
         await this.execute_script(agentContext, run_build_dom_tree, []);
+        await sleep(50);
         element_result = (await this.execute_script(
           agentContext,
           () => {
