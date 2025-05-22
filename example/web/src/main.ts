@@ -1,4 +1,4 @@
-import { Eko, LLMs } from "@eko-ai/eko";
+import { Eko, LLMs, StreamCallbackMessage } from "@eko-ai/eko";
 import { BrowserAgent } from "@eko-ai/eko-web";
 
 export async function auto_test_case() {
@@ -14,9 +14,24 @@ export async function auto_test_case() {
     },
   };
 
+  const callback = {
+    onMessage: async (message: StreamCallbackMessage) => {
+      if (message.type == "workflow" && !message.streamDone) {
+        return;
+      }
+      if (message.type == "text" && !message.streamDone) {
+        return;
+      }
+      if (message.type == "tool_streaming") {
+        return;
+      }
+      console.log("message: ", JSON.stringify(message, null, 2));
+    },
+  };
+
   // Initialize eko
   let agents = [new BrowserAgent()];
-  let eko = new Eko({ llms, agents });
+  let eko = new Eko({ llms, agents, callback });
 
   // Run: Generate workflow from natural language description
   const result = await eko.run(`
