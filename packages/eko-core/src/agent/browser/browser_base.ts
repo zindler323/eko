@@ -220,6 +220,17 @@ export default abstract class BaseBrowserAgent extends Agent {
     return null;
   }
 
+  protected toolUseNames(messages: LanguageModelV1Prompt): string[] {
+    let toolNames: string[] = [];
+    for (let i = 0; i < messages.length; i++) {
+      let message = messages[i];
+      if (message.role == "tool") {
+        toolNames.push(message.content[0].toolName);
+      }
+    }
+    return toolNames;
+  }
+
   protected abstract execute_script(
     agentContext: AgentContext,
     func: (...args: any[]) => void,

@@ -84,21 +84,15 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
 
   protected async scroll_mouse_wheel(
     agentContext: AgentContext,
-    amount: number
-  ): Promise<void> {
-    await this.execute_script(
-      agentContext,
-      (amount) => {
-        let viewportHeight =
-          window.innerHeight ||
-          document.documentElement.clientHeight ||
-          document.body.clientHeight;
-        let y = Math.max(20, Math.min(viewportHeight / 10, 200));
-        window.scrollBy(0, y * amount);
-      },
-      [amount]
-    );
+    amount: number,
+    extract_page_content: boolean
+  ): Promise<any> {
+    await this.execute_script(agentContext, scroll_by, [{ amount }]);
     await sleep(200);
+    if (extract_page_content) {
+      let page_content = await this.extract_page_content(agentContext);
+      return "This is the latest page content:\n" + page_content;
+    }
   }
 
   protected async hover_to_element(
@@ -324,7 +318,8 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       },
       {
         name: "scroll_mouse_wheel",
-        description: "Scroll the mouse wheel at current position, prioritize using extract_page_content, only scroll when you need to load more content",
+        description:
+          "Scroll the mouse wheel at current position, only scroll when you need to load more content",
         parameters: {
           type: "object",
           properties: {
@@ -338,6 +333,11 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
               type: "string",
               enum: ["up", "down"],
             },
+            extract_page_content: {
+              type: "boolean",
+              description:
+                "After scrolling is completed, whether to extract the current latest page content",
+            },
           },
           required: ["amount", "direction"],
         },
@@ -349,7 +349,8 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
             let amount = args.amount as number;
             await this.scroll_mouse_wheel(
               agentContext,
-              args.direction == "up" ? -amount : amount
+              args.direction == "up" ? -amount : amount,
+              args.extract_page_content == true
             );
           });
         },
@@ -395,7 +396,8 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       },
       {
         name: "get_select_options",
-        description: "Get all options from a native dropdown element (<select>).",
+        description:
+          "Get all options from a native dropdown element (<select>).",
         parameters: {
           type: "object",
           properties: {
@@ -417,7 +419,8 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       },
       {
         name: "select_option",
-        description: "Select the native dropdown option, Use this after get_select_options and when you need to select an option from a dropdown.",
+        description:
+          "Select the native dropdown option, Use this after get_select_options and when you need to select an option from a dropdown.",
         parameters: {
           type: "object",
           properties: {
@@ -705,6 +708,61 @@ function select_option(params: { index: number; option: string }) {
     selectedValue: option.value,
     selectedText: option.text.trim(),
   };
+}
+
+function scroll_by(params: { amount: number }) {
+  const amount = params.amount;
+  const documentElement = document.documentElement || document.body;
+  if (documentElement.scrollHeight > window.innerHeight * 1.2) {
+    const y = Math.max(
+      20,
+      Math.min((window.innerHeight || documentElement.clientHeight) / 10, 200)
+    );
+    window.scrollBy(0, y * amount);
+    return;
+  }
+
+  function findScrollableElements(): Element[] {
+    const allElements = Array.from(document.querySelectorAll("*"));
+    return allElements.filter((el) => {
+      const style = window.getComputedStyle(el);
+      const overflowY = style.getPropertyValue("overflow-y");
+      return (
+        (overflowY === "auto" || overflowY === "scroll") &&
+        el.scrollHeight > el.clientHeight
+      );
+    });
+  }
+
+  function getVisibleArea(element: Element) {
+    const rect = element.getBoundingClientRect();
+    const viewportHeight = window.innerHeight || documentElement.clientHeight;
+    const viewportWidth = window.innerWidth || documentElement.clientWidth;
+    const visibleLeft = Math.max(0, Math.min(rect.left, viewportWidth));
+    const visibleRight = Math.max(0, Math.min(rect.right, viewportWidth));
+    const visibleTop = Math.max(0, Math.min(rect.top, viewportHeight));
+    const visibleBottom = Math.max(0, Math.min(rect.bottom, viewportHeight));
+    const visibleWidth = visibleRight - visibleLeft;
+    const visibleHeight = visibleBottom - visibleTop;
+    return visibleWidth * visibleHeight;
+  }
+  const scrollableElements = findScrollableElements();
+  if (scrollableElements.length === 0) {
+    const y = Math.max(
+      20,
+      Math.min((window.innerHeight || documentElement.clientHeight) / 10, 200)
+    );
+    window.scrollBy(0, y * amount);
+    return false;
+  }
+  const sortedElements = scrollableElements.sort((a, b) => {
+    return getVisibleArea(b) - getVisibleArea(a);
+  });
+  const largestElement = sortedElements[0];
+  const viewportHeight = largestElement.clientHeight;
+  const y = Math.max(20, Math.min(viewportHeight / 10, 200));
+  largestElement.scrollBy(0, y * amount);
+  return true;
 }
 
 export { BaseBrowserLabelsAgent };
