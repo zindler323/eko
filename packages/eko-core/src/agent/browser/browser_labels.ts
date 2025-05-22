@@ -143,7 +143,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
           break;
         }
       }
-      await sleep(50);
+      await sleep(100);
       let screenshot = await this.screenshot(agentContext);
       // agentContext.variables.set("selector_map", element_result.selector_map);
       let pseudoHtml = element_result.element_str;
