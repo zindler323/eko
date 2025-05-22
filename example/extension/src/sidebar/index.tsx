@@ -137,27 +137,29 @@ const AppRun = () => {
             <pre
               key={index}
               style={{
-                margin: "2px 0",
+                margin: "4px 0",
                 fontSize: "12px",
                 fontFamily: "monospace",
                 whiteSpace: "pre-wrap",
                 ...getLogStyle(log.level || "info"),
               }}
             >
-              [{log.time}] {log.log}
+              <span style={{ color: "#6666" }}>[{log.time}]&nbsp;</span>
+              <span>{log.log}</span>
             </pre>
           ))}
           {streamLog && (
             <pre
               style={{
-                margin: "2px 0",
+                margin: "4px 0",
                 fontSize: "12px",
                 fontFamily: "monospace",
                 whiteSpace: "pre-wrap",
                 ...getLogStyle(streamLog.level || "info"),
               }}
             >
-              [{streamLog.time}] {streamLog.log}
+              <span style={{ color: "#6666" }}>[{streamLog.time}]&nbsp;</span>
+              <span>{streamLog.log}</span>
             </pre>
           )}
         </div>
