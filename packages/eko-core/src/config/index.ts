@@ -13,7 +13,7 @@ const config: GlobalConfig = {
   platform: "mac",
   maxReactNum: 200,
   maxTokens: 16000,
-  compressThreshold: 60,
+  compressThreshold: 80,
   largeTextLength: 5000,
   shortTextLength: 800,
 };
