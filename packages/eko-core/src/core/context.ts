@@ -1,4 +1,5 @@
 import { Agent } from "../agent";
+import { sleep } from "../common/utils";
 import Chain, { AgentChain } from "./chain";
 import { EkoConfig, Workflow } from "../types/core.types";
 
@@ -10,6 +11,7 @@ export default class Context {
   controller: AbortController;
   variables: Map<string, any>;
   workflow?: Workflow;
+  paused: boolean = false;
 
   constructor(
     taskId: string,
@@ -25,12 +27,20 @@ export default class Context {
     this.controller = new AbortController();
   }
 
-  checkAborted() {
+  async checkAborted() {
     // this.controller.signal.throwIfAborted();
     if (this.controller.signal.aborted) {
       const error = new Error("Operation was interrupted");
       error.name = "AbortError";
       throw error;
+    }
+    while (this.paused) {
+      await sleep(500);
+      if (this.controller.signal.aborted) {
+        const error = new Error("Operation was interrupted");
+        error.name = "AbortError";
+        throw error;
+      }
     }
   }
 }

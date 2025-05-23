@@ -75,7 +75,7 @@ export class Planner {
     let streamText = "";
     try {
       while (true) {
-        this.context.checkAborted();
+        await this.context.checkAborted();
         const { done, value } = await reader.read();
         if (done) {
           break;

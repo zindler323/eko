@@ -123,7 +123,7 @@ export class Eko {
     }, {} as { [key: string]: Agent & { result?: any } });
     let results: string[] = [];
     for (let i = 0; i < workflow.agents.length; i++) {
-      context.checkAborted();
+      await context.checkAborted();
       let agentNode = workflow.agents[i];
       let agent = agentMap[agentNode.name];
       if (!agent) {
@@ -158,6 +158,16 @@ export class Eko {
     let context = this.taskMap.get(taskId);
     if (context) {
       context.controller.abort();
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  public pauseTask(taskId: string, paused: boolean): boolean {
+    let context = this.taskMap.get(taskId);
+    if (context) {
+      context.paused = paused;
       return true;
     } else {
       return false;

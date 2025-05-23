@@ -89,7 +89,7 @@ export class Agent {
     let rlm = new RetryLanguageModel(context.config.llms, this.llms);
     let agentTools = tools;
     while (loopNum < maxReactNum) {
-      context.checkAborted();
+      await context.checkAborted();
       if (mcpClient) {
         let controlMcp = await this.controlMcpTools(
           agentContext,
@@ -451,6 +451,10 @@ export class Agent {
     return this.tools;
   }
 
+  public addTool(tool: Tool) {
+    this.tools.push(tool);
+  }
+
   get Name(): string {
     return this.name;
   }
@@ -507,7 +511,7 @@ export async function callLLM(
   const reader = result.stream.getReader();
   try {
     while (true) {
-      context.checkAborted();
+      await context.checkAborted();
       const { done, value } = await reader.read();
       if (done) {
         break;
