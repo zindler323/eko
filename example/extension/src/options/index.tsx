@@ -66,7 +66,7 @@ const OptionsPage = () => {
       { value: "gpt-4o-mini", label: "gpt-4o-mini" },
     ],
     openrouter: [
-      // { value: "anthropic/claude-sonnet-4", label: "claude-sonnet-4 (default)" },
+      { value: "anthropic/claude-sonnet-4", label: "claude-sonnet-4 (default)" },
       { value: "anthropic/claude-3.7-sonnet", label: "claude-3.7-sonnet (default)" },
       { value: "anthropic/claude-3.5-sonnet", label: "claude-3.5-sonnet" },
       { value: "openai/gpt-4.1", label: "gpt-4.1" },
