@@ -41,7 +41,7 @@ export class RetryLanguageModel {
         toolChoice: request.toolChoice,
       },
       prompt: request.messages,
-      maxTokens: request.maxTokens || config.maxTokens,
+      maxTokens: request.maxTokens,
       temperature: request.temperature,
       topP: request.topP,
       topK: request.topK,
@@ -53,12 +53,17 @@ export class RetryLanguageModel {
   async doGenerate(
     options: LanguageModelV1CallOptions
   ): Promise<GenerateResult> {
+    const maxTokens = options.maxTokens;
     const names = [...this.names, ...this.names];
     for (let i = 0; i < names.length; i++) {
       const name = names[i];
       const llm = this.getLLM(name);
       if (!llm) {
         continue;
+      }
+      if (!maxTokens) {
+        options.maxTokens =
+          this.llms[name].config?.maxTokens || config.maxTokens;
       }
       try {
         let result = await llm.doGenerate(options);
@@ -94,7 +99,7 @@ export class RetryLanguageModel {
         toolChoice: request.toolChoice,
       },
       prompt: request.messages,
-      maxTokens: request.maxTokens || config.maxTokens,
+      maxTokens: request.maxTokens,
       temperature: request.temperature,
       topP: request.topP,
       topK: request.topK,
@@ -104,12 +109,17 @@ export class RetryLanguageModel {
   }
 
   async doStream(options: LanguageModelV1CallOptions): Promise<StreamResult> {
+    const maxTokens = options.maxTokens;
     const names = [...this.names, ...this.names];
     for (let i = 0; i < names.length; i++) {
       const name = names[i];
       const llm = this.getLLM(name);
       if (!llm) {
         continue;
+      }
+      if (!maxTokens) {
+        options.maxTokens =
+          this.llms[name].config?.maxTokens || config.maxTokens;
       }
       try {
         const controller = new AbortController();

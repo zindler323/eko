@@ -28,6 +28,7 @@ export type LLMConfig = {
     temperature?: number;
     topP?: number;
     topK?: number;
+    maxTokens?: number;
     [key: string]: any;
   };
 };
