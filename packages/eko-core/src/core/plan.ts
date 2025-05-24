@@ -57,7 +57,8 @@ export class Planner {
               type: "text",
               text: getPlanUserPrompt(
                 taskPrompt,
-                this.context.variables.get("task_website")
+                this.context.variables.get("task_website"),
+                this.context.variables.get("plan_ext_prompt")
               ),
             },
           ],
