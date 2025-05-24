@@ -14,7 +14,7 @@ export async function testOpenaiPrompt() {
   const client: LanguageModelV1 = createOpenAI({
     apiKey: apiKey,
     baseURL: baseURL,
-  }).languageModel("gpt-4o-mini");
+  }).languageModel("gpt-4.1-mini");
 
   let result = await client.doGenerate({
     inputFormat: "messages",
@@ -37,7 +37,7 @@ export async function testOpenaiStream() {
   const client: LanguageModelV1 = createOpenAI({
     apiKey: apiKey,
     baseURL: baseURL,
-  }).languageModel("gpt-4o-mini");
+  }).languageModel("gpt-4.1-mini");
 
   let result = await client.doStream({
     inputFormat: "messages",
@@ -79,7 +79,7 @@ export async function testToolsPrompt() {
   const client: LanguageModelV1 = createOpenAI({
     apiKey: apiKey,
     baseURL: baseURL,
-  }).languageModel("gpt-4o-mini");
+  }).languageModel("gpt-4.1-mini");
 
   let result = await client.doGenerate({
     inputFormat: "messages",

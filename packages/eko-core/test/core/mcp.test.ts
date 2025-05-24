@@ -27,7 +27,7 @@ const llms: LLMs = {
   },
   openai: {
     provider: "openai",
-    model: "gpt-4o-mini",
+    model: "gpt-4.1-mini",
     apiKey: openaiApiKey || "",
     config: {
       baseURL: openaiBaseURL,

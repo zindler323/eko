@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 import ChatAgent from "./chat";
-import { BrowserAgent } from "@eko-ai/eko-nodejs";
+import { BrowserAgent, FileAgent } from "@eko-ai/eko-nodejs";
 import { Eko, Agent, Log, LLMs, StreamCallbackMessage } from "@eko-ai/eko";
 
 dotenv.config();
@@ -13,7 +13,7 @@ const claudeApiKey = process.env.ANTHROPIC_API_KEY;
 const llms: LLMs = {
   default: {
     provider: "anthropic",
-    model: "claude-3-5-sonnet-20241022",
+    model: "claude-sonnet-4-20250514",
     apiKey: claudeApiKey || "",
     config: {
       baseURL: claudeBaseURL,
@@ -21,7 +21,7 @@ const llms: LLMs = {
   },
   openai: {
     provider: "openai",
-    model: "gpt-4o-mini",
+    model: "gpt-4.1-mini",
     apiKey: openaiApiKey || "",
     config: {
       baseURL: openaiBaseURL,
@@ -46,10 +46,10 @@ const callback = {
 
 async function run() {
   Log.setLevel(0);
-  let agents: Agent[] = [new ChatAgent(), new BrowserAgent()];
+  let agents: Agent[] = [new ChatAgent(), new BrowserAgent(), new FileAgent()];
   let eko = new Eko({ llms, agents, callback });
   // let result = await eko.run("How is the weather in Beijing?");
-  let result = await eko.run("Search for the latest news about Musk");
+  let result = await eko.run("Search for the latest news about Musk, summarize and save to the desktop as Musk.md");
   console.log("result: ", result.result);
 }
 

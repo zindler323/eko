@@ -55,29 +55,26 @@ Eko (pronounced like ‘echo’) is a production-ready JavaScript framework that
 > Please refer to the link: https://eko.fellou.ai/docs/getting-started/configuration#web-environment
 
 ```typescript
-// quickstart.ts
 const llms: LLMs = {
   default: {
     provider: "anthropic",
-    model: "claude-3-5-sonnet-20241022",
-    apiKey: claudeApiKey || "your-api-key",
-    config: { baseURL: claudeBaseURL },
+    model: "claude-sonnet-4-20250514",
+    apiKey: "your-api-key"
   },
   openai: {
     provider: "openai",
-    model: "gpt-4o-mini",
-    apiKey: openaiApiKey || "your-api-key",
-    config: { baseURL: openaiBaseURL },
-  },
+    model: "gpt-4.1",
+    apiKey: "your-api-key"
+  }
 };
-let agents: Agent[] = [new ChatAgent(), new BrowserAgent()];
+
+let agents: Agent[] = [new BrowserAgent(), new FileAgent()];
 let eko = new Eko({ llms, agents });
-let result = await eko.run("Search for the latest news about Musk");
+let result = await eko.run("Search for the latest news about Musk, summarize and save to the desktop as Musk.md");
 ```
 
 ```bash
 $ pnpm install @eko-ai/eko
-$ npx ts-node quickstart.ts
 ```
 
 ## Use Cases

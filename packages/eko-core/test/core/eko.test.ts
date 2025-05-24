@@ -16,7 +16,7 @@ const openaiApiKey = process.env.OPENAI_API_KEY;
 const llms: LLMs = {
   default: {
     provider: "openai",
-    model: "gpt-4o-mini",
+    model: "gpt-4.1-mini",
     apiKey: openaiApiKey || "",
     config: {
       baseURL: openaiBaseURL,

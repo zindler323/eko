@@ -57,7 +57,8 @@ export class Planner {
               type: "text",
               text: getPlanUserPrompt(
                 taskPrompt,
-                this.context.variables.get("task_website")
+                this.context.variables.get("task_website"),
+                this.context.variables.get("plan_ext_prompt")
               ),
             },
           ],
@@ -75,7 +76,7 @@ export class Planner {
     let streamText = "";
     try {
       while (true) {
-        this.context.checkAborted();
+        await this.context.checkAborted();
         const { done, value } = await reader.read();
         if (done) {
           break;

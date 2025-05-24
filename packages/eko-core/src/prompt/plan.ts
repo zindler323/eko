@@ -4,7 +4,7 @@ import { AGENT_NAME as chat_agent_name } from "../agent/chat";
 
 const PLAN_SYSTEM_TEMPLATE = `
 You are {name}, an autonomous AI Agent Planner.
-UTC datetime: {datetime}
+Current datetime: {datetime}
 
 ## Task Description
 Your task is to understand the user's requirements, dynamically plan the user's tasks based on the Agent list, and please follow the steps below:
@@ -164,13 +164,13 @@ Output result:
 
 const PLAN_USER_TEMPLATE = `
 User Platform: {platform}
-Task Description: {taskPrompt}
+Task Description: {task_prompt}
 `;
 
 const PLAN_USER_TASK_WEBSITE_TEMPLATE = `
 User Platform: {platform}
 Task Website: {task_website}
-Task Description: {taskPrompt}
+Task Description: {task_prompt}
 `;
 
 export async function getPlanSystemPrompt(context: Context): Promise<string> {
@@ -200,23 +200,28 @@ export async function getPlanSystemPrompt(context: Context): Promise<string> {
   }
   return PLAN_SYSTEM_TEMPLATE.replace("{name}", config.name)
     .replace("{agents}", agents_prompt.trim())
-    .replace("{datetime}", new Date().toISOString())
+    .replace("{datetime}", new Date().toLocaleString())
     .replace("{example_prompt}", example_prompt)
     .trim();
 }
 
 export function getPlanUserPrompt(
-  taskPrompt: string,
-  task_website?: string
+  task_prompt: string,
+  task_website?: string,
+  ext_prompt?: string,
 ): string {
+  let prompt = "";
   if (task_website) {
-    return PLAN_USER_TASK_WEBSITE_TEMPLATE.replace("{taskPrompt}", taskPrompt)
+    prompt = PLAN_USER_TASK_WEBSITE_TEMPLATE.replace("{task_prompt}", task_prompt)
       .replace("{platform}", config.platform)
-      .replace("{task_website}", task_website)
-      .trim();
+      .replace("{task_website}", task_website);
   } else {
-    return PLAN_USER_TEMPLATE.replace("{taskPrompt}", taskPrompt)
-      .replace("{platform}", config.platform)
-      .trim();
+    prompt = PLAN_USER_TEMPLATE.replace("{task_prompt}", task_prompt)
+      .replace("{platform}", config.platform);
   }
+  prompt = prompt.trim();
+  if (ext_prompt) {
+    prompt += `\n${ext_prompt.trim()}`;
+  }
+  return prompt;
 }
