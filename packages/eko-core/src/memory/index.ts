@@ -117,7 +117,7 @@ export async function compressAgentMessages(
   if (callback) {
     await callback.onMessage({
       taskId: agentContext.context.taskId,
-      agentName: toolCall.toolName,
+      agentName: agentContext.agent.Name,
       nodeId: agentContext.agentChain.agent.id,
       type: "tool_result",
       toolId: toolCall.toolCallId,

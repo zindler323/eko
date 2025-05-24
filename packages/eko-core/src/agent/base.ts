@@ -187,7 +187,7 @@ export class Agent {
       if (context.config.callback) {
         await context.config.callback.onMessage({
           taskId: context.taskId,
-          agentName: result.toolName,
+          agentName: agentContext.agent.Name,
           nodeId: agentContext.agentChain.agent.id,
           type: "tool_result",
           toolId: result.toolCallId,
