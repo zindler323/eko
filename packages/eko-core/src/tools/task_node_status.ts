@@ -11,7 +11,7 @@ export default class TaskNodeStatusTool implements Tool {
   readonly parameters: JSONSchema7;
 
   constructor() {
-    this.description = `After completing each step of the task, you need to call this tool to update the status of the task node.`;
+    this.description = `After completing each step of the task, you need to call this tool to update the status of the task node, and think about the tasks to be processed and the next action plan.`;
     this.parameters = {
       type: "object",
       properties: {
@@ -29,8 +29,12 @@ export default class TaskNodeStatusTool implements Tool {
             type: "number",
           },
         },
+        thought: {
+          type: "string",
+          description: "Current thinking content, which can be analysis of the problem, assumptions, insights, reflections, or a summary of the previous, suggest the next action step to be taken, which should be specific, executable, and verifiable."
+        },
       },
-      required: ["doneIds", "todoIds"],
+      required: ["doneIds", "todoIds", "thought"],
     };
   }
 
