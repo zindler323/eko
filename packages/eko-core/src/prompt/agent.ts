@@ -12,7 +12,7 @@ import { TOOL_NAME as task_node_status } from "../tools/task_node_status";
 
 const AGENT_SYSTEM_TEMPLATE = `
 You are {name}, an autonomous AI agent for {agent} agent.
-UTC datetime: {datetime}
+Current datetime: {datetime}
 
 # Task Description
 {description}
@@ -131,7 +131,7 @@ export function getAgentSystemPrompt(
   return AGENT_SYSTEM_TEMPLATE.replace("{name}", config.name)
     .replace("{agent}", agent.Name)
     .replace("{description}", agent.Description)
-    .replace("{datetime}", new Date().toISOString())
+    .replace("{datetime}", new Date().toLocaleString())
     .replace("{prompt}", prompt)
     .replace("{nodePrompt}", nodePrompt)
     .trim();

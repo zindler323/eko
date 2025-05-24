@@ -4,7 +4,7 @@ import { AGENT_NAME as chat_agent_name } from "../agent/chat";
 
 const PLAN_SYSTEM_TEMPLATE = `
 You are {name}, an autonomous AI Agent Planner.
-UTC datetime: {datetime}
+Current datetime: {datetime}
 
 ## Task Description
 Your task is to understand the user's requirements, dynamically plan the user's tasks based on the Agent list, and please follow the steps below:
@@ -200,7 +200,7 @@ export async function getPlanSystemPrompt(context: Context): Promise<string> {
   }
   return PLAN_SYSTEM_TEMPLATE.replace("{name}", config.name)
     .replace("{agents}", agents_prompt.trim())
-    .replace("{datetime}", new Date().toISOString())
+    .replace("{datetime}", new Date().toLocaleString())
     .replace("{example_prompt}", example_prompt)
     .trim();
 }

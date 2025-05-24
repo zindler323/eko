@@ -74,7 +74,7 @@ export class Logger {
     let formattedMessage = '';
 
     if (this.dateFormat) {
-      formattedMessage += `[${new Date().toISOString()}] `;
+      formattedMessage += `[${new Date().toLocaleString()}] `;
     }
 
     formattedMessage += `[${levelNames[level] || 'UNKNOWN'}] `;
