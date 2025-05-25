@@ -32,6 +32,9 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     tab = await this.waitForTabComplete(tab.id);
     await this.sleep(200);
     agentContext.variables.set("windowId", tab.windowId);
+    let navigateTabIds = agentContext.variables.get("navigateTabIds") || [];
+    navigateTabIds.push(tab.id);
+    agentContext.variables.set("navigateTabIds", navigateTabIds);
     return {
       url: url,
       title: tab.title,
@@ -72,6 +75,37 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
       url: tab.url,
       title: tab.title,
     };
+  }
+
+  protected async go_back(agentContext: AgentContext): Promise<any> {
+    try {
+      let canGoBack = await this.execute_script(
+        agentContext,
+        () => {
+          return (window as any).navigation.canGoBack;
+        },
+        []
+      );
+      if ((canGoBack + "") == "false") {
+        let navigateTabIds = agentContext.variables.get("navigateTabIds");
+        if (navigateTabIds && navigateTabIds.length > 0) {
+          return await this.switch_tab(
+            agentContext,
+            navigateTabIds[navigateTabIds.length - 1]
+          );
+        }
+      }
+      await this.execute_script(
+        agentContext,
+        () => {
+          (window as any).navigation.back();
+        },
+        []
+      );
+      await this.sleep(100);
+    } catch (e) {
+      console.error("BrowserAgent, go_back, error: ", e);
+    }
   }
 
   protected async execute_script(
