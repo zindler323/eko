@@ -130,7 +130,7 @@ export default abstract class BaseFileAgent extends Agent {
       {
         name: "file_write",
         description:
-          "Overwrite or append content to a file. Use for creating new files, appending content, or modifying existing files, only supports txt/md/csv or other text formats.",
+          "Overwrite or append content to a file. Use for creating new files, appending content, or modifying existing files, only supports txt/md/json/csv or other text formats.",
         parameters: {
           type: "object",
           properties: {
