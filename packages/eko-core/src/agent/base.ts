@@ -17,6 +17,8 @@ import {
   ToolResult,
   ToolSchema,
   StreamCallbackMessage,
+  StreamCallback,
+  HumanCallback,
 } from "../types";
 import {
   LanguageModelV1FilePart,
@@ -46,6 +48,7 @@ export class Agent {
   protected llms?: string[];
   protected mcpClient?: IMcpClient;
   protected planDescription?: string;
+  protected callback?: StreamCallback & HumanCallback;
 
   constructor(params: AgentParams) {
     this.name = params.name;
@@ -113,7 +116,11 @@ export class Agent {
         agentContext,
         rlm,
         messages,
-        this.convertTools(agentTools)
+        this.convertTools(agentTools),
+        false,
+        undefined,
+        false,
+        this.callback
       );
       let finalResult = await this.handleCallResult(
         agentContext,
@@ -184,8 +191,9 @@ export class Agent {
           throw e;
         }
       }
-      if (context.config.callback) {
-        await context.config.callback.onMessage({
+      const callback = this.callback || context.config.callback;
+      if (callback) {
+        await callback.onMessage({
           taskId: context.taskId,
           agentName: agentContext.agent.Name,
           nodeId: agentContext.agentChain.agent.id,
@@ -484,6 +492,7 @@ export async function callLLM(
   noCompress?: boolean,
   toolChoice?: LanguageModelV1ToolChoice,
   retry?: boolean,
+  callback?: StreamCallback & HumanCallback
 ): Promise<Array<LanguageModelV1TextPart | LanguageModelV1ToolCallPart>> {
   if (messages.length >= config.compressThreshold && !noCompress) {
     await memory.compressAgentMessages(agentContext, rlm, messages, tools);
@@ -491,9 +500,10 @@ export async function callLLM(
   let context = agentContext.context;
   let agentChain = agentContext.agentChain;
   let agentNode = agentChain.agent;
-  let streamCallback = context.config.callback || {
-    onMessage: async () => {},
-  };
+  let streamCallback = callback ||
+    context.config.callback || {
+      onMessage: async () => {},
+    };
   let request: LLMRequest = {
     tools: tools,
     toolChoice,
@@ -633,9 +643,28 @@ export async function callLLM(
             finishReason: chunk.finishReason,
             usage: chunk.usage,
           });
-          if (chunk.finishReason === "length" && messages.length >= 10 && !noCompress && !retry) {
-            await memory.compressAgentMessages(agentContext, rlm, messages, tools);
-            return callLLM(agentContext, rlm, messages, tools, noCompress, toolChoice, true);
+          if (
+            chunk.finishReason === "length" &&
+            messages.length >= 10 &&
+            !noCompress &&
+            !retry
+          ) {
+            await memory.compressAgentMessages(
+              agentContext,
+              rlm,
+              messages,
+              tools
+            );
+            return callLLM(
+              agentContext,
+              rlm,
+              messages,
+              tools,
+              noCompress,
+              toolChoice,
+              true,
+              streamCallback
+            );
           }
           break;
         }
