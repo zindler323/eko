@@ -124,7 +124,7 @@ export async function compressAgentMessages(
       toolName: toolCall.toolName,
       params: args,
       toolResult: toolResult,
-    });
+    }, agentContext);
   }
   // handle original messages
   let firstToolIndex = 3;

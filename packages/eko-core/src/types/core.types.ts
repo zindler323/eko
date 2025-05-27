@@ -78,7 +78,7 @@ export type StreamCallbackMessage = {
 );
 
 export interface StreamCallback {
-  onMessage: (message: StreamCallbackMessage) => Promise<void>;
+  onMessage: (message: StreamCallbackMessage, agentContext?: AgentContext) => Promise<void>;
 }
 
 export type WorkflowTextNode = {

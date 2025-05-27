@@ -202,7 +202,7 @@ export class Agent {
           toolName: result.toolName,
           params: result.args || {},
           toolResult: toolResult,
-        });
+        }, agentContext);
       }
       let llmToolResult = this.convertToolResult(
         result,
@@ -538,7 +538,7 @@ export async function callLLM(
             streamId,
             streamDone: false,
             text: streamText,
-          });
+          }, agentContext);
           break;
         }
         case "reasoning": {
@@ -551,7 +551,7 @@ export async function callLLM(
             streamId,
             streamDone: false,
             text: thinkText,
-          });
+          }, agentContext);
           break;
         }
         case "tool-call-delta": {
@@ -565,7 +565,7 @@ export async function callLLM(
               streamId,
               streamDone: true,
               text: streamText,
-            });
+            }, agentContext);
           }
           toolArgsText += chunk.argsTextDelta || "";
           await streamCallback.onMessage({
@@ -576,7 +576,7 @@ export async function callLLM(
             toolId: chunk.toolCallId,
             toolName: chunk.toolName,
             paramsText: toolArgsText,
-          });
+          }, agentContext);
           break;
         }
         case "tool-call": {
@@ -591,7 +591,7 @@ export async function callLLM(
             toolName: chunk.toolName,
             params: args,
           };
-          await streamCallback.onMessage(message);
+          await streamCallback.onMessage(message, agentContext);
           toolParts.push({
             type: "tool-call",
             toolCallId: chunk.toolCallId,
@@ -608,7 +608,7 @@ export async function callLLM(
             type: "file",
             mimeType: chunk.mimeType,
             data: chunk.data as string,
-          });
+          }, agentContext);
           break;
         }
         case "error": {
@@ -619,7 +619,7 @@ export async function callLLM(
             nodeId: agentNode.id,
             type: "error",
             error: chunk.error,
-          });
+          }, agentContext);
           throw new Error("Plan Error");
         }
         case "finish": {
@@ -633,7 +633,7 @@ export async function callLLM(
               streamId,
               streamDone: true,
               text: streamText,
-            });
+            }, agentContext);
           }
           await streamCallback.onMessage({
             taskId: context.taskId,
@@ -642,7 +642,7 @@ export async function callLLM(
             type: "finish",
             finishReason: chunk.finishReason,
             usage: chunk.usage,
-          });
+          }, agentContext);
           if (
             chunk.finishReason === "length" &&
             messages.length >= 10 &&
