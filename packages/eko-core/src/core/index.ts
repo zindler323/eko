@@ -133,6 +133,9 @@ export class Eko {
       context.chain.push(agentChain);
       agent.result = await agent.run(context, agentChain);
       results.push(agent.result);
+      if (agentNode.name === "Timer") {
+        break;
+      }
     }
     return {
       success: true,

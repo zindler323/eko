@@ -204,7 +204,7 @@ export function handleLargeContextMessages(messages: LanguageModelV1Prompt) {
             }
             _content = {
               type: "text",
-              text: _content.text.substring(0, config.shortTextLength) + "...",
+              text: _content.text.substring(0, config.largeTextLength) + "...",
             };
             toolContent[r] = _content;
           }

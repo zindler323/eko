@@ -185,10 +185,7 @@ export class RetryLanguageModel {
       return createOpenAI({
         apiKey: llm.apiKey,
         baseURL: llm.config?.baseURL,
-      }).languageModel(llm.model, {
-        // disable_parallel_tool_use
-        parallelToolCalls: llm.config?.parallelToolCalls || false,
-      });
+      }).languageModel(llm.model);
     } else if (llm.provider == "anthropic") {
       return createAnthropic({
         apiKey: llm.apiKey,

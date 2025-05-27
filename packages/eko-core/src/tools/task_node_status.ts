@@ -15,6 +15,10 @@ export default class TaskNodeStatusTool implements Tool {
     this.parameters = {
       type: "object",
       properties: {
+        thought: {
+          type: "string",
+          description: "Current thinking content, which can be analysis of the problem, assumptions, insights, reflections, or a summary of the previous, suggest the next action step to be taken, which should be specific, executable, and verifiable."
+        },
         doneIds: {
           type: "array",
           description: "List of completed node IDs.",
@@ -29,12 +33,8 @@ export default class TaskNodeStatusTool implements Tool {
             type: "number",
           },
         },
-        thought: {
-          type: "string",
-          description: "Current thinking content, which can be analysis of the problem, assumptions, insights, reflections, or a summary of the previous, suggest the next action step to be taken, which should be specific, executable, and verifiable."
-        },
       },
-      required: ["doneIds", "todoIds", "thought"],
+      required: ["thought", "doneIds", "todoIds"],
     };
   }
 
