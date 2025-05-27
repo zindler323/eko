@@ -239,7 +239,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
             },
             enter: {
               type: "boolean",
-              description: "press the Enter key",
+              description: "When text input is completed, press Enter (applicable to search boxes)",
               default: false,
             },
           },
@@ -635,6 +635,19 @@ function typing(params: {
     }
   }
   input.focus && input.focus();
+  if (!text && enter) {
+    ["keydown", "keypress", "keyup"].forEach((eventType) => {
+      const event = new KeyboardEvent(eventType, {
+        key: "Enter",
+        code: "Enter",
+        keyCode: 13,
+        bubbles: true,
+        cancelable: true,
+      });
+      input.dispatchEvent(event);
+    });
+    return true;
+  }
   if (input.value == undefined) {
     input.textContent = text;
   } else {

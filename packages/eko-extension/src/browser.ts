@@ -86,7 +86,33 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
         },
         []
       );
-      if ((canGoBack + "") == "false") {
+      if (canGoBack + "" == "true") {
+        await this.execute_script(
+          agentContext,
+          () => {
+            (window as any).navigation.back();
+          },
+          []
+        );
+        await this.sleep(100);
+        return;
+      }
+      let history_length = await this.execute_script(
+        agentContext,
+        () => {
+          return (window as any).history.length;
+        },
+        []
+      );
+      if (history_length > 1) {
+        await this.execute_script(
+          agentContext,
+          () => {
+            (window as any).history.back();
+          },
+          []
+        );
+      } else {
         let navigateTabIds = agentContext.variables.get("navigateTabIds");
         if (navigateTabIds && navigateTabIds.length > 0) {
           return await this.switch_tab(
@@ -95,13 +121,6 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
           );
         }
       }
-      await this.execute_script(
-        agentContext,
-        () => {
-          (window as any).navigation.back();
-        },
-        []
-      );
       await this.sleep(100);
     } catch (e) {
       console.error("BrowserAgent, go_back, error: ", e);
