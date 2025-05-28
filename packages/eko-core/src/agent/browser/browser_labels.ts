@@ -795,9 +795,20 @@ function scroll_by(params: { amount: number }) {
     return;
   }
 
+  function findNodes(element = document, nodes: any =  []) : Element[] {
+    for (const node of Array.from(element.querySelectorAll("*"))) {
+      if (node.tagName === 'IFRAME' && (node as any).contentDocument) {
+        findNodes((node as any).contentDocument, nodes)
+      } else {
+        nodes.push(node)
+      }
+    }
+    return nodes
+  }
+
   function findScrollableElements(): Element[] {
-    const allElements = Array.from(document.querySelectorAll("*"));
-    return allElements.filter((el) => {
+    const allElements = findNodes();
+    let elements = allElements.filter((el) => {
       const style = window.getComputedStyle(el);
       const overflowY = style.getPropertyValue("overflow-y");
       return (
@@ -805,6 +816,16 @@ function scroll_by(params: { amount: number }) {
         el.scrollHeight > el.clientHeight
       );
     });
+    if (elements.length == 0) {
+      elements = allElements.filter((el) => {
+        const style = window.getComputedStyle(el);
+        const overflowY = style.getPropertyValue("overflow-y");
+        return (
+            overflowY === "auto" || overflowY === "scroll" || el.scrollHeight > el.clientHeight
+        );
+      });
+    }
+    return elements;
   }
 
   function getVisibleArea(element: Element) {
@@ -835,6 +856,12 @@ function scroll_by(params: { amount: number }) {
   const viewportHeight = largestElement.clientHeight;
   const y = Math.max(20, Math.min(viewportHeight / 10, 200));
   largestElement.scrollBy(0, y * amount);
+  const maxHeightElement = sortedElements.sort((a, b) => b.getBoundingClientRect().height - a.getBoundingClientRect().height)[0];
+  if (maxHeightElement != largestElement) {
+    const viewportHeight = maxHeightElement.clientHeight;
+    const y = Math.max(20, Math.min(viewportHeight / 10, 200));
+    maxHeightElement.scrollBy(0, y * amount);
+  }
   return true;
 }
 
