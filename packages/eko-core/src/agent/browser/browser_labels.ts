@@ -89,6 +89,15 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
   ): Promise<any> {
     await this.execute_script(agentContext, scroll_by, [{ amount }]);
     await sleep(200);
+    if (!extract_page_content) {
+      const tools = this.toolUseNames(agentContext.agentChain.agentRequest?.messages);
+      if (tools.length > 3 && 
+        tools[tools.length - 1] == "scroll_mouse_wheel" && 
+        tools[tools.length - 2] == "scroll_mouse_wheel" && 
+        tools[tools.length - 3] == "scroll_mouse_wheel") {
+        extract_page_content = true;
+      }
+    }
     if (extract_page_content) {
       let page_content = await this.extract_page_content(agentContext);
       return "This is the latest page content:\n" + page_content;
@@ -336,11 +345,12 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
             },
             extract_page_content: {
               type: "boolean",
+              default: false,
               description:
                 "After scrolling is completed, whether to extract the current latest page content",
             },
           },
-          required: ["amount", "direction"],
+          required: ["amount", "direction", "extract_page_content"],
         },
         execute: async (
           args: Record<string, unknown>,
