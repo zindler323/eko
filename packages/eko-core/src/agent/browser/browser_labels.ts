@@ -95,7 +95,8 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
         tools[tools.length - 1] == "scroll_mouse_wheel" && 
         tools[tools.length - 2] == "scroll_mouse_wheel" && 
         tools[tools.length - 3] == "scroll_mouse_wheel") {
-        extract_page_content = true;
+        let page_content = await this.extract_page_content(agentContext);
+        return "The current page content has been extracted, latest page content:\n" + page_content;
       }
     }
     if (extract_page_content) {
