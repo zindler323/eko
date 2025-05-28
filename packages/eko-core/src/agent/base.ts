@@ -17,6 +17,8 @@ import {
   ToolResult,
   ToolSchema,
   StreamCallbackMessage,
+  StreamCallback,
+  HumanCallback,
 } from "../types";
 import {
   LanguageModelV1FilePart,
@@ -46,6 +48,7 @@ export class Agent {
   protected llms?: string[];
   protected mcpClient?: IMcpClient;
   protected planDescription?: string;
+  protected callback?: StreamCallback & HumanCallback;
 
   constructor(params: AgentParams) {
     this.name = params.name;
@@ -113,7 +116,11 @@ export class Agent {
         agentContext,
         rlm,
         messages,
-        this.convertTools(agentTools)
+        this.convertTools(agentTools),
+        false,
+        undefined,
+        false,
+        this.callback
       );
       let finalResult = await this.handleCallResult(
         agentContext,
@@ -184,8 +191,9 @@ export class Agent {
           throw e;
         }
       }
-      if (context.config.callback) {
-        await context.config.callback.onMessage({
+      const callback = this.callback || context.config.callback;
+      if (callback) {
+        await callback.onMessage({
           taskId: context.taskId,
           agentName: agentContext.agent.Name,
           nodeId: agentContext.agentChain.agent.id,
@@ -194,7 +202,7 @@ export class Agent {
           toolName: result.toolName,
           params: result.args || {},
           toolResult: toolResult,
-        });
+        }, agentContext);
       }
       let llmToolResult = this.convertToolResult(
         result,
@@ -484,6 +492,7 @@ export async function callLLM(
   noCompress?: boolean,
   toolChoice?: LanguageModelV1ToolChoice,
   retry?: boolean,
+  callback?: StreamCallback & HumanCallback
 ): Promise<Array<LanguageModelV1TextPart | LanguageModelV1ToolCallPart>> {
   if (messages.length >= config.compressThreshold && !noCompress) {
     await memory.compressAgentMessages(agentContext, rlm, messages, tools);
@@ -491,9 +500,10 @@ export async function callLLM(
   let context = agentContext.context;
   let agentChain = agentContext.agentChain;
   let agentNode = agentChain.agent;
-  let streamCallback = context.config.callback || {
-    onMessage: async () => {},
-  };
+  let streamCallback = callback ||
+    context.config.callback || {
+      onMessage: async () => {},
+    };
   let request: LLMRequest = {
     tools: tools,
     toolChoice,
@@ -528,7 +538,7 @@ export async function callLLM(
             streamId,
             streamDone: false,
             text: streamText,
-          });
+          }, agentContext);
           break;
         }
         case "reasoning": {
@@ -541,7 +551,7 @@ export async function callLLM(
             streamId,
             streamDone: false,
             text: thinkText,
-          });
+          }, agentContext);
           break;
         }
         case "tool-call-delta": {
@@ -555,7 +565,7 @@ export async function callLLM(
               streamId,
               streamDone: true,
               text: streamText,
-            });
+            }, agentContext);
           }
           toolArgsText += chunk.argsTextDelta || "";
           await streamCallback.onMessage({
@@ -566,7 +576,7 @@ export async function callLLM(
             toolId: chunk.toolCallId,
             toolName: chunk.toolName,
             paramsText: toolArgsText,
-          });
+          }, agentContext);
           break;
         }
         case "tool-call": {
@@ -581,7 +591,7 @@ export async function callLLM(
             toolName: chunk.toolName,
             params: args,
           };
-          await streamCallback.onMessage(message);
+          await streamCallback.onMessage(message, agentContext);
           toolParts.push({
             type: "tool-call",
             toolCallId: chunk.toolCallId,
@@ -598,7 +608,7 @@ export async function callLLM(
             type: "file",
             mimeType: chunk.mimeType,
             data: chunk.data as string,
-          });
+          }, agentContext);
           break;
         }
         case "error": {
@@ -609,7 +619,7 @@ export async function callLLM(
             nodeId: agentNode.id,
             type: "error",
             error: chunk.error,
-          });
+          }, agentContext);
           throw new Error("Plan Error");
         }
         case "finish": {
@@ -623,7 +633,7 @@ export async function callLLM(
               streamId,
               streamDone: true,
               text: streamText,
-            });
+            }, agentContext);
           }
           await streamCallback.onMessage({
             taskId: context.taskId,
@@ -632,10 +642,29 @@ export async function callLLM(
             type: "finish",
             finishReason: chunk.finishReason,
             usage: chunk.usage,
-          });
-          if (chunk.finishReason === "length" && messages.length >= 10 && !noCompress && !retry) {
-            await memory.compressAgentMessages(agentContext, rlm, messages, tools);
-            return callLLM(agentContext, rlm, messages, tools, noCompress, toolChoice, true);
+          }, agentContext);
+          if (
+            chunk.finishReason === "length" &&
+            messages.length >= 10 &&
+            !noCompress &&
+            !retry
+          ) {
+            await memory.compressAgentMessages(
+              agentContext,
+              rlm,
+              messages,
+              tools
+            );
+            return callLLM(
+              agentContext,
+              rlm,
+              messages,
+              tools,
+              noCompress,
+              toolChoice,
+              true,
+              streamCallback
+            );
           }
           break;
         }

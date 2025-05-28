@@ -89,6 +89,16 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
   ): Promise<any> {
     await this.execute_script(agentContext, scroll_by, [{ amount }]);
     await sleep(200);
+    if (!extract_page_content) {
+      const tools = this.toolUseNames(agentContext.agentChain.agentRequest?.messages);
+      if (tools.length > 3 && 
+        tools[tools.length - 1] == "scroll_mouse_wheel" && 
+        tools[tools.length - 2] == "scroll_mouse_wheel" && 
+        tools[tools.length - 3] == "scroll_mouse_wheel") {
+        let page_content = await this.extract_page_content(agentContext);
+        return "The current page content has been extracted, latest page content:\n" + page_content;
+      }
+    }
     if (extract_page_content) {
       let page_content = await this.extract_page_content(agentContext);
       return "This is the latest page content:\n" + page_content;
@@ -336,11 +346,12 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
             },
             extract_page_content: {
               type: "boolean",
+              default: false,
               description:
                 "After scrolling is completed, whether to extract the current latest page content",
             },
           },
-          required: ["amount", "direction"],
+          required: ["amount", "direction", "extract_page_content"],
         },
         execute: async (
           args: Record<string, unknown>,
@@ -785,9 +796,20 @@ function scroll_by(params: { amount: number }) {
     return;
   }
 
+  function findNodes(element = document, nodes: any =  []) : Element[] {
+    for (const node of Array.from(element.querySelectorAll("*"))) {
+      if (node.tagName === 'IFRAME' && (node as any).contentDocument) {
+        findNodes((node as any).contentDocument, nodes)
+      } else {
+        nodes.push(node)
+      }
+    }
+    return nodes
+  }
+
   function findScrollableElements(): Element[] {
-    const allElements = Array.from(document.querySelectorAll("*"));
-    return allElements.filter((el) => {
+    const allElements = findNodes();
+    let elements = allElements.filter((el) => {
       const style = window.getComputedStyle(el);
       const overflowY = style.getPropertyValue("overflow-y");
       return (
@@ -795,6 +817,16 @@ function scroll_by(params: { amount: number }) {
         el.scrollHeight > el.clientHeight
       );
     });
+    if (elements.length == 0) {
+      elements = allElements.filter((el) => {
+        const style = window.getComputedStyle(el);
+        const overflowY = style.getPropertyValue("overflow-y");
+        return (
+            overflowY === "auto" || overflowY === "scroll" || el.scrollHeight > el.clientHeight
+        );
+      });
+    }
+    return elements;
   }
 
   function getVisibleArea(element: Element) {
@@ -825,6 +857,12 @@ function scroll_by(params: { amount: number }) {
   const viewportHeight = largestElement.clientHeight;
   const y = Math.max(20, Math.min(viewportHeight / 10, 200));
   largestElement.scrollBy(0, y * amount);
+  const maxHeightElement = sortedElements.sort((a, b) => b.getBoundingClientRect().height - a.getBoundingClientRect().height)[0];
+  if (maxHeightElement != largestElement) {
+    const viewportHeight = maxHeightElement.clientHeight;
+    const y = Math.max(20, Math.min(viewportHeight / 10, 200));
+    maxHeightElement.scrollBy(0, y * amount);
+  }
   return true;
 }
 

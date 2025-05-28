@@ -5,6 +5,7 @@ type GlobalConfig = {
   maxTokens: number;
   compressThreshold: number; // Dialogue context compression threshold (message count)
   largeTextLength: number;
+  maxDialogueImgFileNum: number;
 }
 
 const config: GlobalConfig = {
@@ -14,6 +15,7 @@ const config: GlobalConfig = {
   maxTokens: 16000,
   compressThreshold: 80,
   largeTextLength: 5000,
+  maxDialogueImgFileNum: 2,
 };
 
 export default config;

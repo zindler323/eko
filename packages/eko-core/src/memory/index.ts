@@ -124,7 +124,7 @@ export async function compressAgentMessages(
       toolName: toolCall.toolName,
       params: args,
       toolResult: toolResult,
-    });
+    }, agentContext);
   }
   // handle original messages
   let firstToolIndex = 3;
@@ -147,6 +147,7 @@ export async function compressAgentMessages(
 export function handleLargeContextMessages(messages: LanguageModelV1Prompt) {
   let imageNum = 0;
   let fileNum = 0;
+  let maxNum = config.maxDialogueImgFileNum;
   let longTextTools: Record<string, number> = {};
   for (let i = messages.length - 1; i >= 0; i--) {
     let message = messages[i];
@@ -154,7 +155,7 @@ export function handleLargeContextMessages(messages: LanguageModelV1Prompt) {
       for (let j = 0; j < message.content.length; j++) {
         let content = message.content[j];
         if (content.type == "image") {
-          if (++imageNum == 1) {
+          if (++imageNum <= maxNum) {
             break;
           }
           content = {
@@ -163,7 +164,7 @@ export function handleLargeContextMessages(messages: LanguageModelV1Prompt) {
           };
           message.content[j] = content;
         } else if (content.type == "file") {
-          if (++fileNum == 1) {
+          if (++fileNum <= maxNum) {
             break;
           }
           content = {
@@ -183,7 +184,7 @@ export function handleLargeContextMessages(messages: LanguageModelV1Prompt) {
         for (let r = 0; r < toolContent.length; r++) {
           let _content = toolContent[r];
           if (_content.type == "image") {
-            if (++imageNum == 1) {
+            if (++imageNum <= maxNum) {
               break;
             }
             _content = {

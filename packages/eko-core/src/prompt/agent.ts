@@ -115,7 +115,7 @@ export function getAgentSystemPrompt(
   }
   if (context.chain.agents.length > 1) {
     prompt += "\n Main task: " + context.chain.taskPrompt;
-    prompt += "\n# Pre-task execution results";
+    prompt += "\n\n# Pre-task execution results";
     for (let i = 0; i < context.chain.agents.length; i++) {
       let agentChain = context.chain.agents[i];
       if (agentChain.agentResult) {

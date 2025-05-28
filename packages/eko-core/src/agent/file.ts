@@ -52,12 +52,57 @@ export default abstract class BaseFileAgent extends Agent {
     path: string
   ): Promise<string>;
 
+  protected async do_file_read(
+    agentContext: AgentContext,
+    path: string,
+    write_variable: string
+  ): Promise<{ file_context: string; write_variable?: string }> {
+    let file_context = await this.file_read(agentContext, path);
+    if (write_variable) {
+      agentContext.context.variables.set(write_variable, file_context);
+    }
+    return {
+      file_context: file_context,
+      write_variable: write_variable,
+    };
+  }
+
   protected abstract file_write(
     agentContext: AgentContext,
     path: string,
     content: string,
     append: boolean
   ): Promise<any>;
+
+  protected async do_file_write(
+    agentContext: AgentContext,
+    path: string,
+    append: boolean,
+    content?: string,
+    from_variable?: string
+  ): Promise<any> {
+    if (content == null && from_variable == null) {
+      throw new Error(
+        `content and from_variable cannot be both empty, cannot write to file ${path}`
+      );
+    }
+    if (from_variable) {
+      let variable_value =
+        agentContext.context.variables.get(from_variable) || "";
+      if (variable_value) {
+        content = variable_value;
+      }
+      if (!content) {
+        throw new Error(
+          `Variable ${from_variable} is empty, cannot write to file ${path}`
+        );
+      }
+    }
+    if (!content) {
+      throw new Error(`content is empty, cannot write to file ${path}`);
+    }
+    return await this.file_write(agentContext, path, content || "", append);
+  }
 
   protected abstract file_str_replace(
     agentContext: AgentContext,
@@ -115,6 +160,11 @@ export default abstract class BaseFileAgent extends Agent {
               type: "string",
               description: "File path",
             },
+            write_variable: {
+              type: "string",
+              description:
+                "Variable name, the content after reading is simultaneously written to the variable, facilitating direct loading from the variable in subsequent operations.",
+            },
           },
           required: ["path"],
         },
@@ -123,7 +173,11 @@ export default abstract class BaseFileAgent extends Agent {
           agentContext: AgentContext
         ): Promise<ToolResult> => {
           return await this.callInnerTool(() =>
-            this.file_read(agentContext, args.path as string)
+            this.do_file_read(
+              agentContext,
+              args.path as string,
+              args.write_variable as string
+            )
           );
         },
       },
@@ -138,28 +192,34 @@ export default abstract class BaseFileAgent extends Agent {
               type: "string",
               description: "File path",
             },
-            content: {
-              type: "string",
-              description: "Text content",
-            },
             append: {
               type: "boolean",
               description: "(Optional) Whether to use append mode",
               default: false,
             },
+            content: {
+              type: "string",
+              description: "Text content, write content directly to the file.",
+            },
+            from_variable: {
+              type: "string",
+              description:
+                "Variable name, read content from the variable and write it.",
+            },
           },
-          required: ["path", "content"],
+          required: ["path"],
         },
         execute: async (
           args: Record<string, unknown>,
           agentContext: AgentContext
         ): Promise<ToolResult> => {
           return await this.callInnerTool(() =>
-            this.file_write(
+            this.do_file_write(
               agentContext,
               args.path as string,
+              (args.append || false) as boolean,
               args.content as string,
-              (args.append || false) as boolean
+              args.from_variable as string
             )
           );
         },
