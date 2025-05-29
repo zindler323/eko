@@ -61,7 +61,7 @@ repetitive tasks, when executing to the forEach node, require the use of the \`$
 
 const WATCH_NODE = `
     <!-- monitor task node, the loop attribute specifies whether to listen in a loop or listen once -->
-    <watch event="dom or file" loop="true">
+    <watch event="dom" loop="true">
       <description>Monitor task description</description>
       <trigger>
         <node>Trigger step node</node>
@@ -71,7 +71,7 @@ const WATCH_NODE = `
 
 const WATCH_PROMPT = `
 * watch node
-monitor changes in webpage DOM or file content, when executing to the watch node, require the use of the \`${watch_trigger}\` tool.
+monitor changes in webpage DOM elements, when executing to the watch node, require the use of the \`${watch_trigger}\` tool.
 `;
 
 export function getAgentSystemPrompt(

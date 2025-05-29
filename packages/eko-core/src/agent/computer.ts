@@ -328,7 +328,7 @@ This is a computer GUI interface, observe the execution through screenshots, and
               description: "Duration in millisecond",
               default: 500,
               minimum: 200,
-              maximum: 2000,
+              maximum: 10000,
             },
           },
           required: ["duration"],

@@ -1,8 +1,11 @@
-import { BaseBrowserAgent, AGENT_NAME } from "./browser_base";
 import { AgentContext } from "../../core/context";
-import { Tool, ToolResult, IMcpClient } from "../../types";
 import { run_build_dom_tree } from "./build_dom_tree";
-import { LanguageModelV1Prompt } from "@ai-sdk/provider";
+import { BaseBrowserAgent, AGENT_NAME } from "./browser_base";
+import {
+  LanguageModelV1ImagePart,
+  LanguageModelV1Prompt,
+} from "@ai-sdk/provider";
+import { Tool, ToolResult, IMcpClient } from "../../types";
 import { mergeTools, sleep, toImage } from "../../common/utils";
 
 export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
@@ -90,18 +93,22 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     await this.execute_script(agentContext, scroll_by, [{ amount }]);
     await sleep(200);
     if (!extract_page_content) {
-      const tools = this.toolUseNames(agentContext.agentChain.agentRequest?.messages);
-      if (tools.length > 3 && 
-        tools[tools.length - 1] == "scroll_mouse_wheel" && 
-        tools[tools.length - 2] == "scroll_mouse_wheel" && 
-        tools[tools.length - 3] == "scroll_mouse_wheel") {
-        let page_content = await this.extract_page_content(agentContext);
-        return "The current page content has been extracted, latest page content:\n" + page_content;
+      const tools = this.toolUseNames(
+        agentContext.agentChain.agentRequest?.messages
+      );
+      let scroll_count = 0;
+      for (let i = tools.length - 1; i >= Math.max(tools.length - 8, 0); i--) {
+        if (tools[i] == "scroll_mouse_wheel") {
+          scroll_count++;
+        }
+      }
+      if (scroll_count >= 3) {
+        extract_page_content = true;
       }
     }
     if (extract_page_content) {
       let page_content = await this.extract_page_content(agentContext);
-      return "This is the latest page content:\n" + page_content;
+      return "The current page content has been extracted, latest page content:\n" + page_content;
     }
   }
 
@@ -249,7 +256,8 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
             },
             enter: {
               type: "boolean",
-              description: "When text input is completed, press Enter (applicable to search boxes)",
+              description:
+                "When text input is completed, press Enter (applicable to search boxes)",
               default: false,
             },
           },
@@ -512,7 +520,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
               description: "Duration in millisecond",
               default: 500,
               minimum: 200,
-              maximum: 5000,
+              maximum: 10000,
             },
           },
           required: ["duration"],
@@ -527,6 +535,14 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
         },
       },
     ];
+  }
+
+  protected async double_screenshots(
+    agentContext: AgentContext,
+    messages: LanguageModelV1Prompt,
+    tools: Tool[]
+  ): Promise<boolean> {
+    return true;
   }
 
   protected async handleMessages(
@@ -544,16 +560,27 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       lastTool.toolName !== "variable_storage"
     ) {
       await sleep(300);
+      let image_contents: LanguageModelV1ImagePart[] = [];
+      if (await this.double_screenshots(agentContext, messages, tools)) {
+        let imageResult = await this.screenshot(agentContext);
+        let image = toImage(imageResult.imageBase64);
+        image_contents.push({
+          type: "image",
+          image: image,
+          mimeType: imageResult.imageType,
+        });
+      }
       let result = await this.screenshot_and_html(agentContext);
       let image = toImage(result.imageBase64);
+      image_contents.push({
+        type: "image",
+        image: image,
+        mimeType: result.imageType,
+      });
       messages.push({
         role: "user",
         content: [
-          {
-            type: "image",
-            image: image,
-            mimeType: result.imageType,
-          },
+          ...image_contents,
           {
             type: "text",
             text: pseudoHtmlDescription + result.pseudoHtml,
@@ -606,7 +633,12 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
           if (eIdx == -1) {
             continue;
           }
-          line = line.substring(0, sIdx) + line.substring(eIdx + 1).trim().replace('" >', '">');
+          line =
+            line.substring(0, sIdx) +
+            line
+              .substring(eIdx + 1)
+              .trim()
+              .replace('" >', '">');
         }
         return line;
       })
@@ -798,15 +830,15 @@ function scroll_by(params: { amount: number }) {
     return;
   }
 
-  function findNodes(element = document, nodes: any =  []) : Element[] {
+  function findNodes(element = document, nodes: any = []): Element[] {
     for (const node of Array.from(element.querySelectorAll("*"))) {
-      if (node.tagName === 'IFRAME' && (node as any).contentDocument) {
-        findNodes((node as any).contentDocument, nodes)
+      if (node.tagName === "IFRAME" && (node as any).contentDocument) {
+        findNodes((node as any).contentDocument, nodes);
       } else {
-        nodes.push(node)
+        nodes.push(node);
       }
     }
-    return nodes
+    return nodes;
   }
 
   function findScrollableElements(): Element[] {
@@ -824,7 +856,9 @@ function scroll_by(params: { amount: number }) {
         const style = window.getComputedStyle(el);
         const overflowY = style.getPropertyValue("overflow-y");
         return (
-            overflowY === "auto" || overflowY === "scroll" || el.scrollHeight > el.clientHeight
+          overflowY === "auto" ||
+          overflowY === "scroll" ||
+          el.scrollHeight > el.clientHeight
         );
       });
     }
@@ -859,7 +893,10 @@ function scroll_by(params: { amount: number }) {
   const viewportHeight = largestElement.clientHeight;
   const y = Math.max(20, Math.min(viewportHeight / 10, 200));
   largestElement.scrollBy(0, y * amount);
-  const maxHeightElement = sortedElements.sort((a, b) => b.getBoundingClientRect().height - a.getBoundingClientRect().height)[0];
+  const maxHeightElement = sortedElements.sort(
+    (a, b) =>
+      b.getBoundingClientRect().height - a.getBoundingClientRect().height
+  )[0];
   if (maxHeightElement != largestElement) {
     const viewportHeight = maxHeightElement.clientHeight;
     const y = Math.max(20, Math.min(viewportHeight / 10, 200));
