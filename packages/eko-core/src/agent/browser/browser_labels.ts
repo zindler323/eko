@@ -305,6 +305,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
           );
         },
       },
+      /*
       {
         name: "scroll_to_element",
         description: "Scroll to the element",
@@ -327,6 +328,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
           );
         },
       },
+      */
       {
         name: "scroll_mouse_wheel",
         description:
@@ -510,7 +512,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
               description: "Duration in millisecond",
               default: 500,
               minimum: 200,
-              maximum: 2000,
+              maximum: 5000,
             },
           },
           required: ["duration"],

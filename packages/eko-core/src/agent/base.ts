@@ -463,6 +463,10 @@ export class Agent {
     this.tools.push(tool);
   }
 
+  get Llms(): string[] | undefined {
+    return this.llms;
+  }
+
   get Name(): string {
     return this.name;
   }

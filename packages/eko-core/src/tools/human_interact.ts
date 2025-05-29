@@ -1,6 +1,9 @@
 import { JSONSchema7 } from "json-schema";
 import { AgentContext } from "../core/context";
 import { Tool, ToolResult } from "../types/tools.types";
+import { RetryLanguageModel } from "../llm";
+import { LLMRequest } from "../types";
+import { toImage } from "../common/utils";
 
 export const TOOL_NAME = "human_interact";
 
@@ -90,6 +93,13 @@ request_help: Request assistance from the user; for instance, when an operation 
           break;
         case "request_help":
           if (callback.onHumanHelp) {
+            if (
+              args.helpType == "request_login" &&
+              (await this.checkIsLogined(agentContext))
+            ) {
+              resultText = "Already logged in";
+              break;
+            }
             let result = await callback.onHumanHelp(
               agentContext,
               (args.helpType || "request_assistance") as any,
@@ -121,6 +131,48 @@ request_help: Request assistance from the user; for instance, when an operation 
         ],
         isError: true,
       };
+    }
+  }
+
+  private async checkIsLogined(agentContext: AgentContext) {
+    let screenshot = (agentContext.agent as any)["screenshot"];
+    if (!screenshot) {
+      return false;
+    }
+    try {
+      let imageResult = (await screenshot.call(agentContext.agent, agentContext)) as {
+        imageBase64: string;
+        imageType: "image/jpeg" | "image/png";
+      };
+      let rlm = new RetryLanguageModel(
+        agentContext.context.config.llms,
+        agentContext.agent.Llms
+      );
+      let image = toImage(imageResult.imageBase64);
+      let request: LLMRequest = {
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "image",
+                image: image,
+                mimeType: imageResult.imageType,
+              },
+              {
+                type: "text",
+                text: "Check if the current website is logged in. If not logged in, output `NOT_LOGIN`. If logged in, output `LOGGED_IN`. Output directly without explanation.",
+              },
+            ],
+          },
+        ],
+        abortSignal: agentContext.context.controller.signal,
+      };
+      let result = await rlm.call(request);
+      return result.text && result.text.indexOf("LOGGED_IN") > -1;
+    } catch (error) {
+      console.error("Error auto checking login status:", error);
+      return false;
     }
   }
 }
