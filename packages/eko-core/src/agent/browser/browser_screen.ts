@@ -1,7 +1,7 @@
 import { BaseBrowserAgent, AGENT_NAME } from "./browser_base";
 import { AgentContext } from "../../core/context";
-import { Tool, ToolResult, IMcpClient } from "../../types";
 import { LanguageModelV1Prompt } from "@ai-sdk/provider";
+import { Tool, ToolResult, IMcpClient } from "../../types";
 import { mergeTools, sleep, toImage } from "../../common/utils";
 
 export default abstract class BaseBrowserScreenAgent extends BaseBrowserAgent {
@@ -380,7 +380,7 @@ export default abstract class BaseBrowserScreenAgent extends BaseBrowserAgent {
               description: "Duration in millisecond",
               default: 500,
               minimum: 200,
-              maximum: 2000,
+              maximum: 10000,
             },
           },
           required: ["duration"],

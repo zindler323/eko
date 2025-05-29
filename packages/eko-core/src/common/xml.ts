@@ -168,10 +168,17 @@ export function extractAgentXmlNode(
   let nodesNode = doc.getElementsByTagName("nodes");
   if (nodesNode.length > 0) {
     let nodes = nodesNode[0].childNodes;
+    let _nodeId = 0;
     for (let i = 0; i < nodes.length; i++) {
       let node = nodes[i] as any;
-      if (node.nodeType == 1 && node.getAttribute("id") == nodeId + "") {
-        return node;
+      if (node.nodeType == 1) {
+        if (node.getAttribute("id") == null || node.getAttribute("id") == "") {
+          node.setAttribute("id", _nodeId + "");
+        }
+        _nodeId++;
+        if (node.getAttribute("id") == nodeId + "") {
+          return node;
+        }
       }
     }
   }

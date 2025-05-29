@@ -5,7 +5,12 @@ import { RetryLanguageModel } from "../llm";
 import { ToolWrapper } from "../tools/wrapper";
 import { AgentChain, ToolChain } from "../core/chain";
 import Context, { AgentContext } from "../core/context";
-import { McpTool, VariableStorageTool } from "../tools";
+import {
+  ForeachTaskTool,
+  McpTool,
+  VariableStorageTool,
+  WatchTriggerTool,
+} from "../tools";
 import { toImage, mergeTools, uuidv4 } from "../common/utils";
 import { getAgentSystemPrompt, getAgentUserPrompt } from "../prompt/agent";
 import {
@@ -193,16 +198,19 @@ export class Agent {
       }
       const callback = this.callback || context.config.callback;
       if (callback) {
-        await callback.onMessage({
-          taskId: context.taskId,
-          agentName: agentContext.agent.Name,
-          nodeId: agentContext.agentChain.agent.id,
-          type: "tool_result",
-          toolId: result.toolCallId,
-          toolName: result.toolName,
-          params: result.args || {},
-          toolResult: toolResult,
-        }, agentContext);
+        await callback.onMessage(
+          {
+            taskId: context.taskId,
+            agentName: agentContext.agent.Name,
+            nodeId: agentContext.agentChain.agent.id,
+            type: "tool_result",
+            toolId: result.toolCallId,
+            toolName: result.toolName,
+            params: result.args || {},
+            toolResult: toolResult,
+          },
+          agentContext
+        );
       }
       let llmToolResult = this.convertToolResult(
         result,
@@ -235,6 +243,14 @@ export class Agent {
       agentNodeXml.indexOf("output=") > -1;
     if (hasVariable) {
       tools.push(new VariableStorageTool());
+    }
+    let hasForeach = agentNodeXml.indexOf("</forEach>") > -1;
+    if (hasForeach) {
+      tools.push(new ForeachTaskTool());
+    }
+    let hasWatch = agentNodeXml.indexOf("</watch>") > -1;
+    if (hasWatch) {
+      tools.push(new WatchTriggerTool());
     }
     let toolNames = this.tools.map((tool) => tool.name);
     return tools.filter((tool) => toolNames.indexOf(tool.name) == -1);
@@ -463,6 +479,10 @@ export class Agent {
     this.tools.push(tool);
   }
 
+  get Llms(): string[] | undefined {
+    return this.llms;
+  }
+
   get Name(): string {
     return this.name;
   }
@@ -530,53 +550,65 @@ export async function callLLM(
       switch (chunk.type) {
         case "text-delta": {
           streamText += chunk.textDelta || "";
-          await streamCallback.onMessage({
-            taskId: context.taskId,
-            agentName: agentNode.name,
-            nodeId: agentNode.id,
-            type: "text",
-            streamId,
-            streamDone: false,
-            text: streamText,
-          }, agentContext);
-          break;
-        }
-        case "reasoning": {
-          thinkText += chunk.textDelta || "";
-          await streamCallback.onMessage({
-            taskId: context.taskId,
-            agentName: agentNode.name,
-            nodeId: agentNode.id,
-            type: "thinking",
-            streamId,
-            streamDone: false,
-            text: thinkText,
-          }, agentContext);
-          break;
-        }
-        case "tool-call-delta": {
-          if (!textStreamDone) {
-            textStreamDone = true;
-            await streamCallback.onMessage({
+          await streamCallback.onMessage(
+            {
               taskId: context.taskId,
               agentName: agentNode.name,
               nodeId: agentNode.id,
               type: "text",
               streamId,
-              streamDone: true,
+              streamDone: false,
               text: streamText,
-            }, agentContext);
+            },
+            agentContext
+          );
+          break;
+        }
+        case "reasoning": {
+          thinkText += chunk.textDelta || "";
+          await streamCallback.onMessage(
+            {
+              taskId: context.taskId,
+              agentName: agentNode.name,
+              nodeId: agentNode.id,
+              type: "thinking",
+              streamId,
+              streamDone: false,
+              text: thinkText,
+            },
+            agentContext
+          );
+          break;
+        }
+        case "tool-call-delta": {
+          if (!textStreamDone) {
+            textStreamDone = true;
+            await streamCallback.onMessage(
+              {
+                taskId: context.taskId,
+                agentName: agentNode.name,
+                nodeId: agentNode.id,
+                type: "text",
+                streamId,
+                streamDone: true,
+                text: streamText,
+              },
+              agentContext
+            );
           }
           toolArgsText += chunk.argsTextDelta || "";
-          await streamCallback.onMessage({
-            taskId: context.taskId,
-            agentName: agentNode.name,
-            nodeId: agentNode.id,
-            type: "tool_streaming",
-            toolId: chunk.toolCallId,
-            toolName: chunk.toolName,
-            paramsText: toolArgsText,
-          }, agentContext);
+          await streamCallback.onMessage(
+            {
+              taskId: context.taskId,
+              agentName: agentNode.name,
+              nodeId: agentNode.id,
+              type: "tool_streaming",
+              toolId: chunk.toolCallId,
+              toolName: chunk.toolName,
+              paramsText: toolArgsText,
+            },
+            agentContext
+          );
           break;
         }
         case "tool-call": {
@@ -601,48 +633,60 @@ export async function callLLM(
           break;
         }
         case "file": {
-          await streamCallback.onMessage({
-            taskId: context.taskId,
-            agentName: agentNode.name,
-            nodeId: agentNode.id,
-            type: "file",
-            mimeType: chunk.mimeType,
-            data: chunk.data as string,
-          }, agentContext);
+          await streamCallback.onMessage(
+            {
+              taskId: context.taskId,
+              agentName: agentNode.name,
+              nodeId: agentNode.id,
+              type: "file",
+              mimeType: chunk.mimeType,
+              data: chunk.data as string,
+            },
+            agentContext
+          );
           break;
         }
         case "error": {
           Log.error(`${agentNode.name} agent error: `, chunk);
-          await streamCallback.onMessage({
-            taskId: context.taskId,
-            agentName: agentNode.name,
-            nodeId: agentNode.id,
-            type: "error",
-            error: chunk.error,
-          }, agentContext);
+          await streamCallback.onMessage(
+            {
+              taskId: context.taskId,
+              agentName: agentNode.name,
+              nodeId: agentNode.id,
+              type: "error",
+              error: chunk.error,
+            },
+            agentContext
+          );
           throw new Error("Plan Error");
         }
         case "finish": {
           if (!textStreamDone) {
             textStreamDone = true;
-            await streamCallback.onMessage({
+            await streamCallback.onMessage(
+              {
+                taskId: context.taskId,
+                agentName: agentNode.name,
+                nodeId: agentNode.id,
+                type: "text",
+                streamId,
+                streamDone: true,
+                text: streamText,
+              },
+              agentContext
+            );
+          }
+          await streamCallback.onMessage(
+            {
               taskId: context.taskId,
               agentName: agentNode.name,
               nodeId: agentNode.id,
-              type: "text",
-              streamId,
-              streamDone: true,
-              text: streamText,
-            }, agentContext);
-          }
-          await streamCallback.onMessage({
-            taskId: context.taskId,
-            agentName: agentNode.name,
-            nodeId: agentNode.id,
-            type: "finish",
-            finishReason: chunk.finishReason,
-            usage: chunk.usage,
-          }, agentContext);
+              type: "finish",
+              finishReason: chunk.finishReason,
+              usage: chunk.usage,
+            },
+            agentContext
+          );
           if (
             chunk.finishReason === "length" &&
             messages.length >= 10 &&

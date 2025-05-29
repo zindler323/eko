@@ -38,8 +38,8 @@ Your task is to understand the user's requirements, dynamically plan the user's 
         <forEach items="list or variable name">
           <node>forEach step node</node>
         </forEach>
-        <!-- When you need to monitor changes in webpage DOM or file content, you can use \`Watch\`, the loop attribute specifies whether to listen in a loop or listen once. -->
-        <watch event="dom or file" loop="true">
+        <!-- When you need to monitor changes in webpage DOM elements, you can use \`Watch\`, the loop attribute specifies whether to listen in a loop or listen once. -->
+        <watch event="dom" loop="true">
           <description>Monitor task description</description>
           <trigger>
             <node>Trigger step node</node>

@@ -11,7 +11,7 @@ export default class ForeachTaskTool implements Tool {
   readonly parameters: JSONSchema7;
 
   constructor() {
-    this.description = `When executing the \`forEach\` node, please use it to complete the tasks corresponding to that forEach node, which will complete all tasks under the entire forEach node.`;
+    this.description = `When executing the \`forEach\` node, please use the current tool for counting to ensure tasks are executed sequentially, the tool needs to be called with each loop iteration.`;
     this.parameters = {
       type: "object",
       properties: {
@@ -19,8 +19,16 @@ export default class ForeachTaskTool implements Tool {
           type: "number",
           description: "forEach node ID.",
         },
+        progress: {
+          type: "string",
+          description: "Current execution progress.",
+        },
+        next_step: {
+          type: "string",
+          description: "Next task description.",
+        },
       },
-      required: ["nodeId"],
+      required: ["nodeId", "progress", "next_step"],
     };
   }
 
@@ -28,7 +36,6 @@ export default class ForeachTaskTool implements Tool {
     args: Record<string, unknown>,
     agentContext: AgentContext
   ): Promise<ToolResult> {
-    // 调用 forEach Agent 单独逻辑, 根据上下文判断并循环执行
     let nodeId = args.nodeId as number;
     let agentXml = agentContext.agentChain.agent.xml;
     let node = extractAgentXmlNode(agentXml, nodeId);
@@ -40,17 +47,26 @@ export default class ForeachTaskTool implements Tool {
     }
     let items = node.getAttribute("items");
     let varValue = null;
+    let resultText = "Recorded";
     if (items && items != "list") {
       varValue = agentContext.context.variables.get(items.trim());
+      if (varValue) {
+        let key = "foreach_" + nodeId;
+        let loop_count = agentContext.variables.get(key) || 0;
+        if (loop_count % 5 == 0) {
+          resultText = `Variable information associated with the current loop task.\nvariable_name: ${items.trim()}\nvariable_value: ${varValue}`;
+        }
+        agentContext.variables.set(key, ++loop_count);
+      }
     }
-    if (varValue) {
-      // TODO Loop variable
-      // Record the current URL and re-plan it into individual tasks.
-    } else {
-      // TODO Loop list
-      // Continue execution
-    }
-    return null as any;
+    return {
+      content: [
+        {
+          type: "text",
+          text: resultText,
+        },
+      ],
+    };
   }
 }
 
