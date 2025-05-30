@@ -1,13 +1,35 @@
+import Log from "../common/log";
+import { LLMRequest } from "../types";
 import { JSONSchema7 } from "json-schema";
 import { toImage } from "../common/utils";
+import { RetryLanguageModel } from "../llm";
 import { AgentContext } from "../core/context";
 import { extractAgentXmlNode } from "../common/xml";
 import { Tool, ToolResult } from "../types/tools.types";
-import Log from "../common/log";
-import { LLMRequest } from "../types";
-import { RetryLanguageModel } from "../llm";
 
 export const TOOL_NAME = "watch_trigger";
+
+type ImageSource = {
+  image: Uint8Array | URL;
+  imageType: "image/jpeg" | "image/png";
+};
+
+const watch_system_prompt = `You are a tool for detecting element changes. Given a task description, compare two images to determine whether the changes described in the task have occurred.
+If the changes have occurred, return an json with \`changed\` set to true and \`changeInfo\` containing a description of the changes. If no changes have occurred, return an object with \`changed\` set to false.
+
+## Example
+User: Monitor new messages in group chat
+### No changes detected
+Output:
+{
+  "changed": false
+}
+### Change detected
+Output:
+{
+  "changed": true,
+  "changeInfo": "New message received in the group chat. The message content is: 'Hello, how are you?'"
+}`;
 
 export default class WatchTriggerTool implements Tool {
   readonly name: string = TOOL_NAME;
@@ -84,21 +106,11 @@ export default class WatchTriggerTool implements Tool {
         ],
       };
     }
-    const screenshot = (agentContext.agent as any)["screenshot"];
-    const image1Result = (await screenshot.call(
-      agentContext.agent,
-      agentContext
-    )) as {
-      imageBase64: string;
-      imageType: "image/jpeg" | "image/png";
-    };
-    const image1 = toImage(image1Result.imageBase64);
+    await this.init_eko_observer(agentContext);
+    const image1 = await this.get_screenshot(agentContext);
     const start = new Date().getTime();
     const timeout = ((args.timeout as number) || 5) * 60000;
-    const frequency = Math.max(
-      500,
-      (args.frequency = (args.frequency as number) || 1) * 1000
-    );
+    const frequency = Math.max(500, (args.frequency as number || 1) * 1000);
     let rlm = new RetryLanguageModel(
       agentContext.context.config.llms,
       agentContext.agent.Llms
@@ -106,21 +118,17 @@ export default class WatchTriggerTool implements Tool {
     while (new Date().getTime() - start < timeout) {
       await agentContext.context.checkAborted();
       await new Promise((resolve) => setTimeout(resolve, frequency));
-      const image2Result = (await screenshot.call(
-        agentContext.agent,
-        agentContext
-      )) as {
-        imageBase64: string;
-        imageType: "image/jpeg" | "image/png";
-      };
-      const image2 = toImage(image2Result.imageBase64);
+      let changed = await this.has_eko_changed(agentContext);
+      if (changed == "false") {
+        continue;
+      }
+      await this.init_eko_observer(agentContext);
+      const image2 = await this.get_screenshot(agentContext);
       const changeResult = await this.is_dom_change(
         agentContext,
         rlm,
         image1,
-        image1Result.imageType,
         image2,
-        image2Result.imageType,
         task_description
       );
       if (changeResult.changed) {
@@ -144,13 +152,79 @@ export default class WatchTriggerTool implements Tool {
     };
   }
 
+  private async get_screenshot(
+    agentContext: AgentContext
+  ): Promise<ImageSource> {
+    const screenshot = (agentContext.agent as any)["screenshot"];
+    const imageResult = (await screenshot.call(
+      agentContext.agent,
+      agentContext
+    )) as {
+      imageBase64: string;
+      imageType: "image/jpeg" | "image/png";
+    };
+    const image = toImage(imageResult.imageBase64);
+    return {
+      image: image,
+      imageType: imageResult.imageType,
+    };
+  }
+
+  private async init_eko_observer(agentContext: AgentContext): Promise<void> {
+    try {
+      const screenshot = (agentContext.agent as any)["execute_script"];
+      await screenshot.call(
+        agentContext.agent,
+        agentContext,
+        () => {
+          let _window = window as any;
+          _window.has_eko_changed = false;
+          _window.eko_observer && _window.eko_observer.disconnect();
+          let eko_observer = new MutationObserver(function (mutations) {
+            _window.has_eko_changed = true;
+          });
+          eko_observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeOldValue: true,
+            characterData: true,
+            characterDataOldValue: true,
+          });
+          _window.eko_observer = eko_observer;
+        },
+        []
+      );
+    } catch (error) {
+      console.error("Error initializing Eko observer:", error);
+    }
+  }
+
+  private async has_eko_changed(
+    agentContext: AgentContext
+  ): Promise<"true" | "false" | "undefined"> {
+    try {
+      const screenshot = (agentContext.agent as any)["execute_script"];
+      let result = (await screenshot.call(
+        agentContext.agent,
+        agentContext,
+        () => {
+          return (window as any).has_eko_changed + "";
+        },
+        []
+      )) as string;
+      return result as any;
+    } catch (e) {
+      console.error("Error checking Eko change:", e);
+      return "undefined";
+    }
+  }
+
   private async is_dom_change(
     agentContext: AgentContext,
     rlm: RetryLanguageModel,
-    image1: Uint8Array | URL,
-    image1Type: string,
-    image2: Uint8Array | URL,
-    image2Type: string,
+    image1: ImageSource,
+    image2: ImageSource,
     task_description: string
   ): Promise<{
     changed: boolean;
@@ -161,35 +235,20 @@ export default class WatchTriggerTool implements Tool {
         messages: [
           {
             role: "system",
-            content: `You are a tool for detecting element changes. Given a task description, compare two images to determine whether the changes described in the task have occurred.
-If the changes have occurred, return an json with \`changed\` set to true and \`changeInfo\` containing a description of the changes. If no changes have occurred, return an object with \`changed\` set to false.
-
-## Example
-User: Monitor new messages in group chat
-### No changes detected
-Output:
-{
-  "changed": false
-}
-### Change detected
-Output:
-{
-  "changed": true,
-  "changeInfo": "New message received in the group chat. The message content is: 'Hello, how are you?'"
-}`,
+            content: watch_system_prompt,
           },
           {
             role: "user",
             content: [
               {
                 type: "image",
-                image: image1,
-                mimeType: image1Type,
+                image: image1.image,
+                mimeType: image1.imageType,
               },
               {
                 type: "image",
-                image: image2,
-                mimeType: image2Type,
+                image: image2.image,
+                mimeType: image2.imageType,
               },
               {
                 type: "text",
