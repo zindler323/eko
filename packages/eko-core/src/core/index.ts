@@ -64,6 +64,9 @@ export class Eko {
     if (!context) {
       throw new Error("The task does not exist");
     }
+    if (context.paused) {
+      context.paused = false;
+    }
     if (context.controller.signal.aborted) {
       context.controller = new AbortController();
     }

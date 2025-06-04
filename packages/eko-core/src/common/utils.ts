@@ -161,6 +161,9 @@ export function sub(
 }
 
 export function fixXmlTag(code: string) {
+  if (code.indexOf('&') > -1) {
+    code = code.replace(/&(?![a-zA-Z0-9#]+;)/g, '&amp;');
+  }
   function fixDoubleChar(code: string) {
     const stack: string[] = [];
     for (let i = 0; i < code.length; i++) {
