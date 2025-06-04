@@ -23,6 +23,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
    - Only use indexes that exist in the provided element list
    - Each element has a unique index number (e.g., "[33]:<button>")
    - Elements marked with "[]:" are non-interactive (for context only)
+   - Use the latest element index, do not rely on historical outdated element indexes
 * ERROR HANDLING:
    - If no suitable elements exist, use other functions to complete the task
    - If stuck, try alternative approaches, don't refuse tasks
@@ -108,7 +109,10 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     }
     if (extract_page_content) {
       let page_content = await this.extract_page_content(agentContext);
-      return "The current page content has been extracted, latest page content:\n" + page_content;
+      return (
+        "The current page content has been extracted, latest page content:\n" +
+        page_content
+      );
     }
   }
 
@@ -588,30 +592,42 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
         ],
       });
     }
+    super.handleMessages(agentContext, messages, tools);
+    this.handlePseudoHtmlText(messages, pseudoHtmlDescription);
+  }
 
-    if (messages.length > 10) {
-      // compressed pseudoHtml
-      for (let i = 2; i < messages.length - 3; i++) {
-        let message = messages[i];
-        if (message.role == "user" && message.content.length == 2) {
-          let content = message.content;
-          for (let j = 0; j < content.length; j++) {
-            let _content = content[j];
-            if (
-              _content.type == "text" &&
-              _content.text.startsWith(pseudoHtmlDescription)
-            ) {
-              _content.text = this.removePseudoHtmlAttr(_content.text, [
-                "class",
-                "src",
-                "href",
-              ]);
-            }
+  private handlePseudoHtmlText(
+    messages: LanguageModelV1Prompt,
+    pseudoHtmlDescription: string
+  ) {
+    for (let i = 0; i < messages.length; i++) {
+      let message = messages[i];
+      if (message.role !== "user" || message.content.length <= 1) {
+        continue;
+      }
+      let content = message.content;
+      for (let j = 0; j < content.length; j++) {
+        let _content = content[j];
+        if (
+          _content.type == "text" &&
+          _content.text.startsWith(pseudoHtmlDescription)
+        ) {
+          if (i >= 2 && i < messages.length - 3) {
+            _content.text = this.removePseudoHtmlAttr(_content.text, [
+              "class",
+              "src",
+              "href",
+            ]);
           }
         }
       }
+      if (
+        (content[0] as any).text == "[image]" &&
+        (content[1] as any).text == "[image]"
+      ) {
+        content.splice(0, 1);
+      }
     }
-    super.handleMessages(agentContext, messages, tools);
   }
 
   private removePseudoHtmlAttr(
@@ -624,6 +640,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
         if (!line.startsWith("[") || line.indexOf("]:<") == -1) {
           return line;
         }
+        line = line.substring(line.indexOf("]:<") + 2);
         for (let i = 0; i < remove_attrs.length; i++) {
           let sIdx = line.indexOf(remove_attrs[i] + '="');
           if (sIdx == -1) {
@@ -635,12 +652,9 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
           }
           line =
             line.substring(0, sIdx) +
-            line
-              .substring(eIdx + 1)
-              .trim()
-              .replace('" >', '">');
+            line.substring(eIdx + 1).trim();
         }
-        return line;
+        return line.replace('" >', '">').replace(" >", ">");
       })
       .join("\n");
   }

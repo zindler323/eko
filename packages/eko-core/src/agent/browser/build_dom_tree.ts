@@ -17,7 +17,8 @@ export function run_build_dom_tree() {
   }
 
   function get_highlight_element(highlightIndex) {
-    return window.clickable_elements[highlightIndex];
+    let element = document.querySelector(`[eko-user-highlight-id="eko-highlight-${highlightIndex}"]`);
+    return element || window.clickable_elements[highlightIndex];
   }
 
   function remove_highlight() {

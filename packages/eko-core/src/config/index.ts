@@ -17,7 +17,7 @@ const config: GlobalConfig = {
   compressThreshold: 80,
   largeTextLength: 5000,
   fileTextMaxLength: 20000,
-  maxDialogueImgFileNum: 2,
+  maxDialogueImgFileNum: 1,
 };
 
 export default config;
