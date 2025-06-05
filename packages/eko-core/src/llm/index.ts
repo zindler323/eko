@@ -57,7 +57,7 @@ export class RetryLanguageModel {
     const names = [...this.names, ...this.names];
     for (let i = 0; i < names.length; i++) {
       const name = names[i];
-      const llm = this.getLLM(name);
+      const llm = await this.getLLM(name);
       if (!llm) {
         continue;
       }
@@ -113,7 +113,7 @@ export class RetryLanguageModel {
     const names = [...this.names, ...this.names];
     for (let i = 0; i < names.length; i++) {
       const name = names[i];
-      const llm = this.getLLM(name);
+      const llm = await this.getLLM(name);
       if (!llm) {
         continue;
       }
@@ -176,38 +176,52 @@ export class RetryLanguageModel {
     return Promise.reject(new Error("No LLM available"));
   }
 
-  private getLLM(name: string): LanguageModelV1 | null {
+  private async getLLM(name: string): Promise<LanguageModelV1 | null> {
     const llm = this.llms[name];
     if (!llm) {
       return null;
     }
+    let apiKey;
+    if (typeof llm.apiKey === "string") {
+      apiKey = llm.apiKey;
+    } else {
+      apiKey = await llm.apiKey();
+    }
+    let baseURL = undefined;
+    if (llm.config?.baseURL) {
+      if (typeof llm.config.baseURL === "string") {
+        baseURL = llm.config.baseURL;
+      } else {
+        baseURL = await llm.config.baseURL();
+      }
+    }
     if (llm.provider == "openai") {
       return createOpenAI({
-        apiKey: llm.apiKey,
-        baseURL: llm.config?.baseURL,
+        apiKey: apiKey,
+        baseURL: baseURL,
       }).languageModel(llm.model);
     } else if (llm.provider == "anthropic") {
       return createAnthropic({
-        apiKey: llm.apiKey,
-        baseURL: llm.config?.baseURL,
+        apiKey: apiKey,
+        baseURL: baseURL,
       }).languageModel(llm.model);
     } else if (llm.provider == "google") {
       return createGoogleGenerativeAI({
-        apiKey: llm.apiKey,
-        baseURL: llm.config?.baseURL,
+        apiKey: apiKey,
+        baseURL: baseURL,
       }).languageModel(llm.model);
     } else if (llm.provider == "aws") {
-      let keys = llm.apiKey.split("=");
+      let keys = apiKey.split("=");
       return createAmazonBedrock({
         accessKeyId: keys[0],
         secretAccessKey: keys[1],
-        baseURL: llm.config?.baseURL,
+        baseURL: baseURL,
         region: llm.config?.region || "us-west-1",
       }).languageModel(llm.model);
     } else if (llm.provider == "openrouter") {
       return createOpenRouter({
-        apiKey: llm.apiKey,
-        baseURL: llm.config?.baseURL,
+        apiKey: apiKey,
+        baseURL: baseURL,
       }).languageModel(llm.model);
     } else {
       return llm.provider.languageModel(llm.model);

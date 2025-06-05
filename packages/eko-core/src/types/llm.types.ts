@@ -22,9 +22,9 @@ export type LLMprovider =
 export type LLMConfig = {
   provider: LLMprovider;
   model: string;
-  apiKey: string;
+  apiKey: string | (() => Promise<string>);
   config?: {
-    baseURL?: string;
+    baseURL?: string | (() => Promise<string>);
     temperature?: number;
     topP?: number;
     topK?: number;

@@ -67,6 +67,7 @@ export class Eko {
     if (context.paused) {
       context.paused = false;
     }
+    context.conversation = [];
     if (context.controller.signal.aborted) {
       context.controller = new AbortController();
     }
@@ -157,12 +158,14 @@ export class Eko {
   }
 
   public deleteTask(taskId: string): boolean {
+    this.abortTask(taskId);
     return this.taskMap.delete(taskId);
   }
 
   public abortTask(taskId: string): boolean {
     let context = this.taskMap.get(taskId);
     if (context) {
+      context.paused = false;
       context.controller.abort();
       return true;
     } else {
@@ -177,6 +180,14 @@ export class Eko {
       return true;
     } else {
       return false;
+    }
+  }
+
+  public chatTask(taskId: string, userPrompt: string): string[] | undefined {
+    let context = this.taskMap.get(taskId);
+    if (context) {
+      context.conversation.push(userPrompt);
+      return context.conversation;
     }
   }
 
