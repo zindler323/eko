@@ -9,6 +9,7 @@ export function run_build_dom_tree() {
    */
   function get_clickable_elements(doHighlightElements = true, includeAttributes) {
     window.clickable_elements = {};
+    document.querySelectorAll("[eko-user-highlight-id]").forEach(ele => ele.removeAttribute("eko-user-highlight-id"));
     let page_tree = build_dom_tree(doHighlightElements);
     let element_tree = parse_node(page_tree);
     let selector_map = create_selector_map(element_tree);

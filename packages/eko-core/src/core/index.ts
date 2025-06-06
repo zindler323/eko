@@ -4,6 +4,7 @@ import { Agent } from "../agent";
 import { Planner } from "./plan";
 import Chain, { AgentChain } from "./chain";
 import { mergeAgents, uuidv4 } from "../common/utils";
+import Log from "../common/log";
 
 export class Eko {
   private config: EkoConfig;
@@ -74,6 +75,7 @@ export class Eko {
     try {
       return await this.doRunWorkflow(context);
     } catch (e: any) {
+      Log.error("execute error", e);
       return {
         taskId,
         success: false,
