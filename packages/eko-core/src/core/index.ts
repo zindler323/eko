@@ -4,6 +4,7 @@ import { Agent } from "../agent";
 import { Planner } from "./plan";
 import Chain, { AgentChain } from "./chain";
 import { mergeAgents, uuidv4 } from "../common/utils";
+import Log from "../common/log";
 
 export class Eko {
   private config: EkoConfig;
@@ -67,12 +68,14 @@ export class Eko {
     if (context.paused) {
       context.paused = false;
     }
+    context.conversation = [];
     if (context.controller.signal.aborted) {
       context.controller = new AbortController();
     }
     try {
       return await this.doRunWorkflow(context);
     } catch (e: any) {
+      Log.error("execute error", e);
       return {
         taskId,
         success: false,
@@ -157,12 +160,14 @@ export class Eko {
   }
 
   public deleteTask(taskId: string): boolean {
+    this.abortTask(taskId);
     return this.taskMap.delete(taskId);
   }
 
   public abortTask(taskId: string): boolean {
     let context = this.taskMap.get(taskId);
     if (context) {
+      context.paused = false;
       context.controller.abort();
       return true;
     } else {
@@ -177,6 +182,14 @@ export class Eko {
       return true;
     } else {
       return false;
+    }
+  }
+
+  public chatTask(taskId: string, userPrompt: string): string[] | undefined {
+    let context = this.taskMap.get(taskId);
+    if (context) {
+      context.conversation.push(userPrompt);
+      return context.conversation;
     }
   }
 

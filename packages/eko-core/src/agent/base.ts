@@ -447,6 +447,28 @@ export class Agent {
   ): Promise<void> {
     // Only keep the last image / file, large tool-text-result
     memory.handleLargeContextMessages(messages);
+    // User dialogue
+    const userPrompts = agentContext.context.conversation
+      .splice(0, agentContext.context.conversation.length)
+      .filter((s) => !!s);
+    if (userPrompts.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.role == "user") {
+        for (let i = 0; i < userPrompts.length; i++) {
+          lastMessage.content.push({
+            type: "text",
+            text: userPrompts[i],
+          });
+        }
+      } else {
+        messages.push({
+          role: "user",
+          content: userPrompts.map((s) => {
+            return { type: "text", text: s };
+          }),
+        });
+      }
+    }
   }
 
   protected async callInnerTool(fun: () => Promise<any>): Promise<ToolResult> {

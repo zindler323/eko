@@ -12,12 +12,13 @@ export default class Context {
   variables: Map<string, any>;
   workflow?: Workflow;
   paused: boolean = false;
+  conversation: string[] = [];
 
   constructor(
     taskId: string,
     config: EkoConfig,
     agents: Agent[],
-    chain: Chain,
+    chain: Chain
   ) {
     this.taskId = taskId;
     this.config = config;
