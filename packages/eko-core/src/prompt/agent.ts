@@ -36,10 +36,7 @@ The output language should follow the language corresponding to the user's task.
 
 const HUMAN_PROMPT = `
 * HUMAN INTERACT
-During the task execution process, you can use the \`${human_interact}\` tool to interact with humans, please call it in the following situations:
-- When performing dangerous operations such as deleting files, confirmation from humans is required.
-- When encountering obstacles while accessing websites, such as requiring user login, captcha verification, QR code scanning, or human verification, you need to request manual assistance.
-- Please do not use the \`${human_interact}\` tool frequently.
+During the task execution process, you can use the \`${human_interact}\` tool to interact with humans.
 `;
 
 const VARIABLE_PROMPT = `
