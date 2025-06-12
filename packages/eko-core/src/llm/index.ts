@@ -126,6 +126,7 @@ export class RetryLanguageModel {
         const signal = options.abortSignal
           ? AbortSignal.any([options.abortSignal, controller.signal])
           : controller.signal;
+        console.log('【zindler】params to llm: ', options);
         const result = await call_timeout(
           async () => await llm.doStream({ ...options, abortSignal: signal }),
           this.stream_first_timeout,

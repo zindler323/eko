@@ -117,6 +117,11 @@ export class Agent {
         }
       }
       await this.handleMessages(agentContext, messages, tools);
+      console.log('【zindler】callLLM: ', {
+        agentContext,
+        rlm,
+        messages,
+      });
       let results = await callLLM(
         agentContext,
         rlm,
