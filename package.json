@@ -1,7 +1,7 @@
 {
   "name": "@eko-ai/eko",
   "version": "2.1.6",
-  "description": "Empowering language to transform human words into action.",
+  "description": "Personal extension on eko-ai/eko",
   "workspaces": [
     "packages/eko-core",
     "packages/eko-extension",
