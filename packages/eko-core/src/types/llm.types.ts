@@ -31,6 +31,7 @@ export type LLMConfig = {
     maxTokens?: number;
     [key: string]: any;
   };
+  fetch?: typeof globalThis.fetch;
 };
 
 export type LLMs = {

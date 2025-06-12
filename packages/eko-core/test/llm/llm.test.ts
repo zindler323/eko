@@ -22,6 +22,17 @@ const llms: LLMs = {
     config: {
       baseURL: openaiBaseURL,
     },
+    fetch: (url, options) => {
+      const body = JSON.parse(options.body);
+      body.user = "zhuowei@fellou.ai";
+      body.metadata = {
+        test: "xxx",
+      };
+      return fetch(url, {
+        ...options,
+        body: JSON.stringify(body),
+      });
+    },
   },
   test1: {
     provider: "anthropic",

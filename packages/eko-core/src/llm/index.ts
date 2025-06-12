@@ -199,16 +199,19 @@ export class RetryLanguageModel {
       return createOpenAI({
         apiKey: apiKey,
         baseURL: baseURL,
+        fetch: llm.fetch
       }).languageModel(llm.model);
     } else if (llm.provider == "anthropic") {
       return createAnthropic({
         apiKey: apiKey,
         baseURL: baseURL,
+        fetch: llm.fetch
       }).languageModel(llm.model);
     } else if (llm.provider == "google") {
       return createGoogleGenerativeAI({
         apiKey: apiKey,
         baseURL: baseURL,
+        fetch: llm.fetch
       }).languageModel(llm.model);
     } else if (llm.provider == "aws") {
       let keys = apiKey.split("=");
@@ -217,11 +220,13 @@ export class RetryLanguageModel {
         secretAccessKey: keys[1],
         baseURL: baseURL,
         region: llm.config?.region || "us-west-1",
+        fetch: llm.fetch
       }).languageModel(llm.model);
     } else if (llm.provider == "openrouter") {
       return createOpenRouter({
         apiKey: apiKey,
         baseURL: baseURL,
+        fetch: llm.fetch
       }).languageModel(llm.model);
     } else {
       return llm.provider.languageModel(llm.model);
