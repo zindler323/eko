@@ -555,7 +555,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     tools: Tool[]
   ): Promise<void> {
     const pseudoHtmlDescription =
-      "This is the latest screenshot and page element information.\nindex and element:\n";
+      "请你先描述从当前截图中看到的执行结果，是否符合上一步执行的预期，以及下一步计划。这是最新的截图和页面元素信息.\n元素和对应的index:\n";
     let lastTool = this.lastToolResult(messages);
     if (
       lastTool &&
