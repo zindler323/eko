@@ -29,7 +29,9 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
    - If stuck, try alternative approaches, don't refuse tasks
    - Handle popups/cookies by accepting or closing them
 * BROWSER OPERATION:
-   - Use scroll to find elements you are looking for, When extracting content, prioritize using extract_page_content, only scroll when you need to load more content`;
+   - Use scroll to find elements you are looking for, When extracting content, prioritize using extract_page_content, only scroll when you need to load more content
+* During execution, please output user-friendly step information. Do not output element and index information to users, as this would cause user confusion.
+`;
     const _tools_ = [] as Tool[];
     super({
       name: AGENT_NAME,

@@ -1,6 +1,6 @@
-
-export function extract_page_content() {
+export function extract_page_content(max_url_length = 200) {
   let result = "";
+  max_url_length = max_url_length || 200;
   try {
     function traverse(node: any) {
       if (node.nodeType === Node.ELEMENT_NODE) {
@@ -45,6 +45,7 @@ export function extract_page_content() {
           const alt = node.alt || node.title || "";
           if (
             src &&
+            src.length <= max_url_length &&
             node.width * node.height >= 10000 &&
             src.startsWith("http")
           ) {
@@ -54,7 +55,12 @@ export function extract_page_content() {
           // link
           const href = node.href || node.getAttribute("href");
           const text = node.innerText.trim() || node.title;
-          if (text && href && href.startsWith("http")) {
+          if (
+            text &&
+            href &&
+            href.length <= max_url_length &&
+            href.startsWith("http")
+          ) {
             result += `[${text}](${href.trim()}) `;
           } else {
             result += text + " ";
