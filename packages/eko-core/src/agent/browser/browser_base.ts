@@ -54,7 +54,14 @@ export default abstract class BaseBrowserAgent extends Agent {
     } catch (e) {}
   }
 
-  protected async extract_page_content(agentContext: AgentContext, variable_name?: string): Promise<string> {
+  protected async extract_page_content(
+    agentContext: AgentContext,
+    variable_name?: string
+  ): Promise<{
+    title: string;
+    page_url: string;
+    page_content: string;
+  }> {
     let content = await this.execute_script(
       agentContext,
       utils.extract_page_content,
@@ -65,7 +72,11 @@ export default abstract class BaseBrowserAgent extends Agent {
     if (variable_name) {
       agentContext.context.variables.set(variable_name, result);
     }
-    return result;
+    return {
+      title: pageInfo.title || "",
+      page_url: pageInfo.url,
+      page_content: content,
+    };
   }
 
   protected async controlMcpTools(

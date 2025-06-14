@@ -108,11 +108,19 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       }
     }
     if (extract_page_content) {
-      let page_content = await this.extract_page_content(agentContext);
-      return (
-        "The current page content has been extracted, latest page content:\n" +
-        page_content
-      );
+      let page_result = await this.extract_page_content(agentContext);
+      return {
+        result:
+          "The current page content has been extracted, latest page content:\n" +
+          "title: " +
+          page_result.title +
+          "\n" +
+          "page_url: " +
+          page_result.page_url +
+          "\n" +
+          "page_content: " +
+          page_result.page_content,
+      };
     }
   }
 
