@@ -1,5 +1,5 @@
 
-export function extract_page_content(element = document.body) {
+export function extract_page_content() {
   let result = "";
   try {
     function traverse(node: any) {
@@ -97,7 +97,7 @@ export function extract_page_content(element = document.body) {
       }
     }
 
-    traverse(element);
+    traverse(document.body);
   } catch (e) {
     result = document.body.innerText;
   }
