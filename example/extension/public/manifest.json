@@ -22,9 +22,9 @@
   },
   "content_scripts": [
     {
+      "run_at": "document_idle",
       "matches": ["<all_urls>"],
-      "js": ["js/content_script.js"],
-      "run_at": "document_idle"
+      "js": ["js/content_script.js"]
     }
   ],
   "permissions": [
