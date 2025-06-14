@@ -29,7 +29,9 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
    - If stuck, try alternative approaches, don't refuse tasks
    - Handle popups/cookies by accepting or closing them
 * BROWSER OPERATION:
-   - Use scroll to find elements you are looking for, When extracting content, prioritize using extract_page_content, only scroll when you need to load more content`;
+   - Use scroll to find elements you are looking for, When extracting content, prioritize using extract_page_content, only scroll when you need to load more content
+* During execution, please output user-friendly step information. Do not output element and index information to users, as this would cause user confusion.
+`;
     const _tools_ = [] as Tool[];
     super({
       name: AGENT_NAME,
@@ -108,11 +110,19 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       }
     }
     if (extract_page_content) {
-      let page_content = await this.extract_page_content(agentContext);
-      return (
-        "The current page content has been extracted, latest page content:\n" +
-        page_content
-      );
+      let page_result = await this.extract_page_content(agentContext);
+      return {
+        result:
+          "The current page content has been extracted, latest page content:\n" +
+          "title: " +
+          page_result.title +
+          "\n" +
+          "page_url: " +
+          page_result.page_url +
+          "\n" +
+          "page_content: " +
+          page_result.page_content,
+      };
     }
   }
 
@@ -406,7 +416,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       {
         name: "extract_page_content",
         description:
-          "Extract the text content of the current webpage, please use this tool to obtain webpage data.",
+          "Extract the text content and image links of the current webpage, please use this tool to obtain webpage data.",
         parameters: {
           type: "object",
           properties: {},

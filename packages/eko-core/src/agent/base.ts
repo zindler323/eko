@@ -566,6 +566,7 @@ export async function callLLM(
   let toolParts: LanguageModelV1ToolCallPart[] = [];
   const reader = result.stream.getReader();
   try {
+    let toolPart: LanguageModelV1ToolCallPart | null = null;
     while (true) {
       await context.checkAborted();
       const { done, value } = await reader.read();
@@ -575,6 +576,9 @@ export async function callLLM(
       let chunk = value as LanguageModelV1StreamPart;
       switch (chunk.type) {
         case "text-delta": {
+          if (toolPart && !chunk.textDelta) {
+            continue;
+          }
           streamText += chunk.textDelta || "";
           await streamCallback.onMessage(
             {
@@ -588,6 +592,21 @@ export async function callLLM(
             },
             agentContext
           );
+          if (toolPart) {
+            await streamCallback.onMessage(
+              {
+                taskId: context.taskId,
+                agentName: agentNode.name,
+                nodeId: agentNode.id,
+                type: "tool_use",
+                toolId: toolPart.toolCallId,
+                toolName: toolPart.toolName,
+                params: toolPart.args || {},
+              },
+              agentContext
+            );
+            toolPart = null;
+          }
           break;
         }
         case "reasoning": {
@@ -635,6 +654,15 @@ export async function callLLM(
             },
             agentContext
           );
+          if (toolPart == null) {
+            toolPart = {
+              type: "tool-call",
+              toolCallId: chunk.toolCallId,
+              toolName: chunk.toolName,
+              args: {},
+            };
+            toolParts.push(toolPart);
+          }
           break;
         }
         case "tool-call": {
@@ -650,12 +678,17 @@ export async function callLLM(
             params: args,
           };
           await streamCallback.onMessage(message, agentContext);
-          toolParts.push({
-            type: "tool-call",
-            toolCallId: chunk.toolCallId,
-            toolName: chunk.toolName,
-            args: message.params || args,
-          });
+          if (toolPart == null) {
+            toolParts.push({
+              type: "tool-call",
+              toolCallId: chunk.toolCallId,
+              toolName: chunk.toolName,
+              args: message.params || args,
+            });
+          } else {
+            toolPart.args = message.params || args;
+            toolPart = null;
+          }
           break;
         }
         case "file": {
@@ -684,7 +717,7 @@ export async function callLLM(
             },
             agentContext
           );
-          throw new Error("Plan Error");
+          throw new Error("LLM Error: " + chunk.error);
         }
         case "finish": {
           if (!textStreamDone) {
@@ -701,6 +734,21 @@ export async function callLLM(
               },
               agentContext
             );
+          }
+          if (toolPart) {
+            await streamCallback.onMessage(
+              {
+                taskId: context.taskId,
+                agentName: agentNode.name,
+                nodeId: agentNode.id,
+                type: "tool_use",
+                toolId: toolPart.toolCallId,
+                toolName: toolPart.toolName,
+                params: toolPart.args || {},
+              },
+              agentContext
+            );
+            toolPart = null;
           }
           await streamCallback.onMessage(
             {

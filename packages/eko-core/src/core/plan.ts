@@ -88,8 +88,8 @@ export class Planner {
         }
         let chunk = value as LanguageModelV1StreamPart;
         if (chunk.type == "error") {
-          Log.error("Plan Error: ", chunk);
-          throw new Error("Plan Error");
+          Log.error("Plan, LLM Error: ", chunk);
+          throw new Error("LLM Error: " + chunk.error);
         }
         if (chunk.type == "text-delta") {
           streamText += chunk.textDelta || "";

@@ -5,10 +5,18 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     agentContext: AgentContext
   ): Promise<{ imageBase64: string; imageType: "image/jpeg" | "image/png" }> {
     let windowId = await this.getWindowId(agentContext);
-    let dataUrl = await chrome.tabs.captureVisibleTab(windowId, {
-      format: "jpeg",
-      quality: 60,
-    });
+    let dataUrl;
+    try {
+      dataUrl = await chrome.tabs.captureVisibleTab(windowId, {
+        format: "jpeg",
+        quality: 60,
+      });
+    } catch (e) {
+      dataUrl = await chrome.tabs.captureVisibleTab(windowId, {
+        format: "jpeg",
+        quality: 60,
+      });
+    }
     let data = dataUrl.substring(dataUrl.indexOf("base64,") + 7);
     return {
       imageBase64: data,
