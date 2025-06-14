@@ -252,7 +252,7 @@ export default abstract class BaseBrowserScreenAgent extends BaseBrowserAgent {
       {
         name: "extract_page_content",
         description:
-          "Extract the text content of the current webpage, please use this tool to obtain webpage data.",
+          "Extract the text content and image links of the current webpage, please use this tool to obtain webpage data.",
         parameters: {
           type: "object",
           properties: {},

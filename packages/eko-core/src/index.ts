@@ -60,3 +60,5 @@ export {
   uuidv4,
   call_timeout,
 } from "./common/utils";
+
+export { extract_page_content } from "./agent/browser/utils";
