@@ -684,7 +684,7 @@ export async function callLLM(
             },
             agentContext
           );
-          throw new Error("Plan Error");
+          throw new Error("LLM Error: " + chunk.error);
         }
         case "finish": {
           if (!textStreamDone) {
