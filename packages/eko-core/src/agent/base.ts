@@ -54,6 +54,7 @@ export class Agent {
   protected mcpClient?: IMcpClient;
   protected planDescription?: string;
   protected callback?: StreamCallback & HumanCallback;
+  protected agentContext?: AgentContext;
 
   constructor(params: AgentParams) {
     this.name = params.name;
@@ -68,6 +69,7 @@ export class Agent {
     let mcpClient = this.mcpClient || context.config.defaultMcpClient;
     let agentContext = new AgentContext(context, this, agentChain);
     try {
+      this.agentContext = agentContext;
       mcpClient && !mcpClient.isConnected() && (await mcpClient.connect());
       return this.runWithContext(agentContext, mcpClient, config.maxReactNum);
     } finally {
@@ -500,6 +502,8 @@ export class Agent {
   public addTool(tool: Tool) {
     this.tools.push(tool);
   }
+
+  protected async onTaskStatus(status: "pause" | "abort" | "resume-pause") {}
 
   get Llms(): string[] | undefined {
     return this.llms;

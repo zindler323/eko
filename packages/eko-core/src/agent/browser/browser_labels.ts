@@ -650,9 +650,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
           if (eIdx == -1) {
             continue;
           }
-          line =
-            line.substring(0, sIdx) +
-            line.substring(eIdx + 1).trim();
+          line = line.substring(0, sIdx) + line.substring(eIdx + 1).trim();
         }
         return line.replace('" >', '">').replace(" >", ">");
       })
@@ -891,6 +889,23 @@ function scroll_by(params: { amount: number }) {
     const visibleHeight = visibleBottom - visibleTop;
     return visibleWidth * visibleHeight;
   }
+
+  function getComputedZIndex(element: Element | null) {
+    while (
+      element &&
+      element !== document.body &&
+      element !== document.body.parentElement
+    ) {
+      const style = window.getComputedStyle(element);
+      let zIndex = style.zIndex === "auto" ? 0 : parseInt(style.zIndex) || 0;
+      if (zIndex > 0) {
+        return zIndex;
+      }
+      element = element.parentElement;
+    }
+    return 0;
+  }
+
   const scrollableElements = findScrollableElements();
   if (scrollableElements.length === 0) {
     const y = Math.max(
@@ -901,7 +916,19 @@ function scroll_by(params: { amount: number }) {
     return false;
   }
   const sortedElements = scrollableElements.sort((a, b) => {
-    return getVisibleArea(b) - getVisibleArea(a);
+    let z = getComputedZIndex(b) - getComputedZIndex(a);
+    if (z > 0) {
+      return 1;
+    } else if (z < 0) {
+      return -1;
+    }
+    let v = getVisibleArea(b) - getVisibleArea(a);
+    if (v > 0) {
+      return 1;
+    } else if (v < 0) {
+      return -1;
+    }
+    return 0;
   });
   const largestElement = sortedElements[0];
   const viewportHeight = largestElement.clientHeight;

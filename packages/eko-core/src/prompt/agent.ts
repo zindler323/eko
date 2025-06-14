@@ -12,9 +12,8 @@ import { TOOL_NAME as task_node_status } from "../tools/task_node_status";
 
 const AGENT_SYSTEM_TEMPLATE = `
 You are {name}, an autonomous AI agent for {agent} agent.
-Current datetime: {datetime}
 
-# Task Description
+# Agent Description
 {description}
 {prompt}
 
@@ -86,7 +85,8 @@ export function getAgentSystemPrompt(
   let agentNodeXml = agentNode.xml;
   let hasWatchNode = agentNodeXml.indexOf("</watch>") > -1;
   let hasForEachNode = agentNodeXml.indexOf("</forEach>") > -1;
-  let hasHumanTool = tools.filter((tool) => tool.name == human_interact).length > 0;
+  let hasHumanTool =
+    tools.filter((tool) => tool.name == human_interact).length > 0;
   let hasVariable =
     agentNodeXml.indexOf("input=") > -1 ||
     agentNodeXml.indexOf("output=") > -1 ||
@@ -112,6 +112,7 @@ export function getAgentSystemPrompt(
   if (extSysPrompt && extSysPrompt.trim()) {
     prompt += "\n" + extSysPrompt.trim() + "\n";
   }
+  prompt += "\nCurrent datetime: {datetime}";
   if (context.chain.agents.length > 1) {
     prompt += "\n Main task: " + context.chain.taskPrompt;
     prompt += "\n\n# Pre-task execution results";
@@ -120,19 +121,16 @@ export function getAgentSystemPrompt(
       if (agentChain.agentResult) {
         prompt += `\n## ${
           agentChain.agent.task || agentChain.agent.name
-        }\n${sub(agentChain.agentResult, 500)}`;
+        }\n${sub(agentChain.agentResult, 500, true)}`;
       }
     }
-  }
-  if (prompt) {
-    prompt = "\n" + prompt.trim();
   }
   return AGENT_SYSTEM_TEMPLATE.replace("{name}", config.name)
     .replace("{agent}", agent.Name)
     .replace("{description}", agent.Description)
-    .replace("{datetime}", new Date().toLocaleString())
-    .replace("{prompt}", prompt)
+    .replace("{prompt}", "\n" + prompt.trim())
     .replace("{nodePrompt}", nodePrompt)
+    .replace("{datetime}", new Date().toLocaleString())
     .trim();
 }
 

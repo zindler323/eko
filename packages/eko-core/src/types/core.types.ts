@@ -127,22 +127,26 @@ export type Workflow = {
 export interface HumanCallback {
   onHumanConfirm?: (
     agentContext: AgentContext,
-    prompt: string
+    prompt: string,
+    extInfo?: any
   ) => Promise<boolean>;
   onHumanInput?: (
     agentContext: AgentContext,
-    prompt: string
+    prompt: string,
+    extInfo?: any
   ) => Promise<string>;
   onHumanSelect?: (
     agentContext: AgentContext,
     prompt: string,
     options: string[],
-    multiple?: boolean
+    multiple?: boolean,
+    extInfo?: any
   ) => Promise<string[]>;
   onHumanHelp?: (
     agentContext: AgentContext,
     helpType: "request_login" | "request_assistance",
-    prompt: string
+    prompt: string,
+    extInfo?: any
   ) => Promise<boolean>;
 }
 

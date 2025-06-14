@@ -8,6 +8,9 @@ import {
 } from "playwright";
 
 export default class BrowserAgent extends BaseBrowserLabelsAgent {
+  private cdpWsEndpoint?: string;
+  private userDataDir?: string;
+  private options?: Record<string, any>;
   protected browser: Browser | null = null;
   private browser_context: BrowserContext | null = null;
   private current_page: Page | null = null;
@@ -15,6 +18,14 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
 
   public setHeadless(headless: boolean) {
     this.headless = headless;
+  }
+
+  public setCdpWsEndpoint(cdpWsEndpoint: string) {
+    this.cdpWsEndpoint = cdpWsEndpoint;
+  }
+
+  public setOptions(options?: Record<string, any>) {
+    this.options = options;
   }
 
   protected async screenshot(
@@ -211,17 +222,26 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
   }
 
   protected async getBrowserContext() {
-    if (!this.browser) {
-      this.current_page = null;
-      this.browser_context = null;
-      this.browser = await chromium.launch({
-        headless: this.headless,
-        args: ["--no-sandbox"],
-      });
-    }
     if (!this.browser_context) {
       this.current_page = null;
-      this.browser_context = await this.browser.newContext();
+      this.browser_context = null;
+      if (this.cdpWsEndpoint) {
+        this.browser = await chromium.connectOverCDP(this.cdpWsEndpoint, this.options);
+        this.browser_context = await this.browser.newContext();
+      } else if (this.userDataDir) {
+        this.browser_context = await chromium.launchPersistentContext(this.userDataDir, {
+          headless: this.headless,
+          // channel: 'chrome',
+          ...this.options,
+        });
+      } else {
+        this.browser = await chromium.launch({
+          headless: this.headless,
+          args: ["--no-sandbox"],
+          ...this.options,
+        });
+        this.browser_context = await this.browser.newContext();
+      }
       // Anti-crawling detection website:
       // https://bot.sannysoft.com/
       let init_script = await this.initScript();

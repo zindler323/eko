@@ -10,7 +10,7 @@ const OptionsPage = () => {
   const [config, setConfig] = useState({
     llm: "anthropic",
     apiKey: "",
-    modelName: "claude-3-7-sonnet-20250219",
+    modelName: "claude-sonnet-4-20250514",
     options: {
       baseURL: "https://api.anthropic.com/v1",
     },
@@ -72,7 +72,7 @@ const OptionsPage = () => {
       { value: "openai/gpt-4.1", label: "gpt-4.1" },
       { value: "openai/gpt-4.1-mini", label: "gpt-4.1-mini" },
       { value: "openai/gpt-4o", label: "gpt-4o" },
-      { value: "google/gemini-2.5-flash-preview-05-20", label: "gemini-2.5-flash-preview-05-20" },
+      { value: "google/gemini-2.5-pro-preview", label: "gemini-2.5-pro-preview" },
     ],
   };
 
