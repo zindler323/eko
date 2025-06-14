@@ -45,7 +45,6 @@ export class RetryLanguageModel {
       temperature: request.temperature,
       topP: request.topP,
       topK: request.topK,
-      providerMetadata: {},
       abortSignal: request.abortSignal,
     });
   }
@@ -54,6 +53,7 @@ export class RetryLanguageModel {
     options: LanguageModelV1CallOptions
   ): Promise<GenerateResult> {
     const maxTokens = options.maxTokens;
+    const providerMetadata = options.providerMetadata;
     const names = [...this.names, ...this.names];
     for (let i = 0; i < names.length; i++) {
       const name = names[i];
@@ -64,6 +64,10 @@ export class RetryLanguageModel {
       if (!maxTokens) {
         options.maxTokens =
           this.llms[name].config?.maxTokens || config.maxTokens;
+      }
+      if (!providerMetadata) {
+        options.providerMetadata = {};
+        options.providerMetadata[llm.provider] = this.llms[name].options || {};
       }
       try {
         let result = await llm.doGenerate(options);
@@ -103,13 +107,13 @@ export class RetryLanguageModel {
       temperature: request.temperature,
       topP: request.topP,
       topK: request.topK,
-      providerMetadata: {},
       abortSignal: request.abortSignal,
     });
   }
 
   async doStream(options: LanguageModelV1CallOptions): Promise<StreamResult> {
     const maxTokens = options.maxTokens;
+    const providerMetadata = options.providerMetadata;
     const names = [...this.names, ...this.names];
     for (let i = 0; i < names.length; i++) {
       const name = names[i];
@@ -120,6 +124,10 @@ export class RetryLanguageModel {
       if (!maxTokens) {
         options.maxTokens =
           this.llms[name].config?.maxTokens || config.maxTokens;
+      }
+      if (!providerMetadata) {
+        options.providerMetadata = {};
+        options.providerMetadata[llm.provider] = this.llms[name].options || {};
       }
       try {
         const controller = new AbortController();
@@ -199,19 +207,25 @@ export class RetryLanguageModel {
       return createOpenAI({
         apiKey: apiKey,
         baseURL: baseURL,
-        fetch: llm.fetch
+        fetch: llm.fetch,
+        organization: llm.config?.organization,
+        project: llm.config?.project,
+        headers: llm.config?.headers,
+        compatibility: llm.config?.compatibility,
       }).languageModel(llm.model);
     } else if (llm.provider == "anthropic") {
       return createAnthropic({
         apiKey: apiKey,
         baseURL: baseURL,
-        fetch: llm.fetch
+        fetch: llm.fetch,
+        headers: llm.config?.headers,
       }).languageModel(llm.model);
     } else if (llm.provider == "google") {
       return createGoogleGenerativeAI({
         apiKey: apiKey,
         baseURL: baseURL,
-        fetch: llm.fetch
+        fetch: llm.fetch,
+        headers: llm.config?.headers,
       }).languageModel(llm.model);
     } else if (llm.provider == "aws") {
       let keys = apiKey.split("=");
@@ -220,13 +234,17 @@ export class RetryLanguageModel {
         secretAccessKey: keys[1],
         baseURL: baseURL,
         region: llm.config?.region || "us-west-1",
-        fetch: llm.fetch
+        fetch: llm.fetch,
+        headers: llm.config?.headers,
+        sessionToken: llm.config?.sessionToken,
       }).languageModel(llm.model);
     } else if (llm.provider == "openrouter") {
       return createOpenRouter({
         apiKey: apiKey,
         baseURL: baseURL,
-        fetch: llm.fetch
+        fetch: llm.fetch,
+        headers: llm.config?.headers,
+        compatibility: llm.config?.compatibility,
       }).languageModel(llm.model);
     } else {
       return llm.provider.languageModel(llm.model);

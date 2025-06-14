@@ -156,7 +156,8 @@ export function buildAgentRootXml(
   agentInnerHTML = agentInnerHTML
     .replace("<task>", "<currentTask>")
     .replace("</task>", "</currentTask>");
-  return `<root>${prefix}<mainTask>${mainTaskPrompt}</mainTask>${agentInnerHTML}</root>`;
+  const xmlPrompt = `<root>${prefix}<mainTask>${mainTaskPrompt}</mainTask>${agentInnerHTML}</root>`;
+  return xmlPrompt.replace(/      /g, "  ").replace('    </root>', '</root>');
 }
 
 export function extractAgentXmlNode(

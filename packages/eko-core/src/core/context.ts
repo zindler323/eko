@@ -1,7 +1,7 @@
 import { Agent } from "../agent";
 import { sleep } from "../common/utils";
 import Chain, { AgentChain } from "./chain";
-import { EkoConfig, Workflow } from "../types/core.types";
+import { EkoConfig, Workflow, WorkflowAgent } from "../types";
 
 export default class Context {
   taskId: string;
@@ -43,6 +43,21 @@ export default class Context {
         throw error;
       }
     }
+  }
+
+  currentAgent(): [Agent, WorkflowAgent, AgentContext] | null {
+    const agentNode = this.chain.agents[this.chain.agents.length - 1];
+    if (!agentNode) {
+      return null;
+    }
+    const agent = this.agents.filter(
+      (agent) => agent.Name == agentNode.agent.name
+    )[0];
+    if (!agent) {
+      return null;
+    }
+    const agentContext = agent["agentContext"] as AgentContext;
+    return [agent, agentNode.agent, agentContext];
   }
 }
 

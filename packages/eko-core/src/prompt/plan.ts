@@ -4,7 +4,6 @@ import { AGENT_NAME as chat_agent_name } from "../agent/chat";
 
 const PLAN_SYSTEM_TEMPLATE = `
 You are {name}, an autonomous AI Agent Planner.
-Current datetime: {datetime}
 
 ## Task Description
 Your task is to understand the user's requirements, dynamically plan the user's tasks based on the Agent list, and please follow the steps below:
@@ -164,12 +163,14 @@ Output result:
 
 const PLAN_USER_TEMPLATE = `
 User Platform: {platform}
+Current datetime: {datetime}
 Task Description: {task_prompt}
 `;
 
 const PLAN_USER_TASK_WEBSITE_TEMPLATE = `
 User Platform: {platform}
 Task Website: {task_website}
+Current datetime: {datetime}
 Task Description: {task_prompt}
 `;
 
@@ -185,22 +186,28 @@ export async function getPlanSystemPrompt(context: Context): Promise<string> {
       "Tools:\n" +
       tools
         .filter((tool) => !tool.noPlan)
-        .map((tool) => `  - ${tool.name}: ${tool.planDescription || tool.description || ""}`)
+        .map(
+          (tool) =>
+            `  - ${tool.name}: ${
+              tool.planDescription || tool.description || ""
+            }`
+        )
         .join("\n") +
       "\n</agent>\n\n";
   }
-  let example_prompt = "";
+  let plan_example_list =
+    context.variables.get("plan_example_list") || PLAN_EXAMPLE_LIST;
   let hasChatAgent =
     context.agents.filter((a) => a.Name == chat_agent_name).length > 0;
+  let example_prompt = "";
   const example_list = hasChatAgent
-    ? [PLAN_CHAT_EXAMPLE, ...PLAN_EXAMPLE_LIST]
-    : [...PLAN_EXAMPLE_LIST];
+    ? [PLAN_CHAT_EXAMPLE, ...plan_example_list]
+    : [...plan_example_list];
   for (let i = 0; i < example_list.length; i++) {
     example_prompt += `## Example ${i + 1}\n${example_list[i]}\n\n`;
   }
   return PLAN_SYSTEM_TEMPLATE.replace("{name}", config.name)
     .replace("{agents}", agents_prompt.trim())
-    .replace("{datetime}", new Date().toLocaleString())
     .replace("{example_prompt}", example_prompt)
     .trim();
 }
@@ -208,18 +215,22 @@ export async function getPlanSystemPrompt(context: Context): Promise<string> {
 export function getPlanUserPrompt(
   task_prompt: string,
   task_website?: string,
-  ext_prompt?: string,
+  ext_prompt?: string
 ): string {
   let prompt = "";
   if (task_website) {
-    prompt = PLAN_USER_TASK_WEBSITE_TEMPLATE.replace("{task_prompt}", task_prompt)
-      .replace("{platform}", config.platform)
-      .replace("{task_website}", task_website);
+    prompt = PLAN_USER_TASK_WEBSITE_TEMPLATE.replace(
+      "{task_website}",
+      task_website
+    );
   } else {
-    prompt = PLAN_USER_TEMPLATE.replace("{task_prompt}", task_prompt)
-      .replace("{platform}", config.platform);
+    prompt = PLAN_USER_TEMPLATE;
   }
-  prompt = prompt.trim();
+  prompt = prompt
+    .replace("{task_prompt}", task_prompt)
+    .replace("{platform}", config.platform)
+    .replace("{datetime}", new Date().toLocaleString())
+    .trim();
   if (ext_prompt) {
     prompt += `\n${ext_prompt.trim()}`;
   }

@@ -168,6 +168,7 @@ export class Eko {
     let context = this.taskMap.get(taskId);
     if (context) {
       context.paused = false;
+      this.onTaskStatus(context, "abort");
       context.controller.abort();
       return true;
     } else {
@@ -178,6 +179,7 @@ export class Eko {
   public pauseTask(taskId: string, paused: boolean): boolean {
     let context = this.taskMap.get(taskId);
     if (context) {
+      this.onTaskStatus(context, paused ? "pause" : "resume-pause");
       context.paused = paused;
       return true;
     } else {
@@ -196,5 +198,15 @@ export class Eko {
   public addAgent(agent: Agent): void {
     this.config.agents = this.config.agents || [];
     this.config.agents.push(agent);
+  }
+
+  private async onTaskStatus(context: Context, status: string) {
+    const [agent] = context.currentAgent() || [];
+    if (agent) {
+      const onTaskStatus = (agent as any)["onTaskStatus"];
+      if (onTaskStatus) {
+        await onTaskStatus.call(agent, status);
+      }
+    }
   }
 }

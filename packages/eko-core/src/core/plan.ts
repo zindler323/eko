@@ -5,7 +5,10 @@ import { parseWorkflow } from "../common/xml";
 import { Workflow } from "../types/core.types";
 import { LLMRequest } from "../types/llm.types";
 import { getPlanSystemPrompt, getPlanUserPrompt } from "../prompt/plan";
-import { LanguageModelV1Prompt, LanguageModelV1StreamPart } from "@ai-sdk/provider";
+import {
+  LanguageModelV1Prompt,
+  LanguageModelV1StreamPart,
+} from "@ai-sdk/provider";
 
 export class Planner {
   private taskId: string;
@@ -48,7 +51,9 @@ export class Planner {
       messages = [
         {
           role: "system",
-          content: await getPlanSystemPrompt(this.context),
+          content:
+            this.context.variables.get("plan_sys_prompt") ||
+            (await getPlanSystemPrompt(this.context)),
         },
         {
           role: "user",

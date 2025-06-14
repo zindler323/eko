@@ -28,6 +28,7 @@ const llms: LLMs = {
       body.metadata = {
         test: "xxx",
       };
+      console.log("====> body", JSON.stringify(body, null, 2));
       return fetch(url, {
         ...options,
         body: JSON.stringify(body),
