@@ -85,15 +85,12 @@ Output result:
     </agent>
   </agents>
 </root>`,
-  `User: Every morning, help me collect the latest AI news, summarize it, and send it to the "AI Daily Morning Report" group chat on WeChat.
+  `User: Help me collect the latest AI news, summarize it, and send it to the "AI news information" group chat on WeChat.
 Output result:
 <root>
-  <name>AI Daily Morning Report</name>
-  <thought>OK, the user needs to collect the latest AI news every morning, summarize it, and send it to a WeChat group named "AI Daily Morning Report" This requires automation, including the steps of data collection, processing, and distribution.</thought>
+  <name>Latest AI News</name>
+  <thought>OK, users need to collect the latest AI news, summarize it, and send it to a WeChat group named "AI news information" This requires automation, including the steps of data collection, processing, and distribution.</thought>
   <agents>
-    <agent name="Timer">
-      <task>Timing: every morning</task>
-    </agent>
     <agent name="Browser">
       <task>Search for the latest updates on AI</task>
       <nodes>
@@ -106,10 +103,10 @@ Output result:
       </nodes>
     </agent>
     <agent name="Computer">
-      <task>Send a message to the WeChat group chat "AI Daily Morning Report"</task>
+      <task>Send a message to the WeChat group chat "AI news information"</task>
       <nodes>
         <node>Open WeChat</node>
-        <node>Search for the "AI Daily Morning Report" chat group</node>
+        <node>Search for the "AI news information" chat group</node>
         <node input="summaryInfo">Send summary message</node>
       </nodes>
     </agent>
