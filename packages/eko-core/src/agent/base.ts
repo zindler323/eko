@@ -503,7 +503,11 @@ export class Agent {
     this.tools.push(tool);
   }
 
-  protected async onTaskStatus(status: "pause" | "abort" | "resume-pause") {}
+  protected async onTaskStatus(status: "pause" | "abort" | "resume-pause", reason?: string) {
+    if (status == "abort" && this.agentContext) {
+      this.agentContext?.variables.clear();
+    }
+  }
 
   get Llms(): string[] | undefined {
     return this.llms;
