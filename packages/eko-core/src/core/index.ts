@@ -5,6 +5,7 @@ import { Planner } from "./plan";
 import Chain, { AgentChain } from "./chain";
 import { mergeAgents, uuidv4 } from "../common/utils";
 import Log from "../common/log";
+import { LanguageModelV1Prompt, LLMRequest } from "../types";
 
 export class Eko {
   private config: EkoConfig;
@@ -93,6 +94,69 @@ export class Eko {
     await this.generate(taskPrompt, taskId, contextParams);
     return await this.execute(taskId);
   }
+
+  /** extend: 使用历史生成的workflow-xml来执行 */
+  public async runExistingWorkflow(
+    workflowXml: string,
+    taskPrompt: string,
+    taskId: string = uuidv4(),
+  ) {
+    const workflow = await mockGenerate.call(this, workflowXml, taskPrompt, taskId);
+    if (workflow) await this.execute(taskId);
+
+    /** 使用已有的xml来创建上下文状态，而不用 */
+    async function mockGenerate(
+      this: Eko,
+      workflowXml: string,
+      taskPrompt: string,
+      taskId: string = uuidv4(),
+    ): Promise<Workflow> {
+      const config = this.config;
+      const agents = [...(this.config.agents || [])];
+      const chain = new Chain(taskPrompt);
+      const context = new Context(taskId, config, agents, chain);
+      this.taskMap.set(taskId, context);
+      try {
+        const { getPlanSystemPrompt, getPlanUserPrompt } = await import('../prompt/plan');
+  
+        const mockMessages: LanguageModelV1Prompt = [{
+          role: 'system',
+          content: await getPlanSystemPrompt(context),
+        }, {
+          role: 'user',
+          content: [{
+            type: 'text',
+            text: getPlanUserPrompt(taskPrompt),
+          }],
+        }];
+        const mockRequest: LLMRequest = {
+          maxTokens: 4096,
+          temperature: 0.7,
+          messages: mockMessages,
+          abortSignal: context.controller.signal,
+        }
+
+        chain.planRequest = mockRequest;
+        chain.planResult = workflowXml;
+        const { parseWorkflow } =  await import('../common/xml');
+        const workflow = parseWorkflow(taskId, workflowXml, true)!;
+        await config.callback?.onMessage?.({
+          taskId,
+          agentName: 'Planner',
+          type: 'workflow',
+          streamDone: true,
+          workflow,
+        });
+        workflow.taskPrompt = taskPrompt;
+        context.workflow = workflow;
+        return workflow;
+      } catch (e) {
+        this.deleteTask(taskId);
+        throw e;
+      }
+    }
+  }
+
 
   public async initContext(
     workflow: Workflow,

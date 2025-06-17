@@ -117,11 +117,6 @@ export class Agent {
         }
       }
       await this.handleMessages(agentContext, messages, tools);
-      console.log('【zindler】callLLM: ', {
-        agentContext,
-        rlm,
-        messages,
-      });
       let results = await callLLM(
         agentContext,
         rlm,
@@ -541,9 +536,6 @@ export async function callLLM(
   retry?: boolean,
   callback?: StreamCallback & HumanCallback
 ): Promise<Array<LanguageModelV1TextPart | LanguageModelV1ToolCallPart>> {
-  if (messages.length >= config.compressThreshold && !noCompress) {
-    await memory.compressAgentMessages(agentContext, rlm, messages, tools);
-  }
   let context = agentContext.context;
   let agentChain = agentContext.agentChain;
   let agentNode = agentChain.agent;
