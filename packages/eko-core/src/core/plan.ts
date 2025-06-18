@@ -79,6 +79,7 @@ export class Planner {
     let result = await rlm.callStream(request);
     const reader = result.stream.getReader();
     let streamText = "";
+    let thinkingText = "";
     try {
       while (true) {
         await this.context.checkAborted();
@@ -91,11 +92,19 @@ export class Planner {
           Log.error("Plan, LLM Error: ", chunk);
           throw new Error("LLM Error: " + chunk.error);
         }
+        if (chunk.type == "reasoning") {
+          thinkingText += chunk.textDelta || "";
+        }
         if (chunk.type == "text-delta") {
           streamText += chunk.textDelta || "";
         }
         if (config.callback) {
-          let workflow = parseWorkflow(this.taskId, streamText, false);
+          let workflow = parseWorkflow(
+            this.taskId,
+            streamText,
+            false,
+            thinkingText
+          );
           if (workflow) {
             await config.callback.onMessage({
               taskId: this.taskId,
@@ -113,7 +122,12 @@ export class Planner {
     }
     chain.planRequest = request;
     chain.planResult = streamText;
-    let workflow = parseWorkflow(this.taskId, streamText, true) as Workflow;
+    let workflow = parseWorkflow(
+      this.taskId,
+      streamText,
+      true,
+      thinkingText
+    ) as Workflow;
     if (config.callback) {
       await config.callback.onMessage({
         taskId: this.taskId,

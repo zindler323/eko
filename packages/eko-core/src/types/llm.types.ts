@@ -41,8 +41,9 @@ export type LLMs = {
 };
 
 export type GenerateResult = {
-  text?: string;
   llm: string;
+  llmConfig: LLMConfig;
+  text?: string;
   reasoning?:
     | string
     | Array<
@@ -89,6 +90,7 @@ export type GenerateResult = {
 
 export type StreamResult = {
   llm: string;
+  llmConfig: LLMConfig;
   stream: ReadableStream<LanguageModelV1StreamPart>;
   rawCall: {
     rawPrompt: unknown;

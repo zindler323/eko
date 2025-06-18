@@ -78,6 +78,7 @@ export class RetryLanguageModel {
           );
         }
         result.llm = name;
+        result.llmConfig = this.llms[name];
         return result;
       } catch (e: any) {
         if (e?.name === "AbortError") {
@@ -168,6 +169,7 @@ export class RetryLanguageModel {
           continue;
         }
         result.llm = name;
+        result.llmConfig = this.llms[name];
         result.stream = this.streamWrapper([chunk], reader);
         return result;
       } catch (e: any) {
@@ -278,5 +280,13 @@ export class RetryLanguageModel {
         reader.cancel(reason);
       },
     });
+  }
+
+  public get Llms(): LLMs {
+    return this.llms;
+  }
+
+  public get Names(): string[] {
+    return this.names;
   }
 }

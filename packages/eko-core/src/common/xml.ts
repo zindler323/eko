@@ -12,12 +12,23 @@ import {
 export function parseWorkflow(
   taskId: string,
   xml: string,
-  done: boolean
+  done: boolean,
+  thinking?: string
 ): Workflow | null {
+  let _workflow: Workflow | null = null;
   try {
+    if (thinking) {
+      _workflow = {
+        taskId: taskId,
+        name: "",
+        thought: thinking,
+        agents: [],
+        xml: xml,
+      };
+    }
     let sIdx = xml.indexOf("<root>");
     if (sIdx == -1) {
-      return null;
+      return _workflow;
     }
     xml = xml.substring(sIdx);
     let eIdx = xml.indexOf("</root>");
@@ -31,13 +42,14 @@ export function parseWorkflow(
     const doc = parser.parseFromString(xml, "text/xml");
     let root = doc.documentElement;
     if (root.tagName !== "root") {
-      return null;
+      return _workflow;
     }
-    let agents: WorkflowAgent[] = [];
+    const agents: WorkflowAgent[] = [];
+    const thought = root.getElementsByTagName("thought")[0]?.textContent || "";
     const workflow: Workflow = {
       taskId: taskId,
       name: root.getElementsByTagName("name")[0]?.textContent || "",
-      thought: root.getElementsByTagName("thought")[0]?.textContent || "",
+      thought: thinking ? thinking + "\n" + thought : thought,
       agents: agents,
       xml: xml,
     };
@@ -69,7 +81,7 @@ export function parseWorkflow(
     if (done) {
       throw e;
     } else {
-      return null;
+      return _workflow;
     }
   }
 }
@@ -157,7 +169,7 @@ export function buildAgentRootXml(
     .replace("<task>", "<currentTask>")
     .replace("</task>", "</currentTask>");
   const xmlPrompt = `<root>${prefix}<mainTask>${mainTaskPrompt}</mainTask>${agentInnerHTML}</root>`;
-  return xmlPrompt.replace(/      /g, "  ").replace('    </root>', '</root>');
+  return xmlPrompt.replace(/      /g, "  ").replace("    </root>", "</root>");
 }
 
 export function extractAgentXmlNode(
