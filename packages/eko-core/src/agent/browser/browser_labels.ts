@@ -555,7 +555,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     tools: Tool[]
   ): Promise<void> {
     const pseudoHtmlDescription =
-      "请你先描述从当前截图中看到的执行结果，是否符合上一步执行的预期，以及下一步计划。这是最新的截图和页面元素信息.\n元素和对应的index:\n";
+      "请你先评估从当前截图中看到的执行结果是否符合预期，用拟人化的语气将看到的结果分点简洁列出，例如“太好了! 我看到..., 或者完美！我观察到...”。然后用一句话说明接下来要执行的一个操作是什么，例如“接下来我会执行...”。请仔细分辨下拉框（有灰色下拉标志）和输入框，当涉及到“选择”操作时，必须通过点击下拉框/单选框后选择最符合的选项，禁止直接向下拉框中输入文本。这是最新的截图和页面元素信息.\n元素和对应的index:\n"
     let lastTool = this.lastToolResult(messages);
     if (
       lastTool &&
