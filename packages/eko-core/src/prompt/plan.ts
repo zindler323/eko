@@ -20,7 +20,9 @@ Your task is to understand the user's requirements, dynamically plan the user's 
 
 ## Output Rules and Format
 <root>
+  <!-- Task Name (Short) -->
   <name>Task Name</name>
+  <!-- Need to break down the task into multi-agent collaboration. Please think step by step and output a detailed thought process. -->
   <thought>Your thought process on user demand planning</thought>
   <!-- Multiple Agents work together to complete the task -->
   <agents>

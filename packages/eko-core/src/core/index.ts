@@ -161,25 +161,29 @@ export class Eko {
 
   public deleteTask(taskId: string): boolean {
     this.abortTask(taskId);
+    const context = this.taskMap.get(taskId);
+    if (context) {
+      context.variables.clear();
+    }
     return this.taskMap.delete(taskId);
   }
 
-  public abortTask(taskId: string): boolean {
+  public abortTask(taskId: string, reason?: string): boolean {
     let context = this.taskMap.get(taskId);
     if (context) {
       context.paused = false;
-      this.onTaskStatus(context, "abort");
-      context.controller.abort();
+      this.onTaskStatus(context, "abort", reason);
+      context.controller.abort(reason);
       return true;
     } else {
       return false;
     }
   }
 
-  public pauseTask(taskId: string, paused: boolean): boolean {
+  public pauseTask(taskId: string, paused: boolean, reason?: string): boolean {
     let context = this.taskMap.get(taskId);
     if (context) {
-      this.onTaskStatus(context, paused ? "pause" : "resume-pause");
+      this.onTaskStatus(context, paused ? "pause" : "resume-pause", reason);
       context.paused = paused;
       return true;
     } else {
@@ -200,12 +204,12 @@ export class Eko {
     this.config.agents.push(agent);
   }
 
-  private async onTaskStatus(context: Context, status: string) {
+  private async onTaskStatus(context: Context, status: string, reason?: string) {
     const [agent] = context.currentAgent() || [];
     if (agent) {
       const onTaskStatus = (agent as any)["onTaskStatus"];
       if (onTaskStatus) {
-        await onTaskStatus.call(agent, status);
+        await onTaskStatus.call(agent, status, reason);
       }
     }
   }

@@ -1,4 +1,8 @@
-import { parseWorkflow, buildAgentRootXml } from "../../src/common/xml";
+import {
+  parseWorkflow,
+  buildAgentRootXml,
+  buildSimpleAgentWorkflow,
+} from "../../src/common/xml";
 
 test.only("workflowXml", () => {
   const xml = `<root>
@@ -52,4 +56,14 @@ test.only("agentXml", () => {
     node.setAttribute("status", "todo");
   });
   console.log(agentXml);
+});
+
+test.only("buildWorkflow", () => {
+  const workflow = buildSimpleAgentWorkflow({
+    taskId: "test",
+    name: "Test workflow",
+    agentName: "Browser",
+    task: "Open google",
+  });
+  console.log("workflow: \n", JSON.stringify(workflow, null, 2));
 });

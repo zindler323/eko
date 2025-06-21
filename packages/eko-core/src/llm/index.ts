@@ -70,13 +70,15 @@ export class RetryLanguageModel {
         options.providerMetadata[llm.provider] = this.llms[name].options || {};
       }
       try {
-        let result = await llm.doGenerate(options);
+        let result = (await llm.doGenerate(options)) as GenerateResult;
         if (Log.isEnableDebug()) {
           Log.debug(
             `LLM nonstream body, name: ${name} => `,
             result.request?.body
           );
         }
+        result.llm = name;
+        result.llmConfig = this.llms[name];
         return result;
       } catch (e: any) {
         if (e?.name === "AbortError") {
@@ -134,13 +136,13 @@ export class RetryLanguageModel {
         const signal = options.abortSignal
           ? AbortSignal.any([options.abortSignal, controller.signal])
           : controller.signal;
-        const result = await call_timeout(
+        const result = (await call_timeout(
           async () => await llm.doStream({ ...options, abortSignal: signal }),
           this.stream_first_timeout,
           (e) => {
             controller.abort();
           }
-        );
+        )) as StreamResult;
         const stream = result.stream;
         const reader = stream.getReader();
         const { done, value } = await call_timeout(
@@ -166,6 +168,8 @@ export class RetryLanguageModel {
           reader.releaseLock();
           continue;
         }
+        result.llm = name;
+        result.llmConfig = this.llms[name];
         result.stream = this.streamWrapper([chunk], reader);
         return result;
       } catch (e: any) {
@@ -276,5 +280,13 @@ export class RetryLanguageModel {
         reader.cancel(reason);
       },
     });
+  }
+
+  public get Llms(): LLMs {
+    return this.llms;
+  }
+
+  public get Names(): string[] {
+    return this.names;
   }
 }

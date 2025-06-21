@@ -80,17 +80,20 @@ export class Agent {
   public async runWithContext(
     agentContext: AgentContext,
     mcpClient?: IMcpClient,
-    maxReactNum: number = 100
+    maxReactNum: number = 100,
+    historyMessages: LanguageModelV1Prompt = []
   ): Promise<string> {
     let loopNum = 0;
+    this.agentContext = agentContext;
     let context = agentContext.context;
     let agentNode = agentContext.agentChain.agent;
     const tools = [...this.tools, ...this.system_auto_tools(agentNode)];
-    let messages: LanguageModelV1Prompt = [
+    const messages: LanguageModelV1Prompt = [
       {
         role: "system",
         content: await this.buildSystemPrompt(agentContext, tools),
       },
+      ...historyMessages,
       {
         role: "user",
         content: await this.buildUserPrompt(agentContext, tools),
@@ -503,7 +506,14 @@ export class Agent {
     this.tools.push(tool);
   }
 
-  protected async onTaskStatus(status: "pause" | "abort" | "resume-pause") {}
+  protected async onTaskStatus(
+    status: "pause" | "abort" | "resume-pause",
+    reason?: string
+  ) {
+    if (status == "abort" && this.agentContext) {
+      this.agentContext?.variables.clear();
+    }
+  }
 
   get Llms(): string[] | undefined {
     return this.llms;
