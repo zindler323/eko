@@ -154,7 +154,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     args: any[]
   ): Promise<any> {
     let page = await this.currentPage();
-    return await page.evaluate(func, args);
+    return await page.evaluate(func, ...args);
   }
 
   private async open_url(
