@@ -61,4 +61,10 @@ export {
   call_timeout,
 } from "./common/utils";
 
+export {
+  parseWorkflow,
+  resetWorkflowXml,
+  buildSimpleAgentWorkflow,
+} from "./common/xml";
+
 export { extract_page_content } from "./agent/browser/utils";
