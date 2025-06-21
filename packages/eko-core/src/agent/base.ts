@@ -80,22 +80,25 @@ export class Agent {
   public async runWithContext(
     agentContext: AgentContext,
     mcpClient?: IMcpClient,
-    maxReactNum: number = 100
+    maxReactNum: number = 100,
+    messages?: LanguageModelV1Prompt
   ): Promise<string> {
     let loopNum = 0;
     let context = agentContext.context;
     let agentNode = agentContext.agentChain.agent;
     const tools = [...this.tools, ...this.system_auto_tools(agentNode)];
-    let messages: LanguageModelV1Prompt = [
-      {
-        role: "system",
-        content: await this.buildSystemPrompt(agentContext, tools),
-      },
-      {
-        role: "user",
-        content: await this.buildUserPrompt(agentContext, tools),
-      },
-    ];
+    if (!messages || messages.length == 0) {
+      messages = [
+        {
+          role: "system",
+          content: await this.buildSystemPrompt(agentContext, tools),
+        },
+        {
+          role: "user",
+          content: await this.buildUserPrompt(agentContext, tools),
+        },
+      ];
+    }
     let rlm = new RetryLanguageModel(context.config.llms, this.llms);
     let agentTools = tools;
     while (loopNum < maxReactNum) {
@@ -503,7 +506,10 @@ export class Agent {
     this.tools.push(tool);
   }
 
-  protected async onTaskStatus(status: "pause" | "abort" | "resume-pause", reason?: string) {
+  protected async onTaskStatus(
+    status: "pause" | "abort" | "resume-pause",
+    reason?: string
+  ) {
     if (status == "abort" && this.agentContext) {
       this.agentContext?.variables.clear();
     }
