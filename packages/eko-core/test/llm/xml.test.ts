@@ -59,11 +59,11 @@ test.only("agentXml", () => {
 });
 
 test.only("buildWorkflow", () => {
-  const workflow = buildSimpleAgentWorkflow(
-    "test",
-    "Test workflow",
-    "Browser",
-    "Open google"
-  );
+  const workflow = buildSimpleAgentWorkflow({
+    taskId: "test",
+    name: "Test workflow",
+    agentName: "Browser",
+    task: "Open google",
+  });
   console.log("workflow: \n", JSON.stringify(workflow, null, 2));
 });

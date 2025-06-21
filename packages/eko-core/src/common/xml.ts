@@ -212,13 +212,19 @@ export function getOuterXML(node: Element): string {
   return serializer.serializeToString(node);
 }
 
-export function buildSimpleAgentWorkflow(
-  taskId: string,
-  name: string,
-  agentName: string,
-  task: string,
-  taskNodes?: string[]
-): Workflow {
+export function buildSimpleAgentWorkflow({
+  taskId,
+  name,
+  agentName,
+  task,
+  taskNodes,
+}: {
+  taskId: string;
+  name: string;
+  agentName: string;
+  task: string;
+  taskNodes?: string[];
+}): Workflow {
   if (!taskNodes || taskNodes.length == 0) {
     taskNodes = [task];
   }
@@ -242,6 +248,7 @@ export function buildSimpleAgentWorkflow(
     ],
     xml: "",
   };
+  workflow.taskPrompt = task;
   resetWorkflowXml(workflow);
   return workflow;
 }
