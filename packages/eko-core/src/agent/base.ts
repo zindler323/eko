@@ -24,6 +24,7 @@ import {
   StreamCallbackMessage,
   StreamCallback,
   HumanCallback,
+  StreamResult,
 } from "../types";
 import {
   LanguageModelV1FilePart,
@@ -567,7 +568,20 @@ export async function callLLM(
     abortSignal: context.controller.signal,
   };
   agentChain.agentRequest = request;
-  let result = await rlm.callStream(request);
+  let result: StreamResult;
+  try {
+    result = await rlm.callStream(request);
+  } catch (e: any) {
+    if (noCompress || e?.name === "AbortError") {
+      throw e;
+    }
+    if ((e + "").indexOf("tokens") > -1 && messages.length > 10) {
+      await memory.compressAgentMessages(agentContext, rlm, messages, tools);
+      result = await rlm.callStream(request);
+    } else {
+      throw e;
+    }
+  }
   let streamText = "";
   let thinkText = "";
   let toolArgsText = "";
