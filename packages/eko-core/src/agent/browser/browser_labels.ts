@@ -576,6 +576,10 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       }
       let result = await this.screenshot_and_html(agentContext);
       let image = toImage(result.imageBase64);
+      if (lastTool.toolName == "select_option") {
+                console.log("图片在此！",result.imageBase64)
+                console.log("图片在此！",result)
+            }
       image_contents.push({
         type: "image",
         image: image,

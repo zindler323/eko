@@ -25,6 +25,7 @@ import {
   StreamCallback,
   HumanCallback,
 } from "../types";
+import { JSONSchema7 } from "json-schema";
 import {
   LanguageModelV1FilePart,
   LanguageModelV1FunctionTool,
@@ -151,7 +152,16 @@ export class Agent {
     let context = agentContext.context;
     let user_messages: LanguageModelV1Prompt = [];
     let toolResults: LanguageModelV1ToolResultPart[] = [];
+    
+    // 调试日志：记录接收到的工具调用结果
+    console.log(`[DEBUG] handleCallResult接收到结果:`, 
+      JSON.stringify(results.map(r => r.type === 'tool-call' ? 
+        { type: r.type, name: r.toolName, args: r.args } : 
+        { type: r.type, textLen: r.text ? r.text.length : 0 }
+      )));
+      
     results = memory.removeDuplicateToolUse(results);
+    console.log(`[DEBUG] handleCallResult去重后结果:`, results);
     if (results.length == 0) {
       return null;
     }
@@ -173,11 +183,31 @@ export class Agent {
             ? JSON.parse(result.args || "{}")
             : result.args || {};
         toolChain.params = args;
+        // 调试日志：在查找工具前记录工具名称
+        console.log(`[DEBUG] 正在查找工具: ${result.toolName}`);
+        
+        // 打印可用工具列表
+        console.log(`[DEBUG] 可用工具列表:`, 
+          JSON.stringify(agentTools.map(t => ({ name: t.name, description: t.description }))));
+          
         let tool = this.getTool(agentTools, result.toolName);
         if (!tool) {
+          console.error(`[ERROR] 找不到工具: ${result.toolName}`);
           throw new Error(result.toolName + " tool does not exist");
         }
-        toolResult = await tool.execute(args, agentContext, result);
+        
+        // 调试日志：工具找到，准备执行
+        console.log(`[DEBUG] 找到工具 ${result.toolName}，准备执行，参数:`, JSON.stringify(args));
+        
+        try {
+          toolResult = await tool.execute(args, agentContext, result);
+          // 成功执行
+          console.log(`[DEBUG] 工具 ${result.toolName} 执行成功`);
+        } catch (execError) {
+          console.error(`[ERROR] 工具 ${result.toolName} 执行失败:`, execError);
+          throw execError;
+        }
+        
         toolChain.updateToolResult(toolResult);
         agentContext.consecutiveErrorNum = 0;
       } catch (e) {
@@ -223,20 +253,41 @@ export class Agent {
       role: "assistant",
       content: results,
     });
+    // 添加消息
     if (toolResults.length > 0) {
       messages.push({
         role: "tool",
         content: toolResults,
       });
       user_messages.forEach((message) => messages.push(message));
-      return null;
-    } else {
-      return text;
     }
+    
+    // 检查是否调用了finish工具
+    
+    // 解析文本中的所有工具调用
+    let textContent = "";
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
+      if (result.type === "text" && result.text) {
+        textContent += result.text;
+      }
+    }
+    
+    // 使用正则表达式专门查找 finish 工具调用
+    const finishRegex = /<function>\s*finish\s*<\/function>/i;
+    if (finishRegex.test(textContent)) {
+      // 如果找到finish工具调用，终止流程
+      return text || "任务已完成";
+    }
+    
+    // 注意：其他工具调用（如navigate_to）不会导致流程终止
+    
+    // 无论是否调用了其他工具，只要没有调用finish，就继续进行
+    return null;
   }
 
   protected system_auto_tools(agentNode: WorkflowAgent): Tool[] {
-    let tools: Tool[] = [];
+    const tools: Tool[] = [];
     let agentNodeXml = agentNode.xml;
     let hasVariable =
       agentNodeXml.indexOf("input=") > -1 ||
@@ -252,6 +303,21 @@ export class Agent {
     if (hasWatch) {
       tools.push(new WatchTriggerTool());
     }
+    // 添加finish工具
+    tools.push({
+      name: "finish",
+      description: "当任务已经完成时，使用该方法终止任务，不需要参数",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: []
+      } as JSONSchema7,
+      execute: async (): Promise<ToolResult> => {
+        return {
+          content: [{ type: "text", text: "任务已完成" }]
+        };
+      }
+    } as Tool);
     let toolNames = this.tools.map((tool) => tool.name);
     return tools.filter((tool) => toolNames.indexOf(tool.name) == -1);
   }
@@ -520,9 +586,112 @@ export class Agent {
   get PlanDescription() {
     return this.planDescription;
   }
-
+  
   get McpClient() {
     return this.mcpClient;
+  }
+  
+  // 解析自定义格式的工具调用
+  public parseToolCalls(text: string): Array<{toolName: string, args: any, toolCallId: string}> {
+    const toolCalls: Array<{toolName: string, args: any, toolCallId: string}> = [];
+    
+    if (text.trim().length === 0) {
+      return toolCalls;
+    }
+    
+    // 首先从文本中提取所有的函数名
+    const functionRegex = /<function>\s*([\w_]+)\s*<\/function>/g;
+    let functionMatches: Array<{toolName: string, position: number}> = [];
+    let functionMatch: RegExpExecArray | null;
+    
+    while ((functionMatch = functionRegex.exec(text)) !== null) {
+      const toolName = functionMatch[1].trim();
+      const position = functionMatch.index;
+      functionMatches.push({ toolName, position });
+    }
+    
+    // 然后从文本中提取所有的参数
+    const argsRegex = /<args>([\s\S]*?)<\/args>/g;
+    let argsMatches: Array<{argsText: string, position: number}> = [];
+    let argsMatch: RegExpExecArray | null;
+    
+    while ((argsMatch = argsRegex.exec(text)) !== null) {
+      const argsText = argsMatch[1].trim();
+      const position = argsMatch.index;
+      argsMatches.push({ argsText, position });
+    }
+    
+    // 尝试匹配函数名和参数，通常函数名在前，参数紧跟着
+    const combinedMatches: Array<{toolName: string, argsText: string}> = [];
+    
+    for (const funcMatch of functionMatches) {
+      // 找到第一个在函数名之后的参数
+      const nextArgs = argsMatches.find(arg => arg.position > funcMatch.position);
+      
+      if (nextArgs) {
+        combinedMatches.push({
+          toolName: funcMatch.toolName,
+          argsText: nextArgs.argsText
+        });
+        
+        // 从候选中移除已使用的参数，防止重复匹配
+        argsMatches = argsMatches.filter(arg => arg !== nextArgs);
+      } else {
+        // 如果没有找到匹配的参数，使用空对象
+        combinedMatches.push({
+          toolName: funcMatch.toolName,
+          argsText: "{}"
+        });
+      }
+    }
+    
+    // 处理每一对匹配的函数和参数
+    for (const match of combinedMatches) {
+      let args: any;
+      try {
+        args = JSON.parse(match.argsText);
+      } catch (e) {
+        try {
+          // 尝试修复一些常见的JSON格式错误
+          const fixedArgsText = match.argsText
+            .replace(/'/g, '"')  // 将单引号替换为双引号
+            .replace(/\s*([\w]+)\s*:/g, '"$1":')  // 为没有引号的键名添加引号
+            .replace(/,\s*}/g, '}');  // 删除末尾多余的逗号
+          
+          args = JSON.parse(fixedArgsText);
+        } catch (fixError) {
+          // 如果修复后仍无法解析，使用空对象
+          args = {};
+        }
+      }
+      
+      // 生成唯一的工具调用ID
+      const toolCallId = `tool-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+      
+      // 添加到结果集
+      toolCalls.push({
+        toolCallId,
+        toolName: match.toolName,
+        args,
+      });
+      
+      if (match.toolName && Object.keys(args).length > 0) {
+        console.log(`[INFO] 解析到工具调用: ${match.toolName}, 参数: ${JSON.stringify(args)}`);
+      }
+    }
+    
+    if (toolCalls.length > 0) {
+      console.log(`[INFO] 共解析出 ${toolCalls.length} 个工具调用`);
+    }
+    
+    return toolCalls;
+  }
+
+  // 清理文本中的工具调用标记
+  public cleanToolCallsText(text: string): string {
+    return text
+      .replace(/<function>.*?<\/function>[\s\S]*?<args>[\s\S]*?<\/args>/g, "")
+      .trim();
   }
 }
 
@@ -557,6 +726,7 @@ export async function callLLM(
   let streamId = uuidv4();
   let textStreamDone = false;
   let toolParts: LanguageModelV1ToolCallPart[] = [];
+  let customToolCalls: Array<{toolName: string, args: any, toolCallId: string}> = [];
   const reader = result.stream.getReader();
   try {
     while (true) {
@@ -568,19 +738,78 @@ export async function callLLM(
       let chunk = value as LanguageModelV1StreamPart;
       switch (chunk.type) {
         case "text-delta": {
+          // 不打印文本增量，保持跟踪完整文本
           streamText += chunk.textDelta || "";
-          await streamCallback.onMessage(
-            {
-              taskId: context.taskId,
-              agentName: agentNode.name,
-              nodeId: agentNode.id,
-              type: "text",
-              streamId,
-              streamDone: false,
-              text: streamText,
-            },
-            agentContext
-          );
+          
+          // 解析流中的自定义工具调用
+          // 使用代理对象中的方法来解析文本中的工具调用
+          if (agentChain.agent instanceof Agent) {
+            const agent = agentChain.agent as Agent;
+            
+            // 解析所有工具调
+            
+              // 处理新发现的工具调用
+            // for (const toolCall of newToolCalls) {
+            //   // 检查是否已经处理过相同的工具调用
+            //   const existingToolCall = toolParts.find(tp => tp.toolName === toolCall.toolName && 
+            //                                        JSON.stringify(tp.args) === JSON.stringify(toolCall.args));
+              
+            //   if (!existingToolCall) {
+            //     // 将自定义工具调用转换为标准工具调用部分
+            //     toolParts.push({
+            //       type: "tool-call",
+            //       toolCallId: toolCall.toolCallId,
+            //       toolName: toolCall.toolName,
+            //       args: toolCall.args,
+            //     });
+                
+            //     console.log(`[INFO] 流处理中解析到工具调用: ${toolCall.toolName}`);
+                
+            //     // 向回调发送工具调用消息
+            //     await streamCallback.onMessage(
+            //       {
+            //         taskId: context.taskId,
+            //         agentName: agentNode.name,
+            //         nodeId: agentNode.id,
+            //         type: "tool_use",
+            //         toolId: toolCall.toolCallId,
+            //         toolName: toolCall.toolName,
+            //         params: toolCall.args,
+            //       },
+            //       agentContext
+            //     );
+            //   }
+            // }
+            
+            // 使用清理后的文本显示到界面上
+            const cleanText = agent.cleanToolCallsText(streamText);
+            await streamCallback.onMessage(
+              {
+                taskId: context.taskId,
+                agentName: agentNode.name,
+                nodeId: agentNode.id,
+                type: "text",
+                streamId,
+                streamDone: false,
+                text: cleanText,
+              },
+              agentContext
+            );
+          } else {
+            // 原始流程，如果不是 Agent 实例
+            await streamCallback.onMessage(
+              {
+                taskId: context.taskId,
+                agentName: agentNode.name,
+                nodeId: agentNode.id,
+                type: "text",
+                streamId,
+                streamDone: false,
+                text: streamText,
+              },
+              agentContext
+            );
+          }
           break;
         }
         case "reasoning": {
@@ -733,14 +962,61 @@ export async function callLLM(
         }
       }
     }
+    if (agentChain.agent instanceof Agent) {
+      const agent = agentChain.agent as Agent;
+      const newToolCalls = agent.parseToolCalls(streamText);
+      console.log(`[DEBUG] 解析到 ${newToolCalls.length} 个工具调用:`, 
+        JSON.stringify(newToolCalls));
+    }
   } finally {
     reader.releaseLock();
   }
   agentChain.agentResult = streamText;
+  
+  // 在整个流结束后，再次尝试解析工具调用
+  // 这将确保即使在流式输出中工具调用被分割，我们也能在最终完整文本中捕获它们
+  if (agentChain.agent instanceof Agent) {
+    const agent = agentChain.agent as Agent;
+    console.log(`[INFO] 流结束，解析累积的完整文本`);
+    
+    // 从完整的流文本中重新解析工具调用
+    const finalToolCalls = agent.parseToolCalls(streamText);
+    
+    // 如果解析出了工具调用，则添加到结果中
+    if (finalToolCalls && finalToolCalls.length > 0) {
+      for (const call of finalToolCalls) {
+        // 检查是否已经在工具列表中
+        const existing = toolParts.find(tp => tp.toolName === call.toolName && JSON.stringify(tp.args) === JSON.stringify(call.args));
+        if (!existing) {
+          toolParts.push({
+            type: "tool-call",
+            toolCallId: call.toolCallId,
+            toolName: call.toolName,
+            args: call.args,
+          });
+          console.log(`[DEBUG] 从流中解析到工具调用: ${call.toolName}`);
+        }
+      }
+    }
+    
+    // 如果解析出了工具调用，则清理文本中的工具调用标记
+    const cleanText = agent.cleanToolCallsText(streamText);
+    
+    // 调试日志：记录解析到的工具调用
+    console.log(`[DEBUG] 解析到 ${toolParts.length} 个工具调用:`, 
+      JSON.stringify(toolParts.map(t => ({ name: t.toolName, args: t.args }))));
+    
+    if (toolParts.length > 0) {
+      return [
+        // 只有在清理后的文本非空时才返回文本部分
+        ...(cleanText.trim() ? [{ type: "text", text: cleanText } as LanguageModelV1TextPart] : []),
+        ...toolParts, // 始终返回解析出的工具调用
+      ];
+    }
+  }
+  
+  // 如果没有解析到工具调用，或者不是Agent实例，则只返回文本
   return streamText
-    ? [
-        { type: "text", text: streamText } as LanguageModelV1TextPart,
-        ...toolParts,
-      ]
-    : toolParts;
+    ? [{ type: "text", text: streamText } as LanguageModelV1TextPart]
+    : [];
 }
