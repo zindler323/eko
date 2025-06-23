@@ -7,7 +7,7 @@ import {
 import config from "../config";
 import { Tool } from "../types";
 import TaskSnapshotTool from "./snapshot";
-import { callLLM } from "../agent/base";
+import { callAgentLLM } from "../agent/llm";
 import { RetryLanguageModel } from "../llm";
 import { mergeTools } from "../common/utils";
 import { AgentContext } from "../core/context";
@@ -103,7 +103,7 @@ export async function compressAgentMessages(
     ],
   });
   // compress snapshot
-  let result = await callLLM(agentContext, rlm, newMessages, newTools, true, {
+  let result = await callAgentLLM(agentContext, rlm, newMessages, newTools, true, {
     type: "tool",
     toolName: snapshotTool.name,
   });
