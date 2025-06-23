@@ -65,8 +65,8 @@ export class Eko {
     if (!context) {
       throw new Error("The task does not exist");
     }
-    if (context.paused) {
-      context.paused = false;
+    if (context.pause) {
+      context.setPause(false);
     }
     context.conversation = [];
     if (context.controller.signal.aborted) {
@@ -171,7 +171,7 @@ export class Eko {
   public abortTask(taskId: string, reason?: string): boolean {
     let context = this.taskMap.get(taskId);
     if (context) {
-      context.paused = false;
+      context.setPause(false);
       this.onTaskStatus(context, "abort", reason);
       context.controller.abort(reason);
       return true;
@@ -180,11 +180,11 @@ export class Eko {
     }
   }
 
-  public pauseTask(taskId: string, paused: boolean, reason?: string): boolean {
+  public pauseTask(taskId: string, pause: boolean, abortCurrentStep?: boolean, reason?: string): boolean {
     let context = this.taskMap.get(taskId);
     if (context) {
-      this.onTaskStatus(context, paused ? "pause" : "resume-pause", reason);
-      context.paused = paused;
+      this.onTaskStatus(context, pause ? "pause" : "resume-pause", reason);
+      context.setPause(pause, abortCurrentStep);
       return true;
     } else {
       return false;
