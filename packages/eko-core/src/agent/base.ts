@@ -11,7 +11,7 @@ import {
   VariableStorageTool,
   WatchTriggerTool,
 } from "../tools";
-import { toImage, mergeTools, uuidv4 } from "../common/utils";
+import { toImage, mergeTools, uuidv4, sleep } from "../common/utils";
 import { getAgentSystemPrompt, getAgentUserPrompt } from "../prompt/agent";
 import {
   WorkflowAgent,
@@ -575,8 +575,11 @@ export async function callLLM(
     if (noCompress || e?.name === "AbortError") {
       throw e;
     }
-    if ((e + "").indexOf("tokens") > -1 && messages.length > 10) {
+    if (messages.length > 10 && ((e + "").indexOf("tokens") > -1 || (e + "").indexOf("too long") > -1)) {
       await memory.compressAgentMessages(agentContext, rlm, messages, tools);
+    }
+    if (!retry) {
+      await sleep(500);
       result = await rlm.callStream(request);
     } else {
       throw e;
@@ -812,6 +815,23 @@ export async function callLLM(
         }
       }
     }
+  } catch (e: any) {
+    if (e?.name === "AbortError") {
+      throw e;
+    }
+    if (!retry && (e + "").indexOf("network error") > -1) {
+      return callLLM(
+        agentContext,
+        rlm,
+        messages,
+        tools,
+        noCompress,
+        toolChoice,
+        true,
+        streamCallback
+      );
+    }
+    throw e;
   } finally {
     reader.releaseLock();
   }

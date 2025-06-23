@@ -55,6 +55,7 @@ export class RetryLanguageModel {
     const maxTokens = options.maxTokens;
     const providerMetadata = options.providerMetadata;
     const names = [...this.names, ...this.names];
+    let lastError;
     for (let i = 0; i < names.length; i++) {
       const name = names[i];
       const llm = await this.getLLM(name);
@@ -84,6 +85,7 @@ export class RetryLanguageModel {
         if (e?.name === "AbortError") {
           throw e;
         }
+        lastError = e;
         if (Log.isEnableInfo()) {
           Log.info(`LLM nonstream request, name: ${name} => `, {
             tools: (options.mode as any)?.tools,
@@ -93,7 +95,7 @@ export class RetryLanguageModel {
         Log.error(`LLM error, name: ${name} => `, e);
       }
     }
-    return Promise.reject(new Error("No LLM available"));
+    return Promise.reject(lastError ? lastError : new Error("No LLM available"));
   }
 
   async callStream(request: LLMRequest): Promise<StreamResult> {
@@ -117,6 +119,7 @@ export class RetryLanguageModel {
     const maxTokens = options.maxTokens;
     const providerMetadata = options.providerMetadata;
     const names = [...this.names, ...this.names];
+    let lastError;
     for (let i = 0; i < names.length; i++) {
       const name = names[i];
       const llm = await this.getLLM(name);
@@ -176,6 +179,7 @@ export class RetryLanguageModel {
         if (e?.name === "AbortError") {
           throw e;
         }
+        lastError = e;
         if (Log.isEnableInfo()) {
           Log.info(`LLM stream request, name: ${name} => `, {
             tools: (options.mode as any)?.tools,
@@ -185,7 +189,7 @@ export class RetryLanguageModel {
         Log.error(`LLM error, name: ${name} => `, e);
       }
     }
-    return Promise.reject(new Error("No LLM available"));
+    return Promise.reject(lastError ? lastError : new Error("No LLM available"));
   }
 
   private async getLLM(name: string): Promise<LanguageModelV1 | null> {
