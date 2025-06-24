@@ -343,7 +343,6 @@ export function run_build_dom_tree() {
         'select',
         'textarea',
         'summary',
-        'li',
       ]);
 
       const interactiveRoles = new Set([
