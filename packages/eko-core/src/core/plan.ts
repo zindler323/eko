@@ -20,23 +20,34 @@ export class Planner {
   }
 
   async plan(taskPrompt: string): Promise<Workflow> {
-    return await this.doPlan(taskPrompt, false);
+    const messages: LanguageModelV1Prompt = [
+      {
+        role: "system",
+        content:
+          this.context.variables.get("plan_sys_prompt") ||
+          (await getPlanSystemPrompt(this.context)),
+      },
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: getPlanUserPrompt(
+              taskPrompt,
+              this.context.variables.get("task_website"),
+              this.context.variables.get("plan_ext_prompt")
+            ),
+          },
+        ],
+      },
+    ];
+    return await this.doPlan(taskPrompt, messages, true);
   }
 
   async replan(taskPrompt: string): Promise<Workflow> {
-    return await this.doPlan(taskPrompt, true);
-  }
-
-  private async doPlan(
-    taskPrompt: string,
-    replan: boolean = false
-  ): Promise<Workflow> {
-    let config = this.context.config;
-    let chain = this.context.chain;
-    let rlm = new RetryLanguageModel(config.llms, config.planLlms);
-    let messages: LanguageModelV1Prompt;
-    if (replan && chain.planRequest && chain.planResult) {
-      messages = [
+    const chain = this.context.chain;
+    if (chain.planRequest && chain.planResult) {
+      const messages: LanguageModelV1Prompt = [
         ...chain.planRequest.messages,
         {
           role: "assistant",
@@ -47,36 +58,26 @@ export class Planner {
           content: [{ type: "text", text: taskPrompt }],
         },
       ];
+      return await this.doPlan(taskPrompt, messages, true);
     } else {
-      messages = [
-        {
-          role: "system",
-          content:
-            this.context.variables.get("plan_sys_prompt") ||
-            (await getPlanSystemPrompt(this.context)),
-        },
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: getPlanUserPrompt(
-                taskPrompt,
-                this.context.variables.get("task_website"),
-                this.context.variables.get("plan_ext_prompt")
-              ),
-            },
-          ],
-        },
-      ];
+      return this.plan(taskPrompt);
     }
-    let request: LLMRequest = {
+  }
+
+  private async doPlan(
+    taskPrompt: string,
+    messages: LanguageModelV1Prompt,
+    saveHistory: boolean
+  ): Promise<Workflow> {
+    const config = this.context.config;
+    const rlm = new RetryLanguageModel(config.llms, config.planLlms);
+    const request: LLMRequest = {
       maxTokens: 4096,
       temperature: 0.7,
       messages: messages,
       abortSignal: this.context.controller.signal,
     };
-    let result = await rlm.callStream(request);
+    const result = await rlm.callStream(request);
     const reader = result.stream.getReader();
     let streamText = "";
     let thinkingText = "";
@@ -118,10 +119,15 @@ export class Planner {
       }
     } finally {
       reader.releaseLock();
-      Log.info("Planner result: \n" + streamText);
+      if (Log.isEnableInfo()) {
+        Log.info("Planner result: \n" + streamText);
+      }
     }
-    chain.planRequest = request;
-    chain.planResult = streamText;
+    if (saveHistory) {
+      const chain = this.context.chain;
+      chain.planRequest = request;
+      chain.planResult = streamText;
+    }
     let workflow = parseWorkflow(
       this.taskId,
       streamText,
@@ -137,7 +143,11 @@ export class Planner {
         workflow: workflow,
       });
     }
-    workflow.taskPrompt = taskPrompt;
+    if (workflow.taskPrompt) {
+      workflow.taskPrompt += "\n" + taskPrompt.trim();
+    } else {
+      workflow.taskPrompt = taskPrompt.trim();
+    }
     return workflow;
   }
 }

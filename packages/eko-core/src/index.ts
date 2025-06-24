@@ -1,6 +1,7 @@
 import config from "./config";
 import Log from "./common/log";
 import { Eko } from "./core/index";
+import { Planner } from "./core/plan";
 import { RetryLanguageModel } from "./llm";
 import { SimpleSseMcpClient } from "./mcp";
 import Chain, { AgentChain } from "./core/chain";
@@ -13,6 +14,7 @@ export {
   Log,
   config,
   Context,
+  Planner,
   AgentContext,
   Chain,
   AgentChain,

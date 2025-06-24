@@ -232,8 +232,10 @@ export function fixXmlTag(code: string) {
     const top = stack.pop() as string;
     if (top.startsWith("<")) {
       let arr = top.match(/<(\w+)/) as string[];
-      const tagName = arr[1];
-      missingParts.push(`</${tagName}>`);
+      if (arr) {
+        const tagName = arr[1];
+        missingParts.push(`</${tagName}>`);
+      }
     } else {
       missingParts.push(top);
     }
