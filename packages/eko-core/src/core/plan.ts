@@ -8,18 +8,38 @@ import { getPlanSystemPrompt, getPlanUserPrompt } from "../prompt/plan";
 import {
   LanguageModelV1Prompt,
   LanguageModelV1StreamPart,
+  LanguageModelV1TextPart,
 } from "@ai-sdk/provider";
 
 export class Planner {
   private taskId: string;
   private context: Context;
 
-  constructor(context: Context, taskId: string) {
+  constructor(context: Context, taskId?: string) {
     this.context = context;
-    this.taskId = taskId;
+    this.taskId = taskId || context.taskId;
   }
 
-  async plan(taskPrompt: string, saveHistory: boolean = true): Promise<Workflow> {
+  async plan(
+    taskPrompt: string | LanguageModelV1TextPart,
+    saveHistory: boolean = true
+  ): Promise<Workflow> {
+    let taskPromptStr;
+    let userPrompt: LanguageModelV1TextPart;
+    if (typeof taskPrompt === "string") {
+      taskPromptStr = taskPrompt;
+      userPrompt = {
+        type: "text",
+        text: getPlanUserPrompt(
+          taskPrompt,
+          this.context.variables.get("task_website"),
+          this.context.variables.get("plan_ext_prompt")
+        ),
+      };
+    } else {
+      userPrompt = taskPrompt;
+      taskPromptStr = taskPrompt.text || "";
+    }
     const messages: LanguageModelV1Prompt = [
       {
         role: "system",
@@ -29,22 +49,16 @@ export class Planner {
       },
       {
         role: "user",
-        content: [
-          {
-            type: "text",
-            text: getPlanUserPrompt(
-              taskPrompt,
-              this.context.variables.get("task_website"),
-              this.context.variables.get("plan_ext_prompt")
-            ),
-          },
-        ],
+        content: [userPrompt],
       },
     ];
-    return await this.doPlan(taskPrompt, messages, saveHistory);
+    return await this.doPlan(taskPromptStr, messages, saveHistory);
   }
 
-  async replan(taskPrompt: string, saveHistory: boolean = true): Promise<Workflow> {
+  async replan(
+    taskPrompt: string,
+    saveHistory: boolean = true
+  ): Promise<Workflow> {
     const chain = this.context.chain;
     if (chain.planRequest && chain.planResult) {
       const messages: LanguageModelV1Prompt = [

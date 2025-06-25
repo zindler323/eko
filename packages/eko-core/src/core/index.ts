@@ -126,7 +126,7 @@ export class Eko {
     let agentMap = agents.reduce((map, item) => {
       map[item.Name] = item;
       return map;
-    }, {} as { [key: string]: Agent & { result?: any } });
+    }, {} as { [key: string]: Agent & { result?: string } });
     let results: string[] = [];
     for (let i = 0; i < workflow.agents.length; i++) {
       await context.checkAborted();

@@ -67,7 +67,7 @@ export default class Context {
     if (!agent) {
       return null;
     }
-    const agentContext = agent["agentContext"] as AgentContext;
+    const agentContext = agent.AgentContext as AgentContext;
     return [agent, agentNode.agent, agentContext];
   }
 
