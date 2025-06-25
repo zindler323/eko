@@ -97,7 +97,7 @@ export class Planner {
     let thinkingText = "";
     try {
       while (true) {
-        await this.context.checkAborted();
+        await this.context.checkAborted(true);
         const { done, value } = await reader.read();
         if (done) {
           break;

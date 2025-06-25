@@ -151,6 +151,10 @@ export class Agent {
     agentTools: Tool[],
     results: Array<LanguageModelV1TextPart | LanguageModelV1ToolCallPart>
   ): Promise<string | null> {
+    const forceStop = agentContext.variables.get("forceStop");
+    if (forceStop) {
+      return forceStop;
+    }
     let text: string | null = null;
     let context = agentContext.context;
     let user_messages: LanguageModelV1Prompt = [];

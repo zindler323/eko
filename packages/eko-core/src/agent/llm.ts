@@ -352,7 +352,7 @@ function appendUserConversation(
     .splice(0, agentContext.context.conversation.length)
     .filter((s) => !!s);
   if (userPrompts.length > 0) {
-    const prompt = "The user is intervening in the current task. Please replan and execute according to the following instructions:\n" + userPrompts.map(s => `- ${s.trim()}`).join("\n");
+    const prompt = "The user is intervening in the current task, please replan and execute according to the following instructions:\n" + userPrompts.map(s => `- ${s.trim()}`).join("\n");
     messages.push({
       role: "user",
       content: [{ type: "text", text: prompt }],

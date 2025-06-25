@@ -22,11 +22,18 @@ export class RetryLanguageModel {
   private llms: LLMs;
   private names: string[];
   private stream_first_timeout: number;
+  private stream_token_timeout: number;
 
-  constructor(llms: LLMs, names?: string[], stream_first_timeout?: number) {
+  constructor(
+    llms: LLMs,
+    names?: string[],
+    stream_first_timeout?: number,
+    stream_token_timeout?: number
+  ) {
     this.llms = llms;
     this.names = names || [];
     this.stream_first_timeout = stream_first_timeout || 30_000;
+    this.stream_token_timeout = stream_token_timeout || 60_000;
     if (this.names.indexOf("default") == -1) {
       this.names.push("default");
     }
@@ -95,7 +102,9 @@ export class RetryLanguageModel {
         Log.error(`LLM error, name: ${name} => `, e);
       }
     }
-    return Promise.reject(lastError ? lastError : new Error("No LLM available"));
+    return Promise.reject(
+      lastError ? lastError : new Error("No LLM available")
+    );
   }
 
   async callStream(request: LLMRequest): Promise<StreamResult> {
@@ -173,7 +182,7 @@ export class RetryLanguageModel {
         }
         result.llm = name;
         result.llmConfig = this.llms[name];
-        result.stream = this.streamWrapper([chunk], reader);
+        result.stream = this.streamWrapper([chunk], reader, controller);
         return result;
       } catch (e: any) {
         if (e?.name === "AbortError") {
@@ -189,7 +198,9 @@ export class RetryLanguageModel {
         Log.error(`LLM error, name: ${name} => `, e);
       }
     }
-    return Promise.reject(lastError ? lastError : new Error("No LLM available"));
+    return Promise.reject(
+      lastError ? lastError : new Error("No LLM available")
+    );
   }
 
   private async getLLM(name: string): Promise<LanguageModelV1 | null> {
@@ -261,8 +272,10 @@ export class RetryLanguageModel {
 
   private streamWrapper(
     parts: LanguageModelV1StreamPart[],
-    reader: ReadableStreamDefaultReader<LanguageModelV1StreamPart>
+    reader: ReadableStreamDefaultReader<LanguageModelV1StreamPart>,
+    abortController: AbortController
   ): ReadableStream<LanguageModelV1StreamPart> {
+    let timer: any = null;
     return new ReadableStream<LanguageModelV1StreamPart>({
       start: (controller) => {
         if (parts != null && parts.length > 0) {
@@ -272,7 +285,11 @@ export class RetryLanguageModel {
         }
       },
       pull: async (controller) => {
+        timer = setTimeout(() => {
+          abortController.abort("Streaming request timeout");
+        }, this.stream_token_timeout);
         const { done, value } = await reader.read();
+        clearTimeout(timer);
         if (done) {
           controller.close();
           reader.releaseLock();
@@ -281,6 +298,7 @@ export class RetryLanguageModel {
         controller.enqueue(value);
       },
       cancel: (reason) => {
+        timer && clearTimeout(timer);
         reader.cancel(reason);
       },
     });

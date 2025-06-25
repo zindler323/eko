@@ -34,13 +34,13 @@ export default class Context {
     this.controller = new AbortController();
   }
 
-  async checkAborted() {
+  async checkAborted(noCheckPause?: boolean): Promise<void> {
     if (this.controller.signal.aborted) {
       const error = new Error("Operation was interrupted");
       error.name = "AbortError";
       throw error;
     }
-    while (this.pauseStatus > 0) {
+    while (this.pauseStatus > 0 && !noCheckPause) {
       await sleep(500);
       if (this.pauseStatus == 2) {
         this.currentStepControllers.forEach((c) => {
