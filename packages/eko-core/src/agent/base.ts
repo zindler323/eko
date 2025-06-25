@@ -515,4 +515,8 @@ export class Agent {
   get McpClient() {
     return this.mcpClient;
   }
+
+  get AgentContext(): AgentContext | undefined {
+    return this.agentContext;
+  }
 }
