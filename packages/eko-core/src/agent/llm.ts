@@ -317,10 +317,8 @@ export async function callAgentLLM(
       }
     }
   } catch (e: any) {
-    if (e?.name === "AbortError") {
-      throw e;
-    }
-    if (!retry && (e + "").indexOf("network error") > -1) {
+    await context.checkAborted();
+    if (!retry) {
       return callAgentLLM(
         agentContext,
         rlm,
