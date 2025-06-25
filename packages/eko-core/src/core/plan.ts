@@ -19,7 +19,7 @@ export class Planner {
     this.taskId = taskId;
   }
 
-  async plan(taskPrompt: string): Promise<Workflow> {
+  async plan(taskPrompt: string, saveHistory: boolean = true): Promise<Workflow> {
     const messages: LanguageModelV1Prompt = [
       {
         role: "system",
@@ -41,10 +41,10 @@ export class Planner {
         ],
       },
     ];
-    return await this.doPlan(taskPrompt, messages, true);
+    return await this.doPlan(taskPrompt, messages, saveHistory);
   }
 
-  async replan(taskPrompt: string): Promise<Workflow> {
+  async replan(taskPrompt: string, saveHistory: boolean = true): Promise<Workflow> {
     const chain = this.context.chain;
     if (chain.planRequest && chain.planResult) {
       const messages: LanguageModelV1Prompt = [
@@ -58,9 +58,9 @@ export class Planner {
           content: [{ type: "text", text: taskPrompt }],
         },
       ];
-      return await this.doPlan(taskPrompt, messages, true);
+      return await this.doPlan(taskPrompt, messages, saveHistory);
     } else {
-      return this.plan(taskPrompt);
+      return this.plan(taskPrompt, saveHistory);
     }
   }
 

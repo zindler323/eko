@@ -30,10 +30,11 @@ export async function callAgentLLM(
   retry?: boolean,
   callback?: StreamCallback & HumanCallback
 ): Promise<Array<LanguageModelV1TextPart | LanguageModelV1ToolCallPart>> {
+  await agentContext.context.checkAborted();
   if (messages.length >= config.compressThreshold && !noCompress) {
     await memory.compressAgentMessages(agentContext, rlm, messages, tools);
   }
-  if (!toolChoice && callback) {
+  if (!toolChoice) {
     // Append user dialogue
     appendUserConversation(agentContext, messages);
   }
@@ -353,21 +354,10 @@ function appendUserConversation(
     .splice(0, agentContext.context.conversation.length)
     .filter((s) => !!s);
   if (userPrompts.length > 0) {
-    const lastMessage = messages[messages.length - 1];
-    if (lastMessage.role == "user") {
-      for (let i = 0; i < userPrompts.length; i++) {
-        lastMessage.content.push({
-          type: "text",
-          text: userPrompts[i],
-        });
-      }
-    } else {
-      messages.push({
-        role: "user",
-        content: userPrompts.map((s) => {
-          return { type: "text", text: s };
-        }),
-      });
-    }
+    const prompt = "The user is intervening in the current task. Please replan and execute according to the following instructions:\n" + userPrompts.map(s => `- ${s.trim()}`).join("\n");
+    messages.push({
+      role: "user",
+      content: [{ type: "text", text: prompt }],
+    });
   }
 }
