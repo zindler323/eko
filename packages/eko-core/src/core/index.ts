@@ -142,6 +142,7 @@ export class Eko {
       if (agentNode.name === "Timer") {
         break;
       }
+      context.conversation.splice(0, context.conversation.length);
     }
     return {
       success: true,
