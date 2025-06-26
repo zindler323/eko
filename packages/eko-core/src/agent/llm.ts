@@ -319,6 +319,7 @@ export async function callAgentLLM(
   } catch (e: any) {
     await context.checkAborted();
     if (!retry) {
+      await sleep(200);
       return callAgentLLM(
         agentContext,
         rlm,
