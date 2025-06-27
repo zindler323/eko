@@ -93,13 +93,13 @@ request_help: Request assistance from the user; for instance, when an operation 
           break;
         case "request_help":
           if (callback.onHumanHelp) {
-            if (
-              args.helpType == "request_login" &&
-              (await this.checkIsLogined(agentContext))
-            ) {
-              resultText = "Already logged in";
-              break;
-            }
+            // if (
+            //   args.helpType == "request_login" &&
+            //   (await this.checkIsLogined(agentContext))
+            // ) {
+            //   resultText = "Already logged in";
+            //   break;
+            // }
             let result = await callback.onHumanHelp(
               agentContext,
               (args.helpType || "request_assistance") as any,
