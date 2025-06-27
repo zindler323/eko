@@ -2,7 +2,7 @@ import Log from "../common/log";
 import Context from "./context";
 import { RetryLanguageModel } from "../llm";
 import { parseWorkflow } from "../common/xml";
-import { Workflow } from "../types/core.types";
+import { StreamCallback, Workflow } from "../types/core.types";
 import { LLMRequest } from "../types/llm.types";
 import { getPlanSystemPrompt, getPlanUserPrompt } from "../prompt/plan";
 import {
@@ -14,10 +14,12 @@ import {
 export class Planner {
   private taskId: string;
   private context: Context;
+  private callback?: StreamCallback;
 
-  constructor(context: Context, taskId?: string) {
+  constructor(context: Context, callback?: StreamCallback) {
     this.context = context;
-    this.taskId = taskId || context.taskId;
+    this.taskId = context.taskId;
+    this.callback = callback || context.config.callback;
   }
 
   async plan(
@@ -78,7 +80,7 @@ export class Planner {
     }
   }
 
-  private async doPlan(
+  async doPlan(
     taskPrompt: string,
     messages: LanguageModelV1Prompt,
     saveHistory: boolean
@@ -113,7 +115,7 @@ export class Planner {
         if (chunk.type == "text-delta") {
           streamText += chunk.textDelta || "";
         }
-        if (config.callback) {
+        if (this.callback) {
           let workflow = parseWorkflow(
             this.taskId,
             streamText,
@@ -121,7 +123,7 @@ export class Planner {
             thinkingText
           );
           if (workflow) {
-            await config.callback.onMessage({
+            await this.callback.onMessage({
               taskId: this.taskId,
               agentName: "Planer",
               type: "workflow",
@@ -148,8 +150,8 @@ export class Planner {
       true,
       thinkingText
     ) as Workflow;
-    if (config.callback) {
-      await config.callback.onMessage({
+    if (this.callback) {
+      await this.callback.onMessage({
         taskId: this.taskId,
         agentName: "Planer",
         type: "workflow",
