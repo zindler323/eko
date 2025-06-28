@@ -115,5 +115,6 @@ export type LLMRequest = {
   temperature?: number;
   topP?: number;
   topK?: number;
+  stopSequences?: string[];
   abortSignal?: AbortSignal;
 };

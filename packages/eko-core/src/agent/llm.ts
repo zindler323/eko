@@ -28,7 +28,8 @@ export async function callAgentLLM(
   noCompress?: boolean,
   toolChoice?: LanguageModelV1ToolChoice,
   retryNum: number = 0,
-  callback?: StreamCallback & HumanCallback
+  callback?: StreamCallback & HumanCallback,
+  requestHandler?: (request: LLMRequest) => void
 ): Promise<Array<LanguageModelV1TextPart | LanguageModelV1ToolCallPart>> {
   await agentContext.context.checkAborted();
   if (messages.length >= config.compressThreshold && !noCompress) {
@@ -56,6 +57,7 @@ export async function callAgentLLM(
     messages: messages,
     abortSignal: signal,
   };
+  requestHandler && requestHandler(request);
   agentChain.agentRequest = request;
   let result: StreamResult;
   try {
