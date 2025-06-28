@@ -9,6 +9,7 @@ import {
   LanguageModelV1FunctionTool,
   LanguageModelV1ToolChoice,
   LanguageModelV1Prompt,
+  LanguageModelV1CallOptions,
 } from "@ai-sdk/provider";
 
 export type LLMprovider =
@@ -33,6 +34,7 @@ export type LLMConfig = {
   };
   options?: Record<string, any>;
   fetch?: typeof globalThis.fetch;
+  handler?: (options: LanguageModelV1CallOptions) => Promise<LanguageModelV1CallOptions>;
 };
 
 export type LLMs = {

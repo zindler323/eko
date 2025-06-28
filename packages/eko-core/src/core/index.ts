@@ -34,7 +34,7 @@ export class Eko {
         let a2aList = await this.config.a2aClient.listAgents(taskPrompt);
         context.agents = mergeAgents(context.agents, a2aList);
       }
-      let planner = new Planner(context, taskId);
+      let planner = new Planner(context);
       context.workflow = await planner.plan(taskPrompt);
       return context.workflow;
     } catch (e) {
@@ -55,7 +55,7 @@ export class Eko {
       let a2aList = await this.config.a2aClient.listAgents(modifyTaskPrompt);
       context.agents = mergeAgents(context.agents, a2aList);
     }
-    let planner = new Planner(context, taskId);
+    let planner = new Planner(context);
     context.workflow = await planner.replan(modifyTaskPrompt);
     return context.workflow;
   }
@@ -142,6 +142,7 @@ export class Eko {
       if (agentNode.name === "Timer") {
         break;
       }
+      context.conversation.splice(0, context.conversation.length);
     }
     return {
       success: true,

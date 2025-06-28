@@ -27,7 +27,7 @@ export async function callAgentLLM(
   tools: LanguageModelV1FunctionTool[],
   noCompress?: boolean,
   toolChoice?: LanguageModelV1ToolChoice,
-  retry?: boolean,
+  retryNum: number = 0,
   callback?: StreamCallback & HumanCallback
 ): Promise<Array<LanguageModelV1TextPart | LanguageModelV1ToolCallPart>> {
   await agentContext.context.checkAborted();
@@ -66,13 +66,13 @@ export async function callAgentLLM(
     await context.checkAborted();
     if (
       !noCompress &&
-      messages.length > 10 &&
+      messages.length >= 5 &&
       ((e + "").indexOf("tokens") > -1 || (e + "").indexOf("too long") > -1)
     ) {
       await memory.compressAgentMessages(agentContext, rlm, messages, tools);
     }
-    if (!retry) {
-      await sleep(200);
+    if (retryNum < config.maxRetryNum) {
+      await sleep(200 * (retryNum + 1) * (retryNum + 1));
       return callAgentLLM(
         agentContext,
         rlm,
@@ -80,7 +80,7 @@ export async function callAgentLLM(
         tools,
         noCompress,
         toolChoice,
-        true,
+        ++retryNum,
         streamCallback
       );
     }
@@ -291,9 +291,9 @@ export async function callAgentLLM(
           );
           if (
             chunk.finishReason === "length" &&
-            messages.length >= 10 &&
+            messages.length >= 5 &&
             !noCompress &&
-            !retry
+            retryNum < config.maxRetryNum
           ) {
             await memory.compressAgentMessages(
               agentContext,
@@ -308,7 +308,7 @@ export async function callAgentLLM(
               tools,
               noCompress,
               toolChoice,
-              true,
+              ++retryNum,
               streamCallback
             );
           }
@@ -318,7 +318,8 @@ export async function callAgentLLM(
     }
   } catch (e: any) {
     await context.checkAborted();
-    if (!retry) {
+    if (retryNum < config.maxRetryNum) {
+      await sleep(200 * (retryNum + 1) * (retryNum + 1));
       return callAgentLLM(
         agentContext,
         rlm,
@@ -326,7 +327,7 @@ export async function callAgentLLM(
         tools,
         noCompress,
         toolChoice,
-        true,
+        ++retryNum,
         streamCallback
       );
     }
@@ -352,7 +353,9 @@ function appendUserConversation(
     .splice(0, agentContext.context.conversation.length)
     .filter((s) => !!s);
   if (userPrompts.length > 0) {
-    const prompt = "The user is intervening in the current task. Please replan and execute according to the following instructions:\n" + userPrompts.map(s => `- ${s.trim()}`).join("\n");
+    const prompt =
+      "The user is intervening in the current task, please replan and execute according to the following instructions:\n" +
+      userPrompts.map((s) => `- ${s.trim()}`).join("\n");
     messages.push({
       role: "user",
       content: [{ type: "text", text: prompt }],
