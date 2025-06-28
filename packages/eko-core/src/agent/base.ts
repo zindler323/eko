@@ -128,7 +128,7 @@ export class Agent {
         this.convertTools(agentTools),
         false,
         undefined,
-        false,
+        0,
         this.callback
       );
       let finalResult = await this.handleCallResult(
