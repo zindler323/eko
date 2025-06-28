@@ -11,6 +11,7 @@ import { callAgentLLM } from "../agent/llm";
 import { RetryLanguageModel } from "../llm";
 import { mergeTools } from "../common/utils";
 import { AgentContext } from "../core/context";
+import Log from "../common/log";
 
 export function extractUsedTool<T extends Tool | LanguageModelV1FunctionTool>(
   messages: LanguageModelV1Prompt,
@@ -72,6 +73,19 @@ export async function compressAgentMessages(
   if (messages.length < 10) {
     return;
   }
+  try {
+    doCompressAgentMessages(agentContext, rlm, messages, tools);
+  } catch (e) {
+    Log.error("Error compressing agent messages:", e);
+  }
+}
+
+async function doCompressAgentMessages(
+  agentContext: AgentContext,
+  rlm: RetryLanguageModel,
+  messages: LanguageModelV1Prompt,
+  tools: LanguageModelV1FunctionTool[]
+) {
   // extract used tool
   let usedTools = extractUsedTool(messages, tools);
   let snapshotTool = new TaskSnapshotTool();
