@@ -555,13 +555,13 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     tools: Tool[]
   ): Promise<void> {
     const pseudoHtmlDescription =
-      "请你先评估从当前截图中看到的执行结果是否符合预期，用拟人化的语气将看到的结果分点简洁列出，例如当正确执行时使用“太好了! 我看到...”, 或者“完美！我观察到...”, 当执行有误不符合预期，或者没有变化时使用“看起来似乎不太对，我发现...”，注意在描述元素时务必要补充元素所在的位置区域信息描述。" +
+      "请你先评估从当前截图中看到的执行结果是否符合预期，用拟人化的语气将看到的结果分点简洁列出，例如当执行有效时使用“太好了! 我看到...”, 或者“完美！我观察到...”, 当执行有误不符合预期，或者没有变化时使用“看起来似乎不太对，我发现...”，注意在描述元素时务必要补充元素所在的位置区域信息描述。" +
         "再用一句话说明接下来要执行的一个操作是什么，例如“接下来我会执行...”。注意：" +
-        "1. 生成操作时如果有非常合适的信息，直接选择。如果没有，需要对问题进行发散思考，寻找是否有相关的元素可能导向当前任务。只有在没有直接可用的场景下，在任何相关联的元素中寻找能达到效果的间接方式。" +
+        "1. 一步一步思考，从多个角度思考当前的问题。生成操作时不要被plan中的信息限制，任何可以导向最终任务要求的都可以被考虑在内。" +
         "2. 如果页面元素信息中有操作相关的信息，但没有编号，同时截图中也没有这个元素信息，可能是不在可视网页范围内，需要滚动直到获取到想要的元素或到达页面边界为止。" +
         "3. 生成的执行操作需要参考上文的评估，确保区域和描述正确。" +
         "4. 优先处理弹窗、浮层。如果包含信息汇总在内的全部任务都已经完成，明确表达出任务已经完成的意思。" +
-        "5. 如果需要做总结，直接输出总结的全部内容，再去说明接下来的操作，不要把总结视为操作。" +
+        "5. 操作只能为工具列表相关的操作，信息汇总等非工具相关的操作请在该环节之前输出。" +
         "6. 不允许一次输出多个操作，即使接下来有一系列操作，只允许输出第一个。\n" +
         "识别说明：请仔细分辨下拉框（有灰色下拉标志）和输入框，当涉及到“选择”操作时，必须通过点击下拉框/单选框后选择最符合的选项，禁止直接向下拉框中输入文本，禁止向截图中非输入框的元素输入文本。" +
         "这是最新的截图和页面元素信息.\n元素和对应的index:\n"
@@ -572,7 +572,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       lastTool.toolName !== "get_all_tabs" &&
       lastTool.toolName !== "variable_storage"
     ) {
-      await sleep(300);
+      await sleep(700);
       let image_contents: LanguageModelV1ImagePart[] = [];
       if (await this.double_screenshots(agentContext, messages, tools)) {
         let imageResult = await this.screenshot(agentContext);
@@ -832,8 +832,20 @@ function select_option(params: { index: number; option: string }) {
       ),
     };
   }
+  // console.log("option value: ", option.value);
+  // console.log("element: ", { element });
   element.value = option.value;
   element.dispatchEvent(new Event("change"));
+  // const types = ['mousedown', 'mouseup', 'click'];
+  // for (let i = 0; i < types.length; i++) {
+  //   const event = new MouseEvent(types[i], {
+  //     view: window,
+  //     bubbles: true,
+  //     cancelable: true,
+  //     button: 0
+  //   });
+  //   element.dispatchEvent(event);
+  // }
   return {
     success: true,
     selectedValue: option.value,
@@ -857,6 +869,8 @@ function scroll_by(params: { amount: number }) {
     for (const node of Array.from(element.querySelectorAll("*"))) {
       if (node.tagName === "IFRAME" && (node as any).contentDocument) {
         findNodes((node as any).contentDocument, nodes);
+      } else if (node.shadowRoot) {
+        findNodes(node.shadowRoot as any, nodes)
       } else {
         nodes.push(node);
       }
