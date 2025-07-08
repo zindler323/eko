@@ -144,6 +144,77 @@ export async function compressAgentMessages(
   });
 }
 
+export async function activeCompressContext(
+  agentContext: AgentContext,
+  rlm: RetryLanguageModel,
+  messages: LanguageModelV1Prompt,
+  tools: LanguageModelV1FunctionTool[]
+) {
+  // 提取已使用的工具
+  let usedTools = extractUsedTool(messages, tools);
+  let snapshotTool = new TaskSnapshotTool();
+  let newTools = mergeTools(usedTools, [
+    {
+      type: "function",
+      name: snapshotTool.name,
+      description: snapshotTool.description,
+      parameters: snapshotTool.parameters,
+    },
+  ]);
+
+  // 构造压缩指令
+  const compressPrompt: LanguageModelV1Prompt = [
+    ...messages,
+    {
+      role: "user",
+      content: [
+        {
+          type: "text",
+          text: "Please create a concise summary of the current task context, keeping only essential information and task progress status.",
+        },
+      ],
+    },
+  ];
+
+  // 创建静默回调，不显示tool调用过程
+  const silentCallback = {
+    onMessage: async () => {},
+  };
+
+  // 执行压缩，使用静默回调
+  let result = await callLLM(
+    agentContext,
+    rlm,
+    compressPrompt,
+    newTools,
+    true,
+    {
+      type: "tool",
+      toolName: snapshotTool.name,
+    },
+    false,
+    silentCallback
+  );
+
+  let toolCall = result.filter((s) => s.type == "tool-call")[0];
+  let args =
+    typeof toolCall.args == "string"
+      ? JSON.parse(toolCall.args || "{}")
+      : toolCall.args || {};
+
+  let toolResult = await snapshotTool.execute(args, agentContext);
+
+  // 只保留一条摘要消息
+  messages.length = 0;
+  messages.push({
+    role: "assistant",
+    content: toolResult.content.filter((s) => s.type == "text") as Array<{
+      type: "text";
+      text: string;
+    }>,
+  });
+}
+
 export function handleLargeContextMessages(messages: LanguageModelV1Prompt) {
   let imageNum = 0;
   let fileNum = 0;

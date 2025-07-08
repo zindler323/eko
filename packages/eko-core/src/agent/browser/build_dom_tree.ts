@@ -7,10 +7,17 @@ export function run_build_dom_tree() {
    * @param {*} includeAttributes [attr_names...]
    * @returns { element_str, selector_map }
    */
-  function get_clickable_elements(doHighlightElements = true, includeAttributes) {
+  function get_clickable_elements(doHighlightElements = true, includeAttributes, enableExpensiveChecks = false) {
     window.clickable_elements = {};
     document.querySelectorAll("[eko-user-highlight-id]").forEach(ele => ele.removeAttribute("eko-user-highlight-id"));
-    let page_tree = build_dom_tree(doHighlightElements);
+    
+    // 清理缓存，避免内存泄漏
+    document.querySelectorAll('*').forEach(element => {
+      delete element._ekoVisibilityCache;
+      delete element._ekoTextVisibilityCache;
+    });
+    
+    let page_tree = build_dom_tree(doHighlightElements, enableExpensiveChecks);
     let element_tree = parse_node(page_tree);
     let selector_map = create_selector_map(element_tree);
     let element_str = clickable_elements_to_string(element_tree, includeAttributes);
@@ -172,7 +179,7 @@ export function run_build_dom_tree() {
     return element_node;
   }
 
-  function build_dom_tree(doHighlightElements) {
+  function build_dom_tree(doHighlightElements, enableExpensiveChecks = false) {
     let highlightIndex = 0; // Reset highlight index
 
     function highlightElement(element, index, parentIframe = null) {
@@ -327,8 +334,36 @@ export function run_build_dom_tree() {
       return !leafElementDenyList.has(element.tagName.toLowerCase());
     }
 
+    // Helper function to check if element is visible
+    function isElementVisible(element) {
+      // 缓存计算结果，避免重复计算
+      if (element._ekoVisibilityCache !== undefined) {
+        return element._ekoVisibilityCache;
+      }
+      
+      const style = window.getComputedStyle(element);
+      const result = (
+        element.offsetWidth > 0 &&
+        element.offsetHeight > 0 &&
+        style.visibility !== 'hidden' &&
+        style.display !== 'none'
+      );
+      
+      element._ekoVisibilityCache = result;
+      return result;
+    }
+
+    // 缓存交互性检查结果
+    const interactiveCache = new WeakMap();
+    const topElementCache = new WeakMap();
+    
     // Helper function to check if element is interactive
     function isInteractiveElement(element) {
+      // 检查缓存
+      if (interactiveCache.has(element)) {
+        return interactiveCache.get(element);
+      }
+
       // Base interactive elements and roles
       const interactiveElements = new Set([
         'a',
@@ -386,10 +421,9 @@ export function run_build_dom_tree() {
       const role = element.getAttribute('role');
       const ariaRole = element.getAttribute('aria-role');
       const tabIndex = element.getAttribute('tabindex');
-
       const contentEditable = element.getAttribute('contenteditable');
 
-      // Basic role/attribute checks
+      // Basic role/attribute checks - 快速检查
       const hasInteractiveRole =
         contentEditable === 'true' ||
         interactiveElements.has(tagName) ||
@@ -399,17 +433,24 @@ export function run_build_dom_tree() {
         element.getAttribute('data-action') === 'a-dropdown-select' ||
         element.getAttribute('data-action') === 'a-dropdown-button';
 
-      if (hasInteractiveRole) return true;
+      if (hasInteractiveRole) {
+        interactiveCache.set(element, true);
+        return true;
+      }
 
-      // Get computed style
-      const style = window.getComputedStyle(element);
+      // 检查ARIA属性 - 快速检查
+      const hasAriaProps =
+        element.hasAttribute('aria-expanded') ||
+        element.hasAttribute('aria-pressed') ||
+        element.hasAttribute('aria-selected') ||
+        element.hasAttribute('aria-checked');
 
-      // Check if element has click-like styling
-      // const hasClickStyling = style.cursor === 'pointer' ||
-      //     element.style.cursor === 'pointer' ||
-      //     style.pointerEvents !== 'none';
+      if (hasAriaProps) {
+        interactiveCache.set(element, true);
+        return true;
+      }
 
-      // Check for event listeners
+      // 检查事件处理器 - 快速检查
       const hasClickHandler =
         element.onclick !== null ||
         element.getAttribute('onclick') !== null ||
@@ -417,98 +458,80 @@ export function run_build_dom_tree() {
         element.hasAttribute('@click') ||
         element.hasAttribute('v-on:click');
 
-      // Helper function to safely get event listeners
-      function getEventListeners(el) {
+      if (hasClickHandler) {
+        interactiveCache.set(element, true);
+        return true;
+      }
+
+      // 检查拖拽属性
+      const isDraggable = element.draggable || element.getAttribute('draggable') === 'true';
+      if (isDraggable) {
+        interactiveCache.set(element, true);
+        return true;
+      }
+
+      // 检查样式相关的交互性（仅在启用昂贵检查时）
+      if (enableExpensiveChecks) {
+        const style = window.getComputedStyle(element);
+        const hasClickStyling = 
+          style.cursor === 'pointer' ||
+          element.style.cursor === 'pointer' ||
+          style.pointerEvents !== 'none';
+
+        if (hasClickStyling) {
+          interactiveCache.set(element, true);
+          return true;
+        }
+
+        // 检查表单相关功能
+        const isFormRelated = element.form !== undefined;
+        if (isFormRelated) {
+          interactiveCache.set(element, true);
+          return true;
+        }
+
+        // 尝试检查事件监听器（仅在开发环境或需要时）
+        let hasClickListeners = false;
         try {
-          // Try to get listeners using Chrome DevTools API
-          return window.getEventListeners?.(el) || {};
-        } catch (e) {
-          // Fallback: check for common event properties
-          const listeners = {};
-
-          // List of common event types to check
-          const eventTypes = [
-            'click',
-            'mousedown',
-            'mouseup',
-            'touchstart',
-            'touchend',
-            'keydown',
-            'keyup',
-            'focus',
-            'blur',
-          ];
-
-          for (const type of eventTypes) {
-            const handler = el[`on${type}`];
-            if (handler) {
-              listeners[type] = [
-                {
-                  listener: handler,
-                  useCapture: false,
-                },
-              ];
-            }
+          // 只在Chrome DevTools可用时检查
+          if (window.getEventListeners) {
+            const listeners = window.getEventListeners(element);
+            hasClickListeners = listeners && (
+              listeners.click?.length > 0 ||
+              listeners.mousedown?.length > 0 ||
+              listeners.mouseup?.length > 0 ||
+              listeners.touchstart?.length > 0 ||
+              listeners.touchend?.length > 0
+            );
           }
+        } catch (e) {
+          // 忽略错误，继续执行
+        }
 
-          return listeners;
+        if (hasClickListeners) {
+          interactiveCache.set(element, true);
+          return true;
         }
       }
 
-      // Check for click-related events on the element itself
-      const listeners = getEventListeners(element);
-      const hasClickListeners =
-        listeners &&
-        (listeners.click?.length > 0 ||
-          listeners.mousedown?.length > 0 ||
-          listeners.mouseup?.length > 0 ||
-          listeners.touchstart?.length > 0 ||
-          listeners.touchend?.length > 0);
-
-      // Check for ARIA properties that suggest interactivity
-      const hasAriaProps =
-        element.hasAttribute('aria-expanded') ||
-        element.hasAttribute('aria-pressed') ||
-        element.hasAttribute('aria-selected') ||
-        element.hasAttribute('aria-checked');
-
-      // Check for form-related functionality
-      const isFormRelated =
-        element.form !== undefined ||
-        element.hasAttribute('contenteditable') ||
-        style.userSelect !== 'none';
-
-      // Check if element is draggable
-      const isDraggable = element.draggable || element.getAttribute('draggable') === 'true';
-
-      return (
-        hasAriaProps ||
-        // hasClickStyling ||
-        hasClickHandler ||
-        hasClickListeners ||
-        // isFormRelated ||
-        isDraggable
-      );
-    }
-
-    // Helper function to check if element is visible
-    function isElementVisible(element) {
-      const style = window.getComputedStyle(element);
-      return (
-        element.offsetWidth > 0 &&
-        element.offsetHeight > 0 &&
-        style.visibility !== 'hidden' &&
-        style.display !== 'none'
-      );
+      const result = false;
+      interactiveCache.set(element, result);
+      return result;
     }
 
     // Helper function to check if element is the top element at its position
     function isTopElement(element) {
+      // 检查缓存
+      if (topElementCache.has(element)) {
+        return topElementCache.get(element);
+      }
+
       // Find the correct document context and root element
       let doc = element.ownerDocument;
 
       // If we're in an iframe, elements are considered top by default
       if (doc !== window.document) {
+        topElementCache.set(element, true);
         return true;
       }
 
@@ -521,16 +544,24 @@ export function run_build_dom_tree() {
         try {
           // Use shadow root's elementFromPoint to check within shadow DOM context
           const topEl = shadowRoot.elementFromPoint(point.x, point.y);
-          if (!topEl) return false;
+          if (!topEl) {
+            topElementCache.set(element, false);
+            return false;
+          }
 
           // Check if the element or any of its parents match our target element
           let current = topEl;
           while (current && current !== shadowRoot) {
-            if (current === element) return true;
+            if (current === element) {
+              topElementCache.set(element, true);
+              return true;
+            }
             current = current.parentElement;
           }
+          topElementCache.set(element, false);
           return false;
         } catch (e) {
+          topElementCache.set(element, true);
           return true; // If we can't determine, consider it visible
         }
       }
@@ -541,40 +572,68 @@ export function run_build_dom_tree() {
 
       try {
         const topEl = document.elementFromPoint(point.x, point.y);
-        if (!topEl) return false;
+        if (!topEl) {
+          topElementCache.set(element, false);
+          return false;
+        }
 
         let current = topEl;
         while (current && current !== document.documentElement) {
-          if (current === element) return true;
+          if (current === element) {
+            topElementCache.set(element, true);
+            return true;
+          }
           current = current.parentElement;
         }
+        topElementCache.set(element, false);
         return false;
       } catch (e) {
+        topElementCache.set(element, true);
         return true;
       }
     }
 
-    // Helper function to check if text node is visible
+    // 简化的文本节点可见性检查
     function isTextNodeVisible(textNode) {
-      const range = document.createRange();
-      range.selectNodeContents(textNode);
-      const rect = range.getBoundingClientRect();
+      // 缓存检查结果
+      if (textNode._ekoTextVisibilityCache !== undefined) {
+        return textNode._ekoTextVisibilityCache;
+      }
 
-      return (
-        rect.width !== 0 &&
-        rect.height !== 0 &&
-        rect.top >= 0 &&
-        rect.top <= window.innerHeight &&
-        textNode.parentElement?.checkVisibility({
-          checkOpacity: true,
-          checkVisibilityCSS: true,
-        })
+      // 简化检查，避免昂贵的Range操作
+      const parent = textNode.parentElement;
+      if (!parent) {
+        textNode._ekoTextVisibilityCache = false;
+        return false;
+      }
+
+      // 检查父元素是否可见
+      const style = window.getComputedStyle(parent);
+      const isVisible = (
+        parent.offsetWidth > 0 &&
+        parent.offsetHeight > 0 &&
+        style.visibility !== 'hidden' &&
+        style.display !== 'none' &&
+        textNode.textContent.trim().length > 0
       );
+
+      textNode._ekoTextVisibilityCache = isVisible;
+      return isVisible;
     }
 
+    // 添加深度限制，防止过深的递归
+    const MAX_DEPTH = 20;
+    const MAX_ELEMENTS = 1000; // 限制最大元素数量
+    let elementCount = 0;
+    
+    // 重置计数器
+    elementCount = 0;
+
     // Function to traverse the DOM and create nested JSON
-    function buildDomTree(node, parentIframe = null) {
-      if (!node) return null;
+    function buildDomTree(node, parentIframe = null, depth = 0) {
+      if (!node || depth > MAX_DEPTH || elementCount > MAX_ELEMENTS) {
+        return null;
+      }
 
       // Special case for text nodes
       if (node.nodeType === Node.TEXT_NODE) {
@@ -594,6 +653,8 @@ export function run_build_dom_tree() {
         return null;
       }
 
+      elementCount++;
+
       const nodeData = {
         tagName: node.tagName ? node.tagName.toLowerCase() : null,
         attributes: {},
@@ -611,28 +672,30 @@ export function run_build_dom_tree() {
       }
 
       if (node.nodeType === Node.ELEMENT_NODE) {
-        const isInteractive = isInteractiveElement(node);
+        // 优化：先检查可见性，如果不可见则跳过其他检查
         const isVisible = isElementVisible(node);
-        const isTop = isTopElement(node);
+        if (!isVisible) {
+          nodeData.isInteractive = false;
+          nodeData.isVisible = false;
+          nodeData.isTopElement = false;
+        } else {
+          const isInteractive = isInteractiveElement(node);
+          const isTop = isTopElement(node);
 
-        nodeData.isInteractive = isInteractive;
-        nodeData.isVisible = isVisible;
-        nodeData.isTopElement = isTop;
+          nodeData.isInteractive = isInteractive;
+          nodeData.isVisible = true;
+          nodeData.isTopElement = isTop;
 
-        // Highlight if element meets all criteria and highlighting is enabled
-        if (isInteractive && isVisible && isTop) {
-          nodeData.highlightIndex = highlightIndex++;
-          window.clickable_elements[nodeData.highlightIndex] = node;
-          if (doHighlightElements) {
-            highlightElement(node, nodeData.highlightIndex, parentIframe);
+          // Highlight if element meets all criteria and highlighting is enabled
+          if (isInteractive && isTop) {
+            nodeData.highlightIndex = highlightIndex++;
+            window.clickable_elements[nodeData.highlightIndex] = node;
+            if (doHighlightElements) {
+              highlightElement(node, nodeData.highlightIndex, parentIframe);
+            }
           }
         }
       }
-
-      // Only add iframeContext if we're inside an iframe
-      // if (parentIframe) {
-      //     nodeData.iframeContext = `iframe[src="${parentIframe.src || ''}"]`;
-      // }
 
       // Only add shadowRoot field if it exists
       if (node.shadowRoot) {
@@ -642,7 +705,7 @@ export function run_build_dom_tree() {
       // Handle shadow DOM
       if (node.shadowRoot) {
         const shadowChildren = Array.from(node.shadowRoot.childNodes).map((child) =>
-          buildDomTree(child, parentIframe)
+          buildDomTree(child, parentIframe, depth + 1)
         );
         nodeData.children.push(...shadowChildren);
       }
@@ -653,7 +716,7 @@ export function run_build_dom_tree() {
           const iframeDoc = node.contentDocument || node.contentWindow.document;
           if (iframeDoc) {
             const iframeChildren = Array.from(iframeDoc.body.childNodes).map((child) =>
-              buildDomTree(child, node)
+              buildDomTree(child, node, depth + 1)
             );
             nodeData.children.push(...iframeChildren);
           }
@@ -662,7 +725,7 @@ export function run_build_dom_tree() {
         }
       } else {
         const children = Array.from(node.childNodes).map((child) =>
-          buildDomTree(child, parentIframe)
+          buildDomTree(child, parentIframe, depth + 1)
         );
         nodeData.children.push(...children);
       }

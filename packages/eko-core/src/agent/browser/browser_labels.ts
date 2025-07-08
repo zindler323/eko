@@ -1,12 +1,15 @@
 import { AgentContext } from "../../core/context";
+import * as memory from "../../memory";
 import { run_build_dom_tree } from "./build_dom_tree";
 import { BaseBrowserAgent, AGENT_NAME } from "./browser_base";
 import {
   LanguageModelV1ImagePart,
   LanguageModelV1Prompt,
+  LanguageModelV1FunctionTool,
 } from "@ai-sdk/provider";
 import { Tool, ToolResult, IMcpClient } from "../../types";
 import { mergeTools, sleep, toImage } from "../../common/utils";
+import {RetryLanguageModel} from "../../llm";
 
 export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
   constructor(llms?: string[], ext_tools?: Tool[], mcpClient?: IMcpClient) {
@@ -601,8 +604,17 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
         ],
       });
     }
-    super.handleMessages(agentContext, messages, tools);
+    await super.handleMessages(agentContext, messages, tools);
     this.handlePseudoHtmlText(messages, pseudoHtmlDescription);
+  }
+
+  private async activeCompressContext(
+    agentContext: AgentContext,
+    rlm: RetryLanguageModel,
+    messages: LanguageModelV1Prompt,
+    tools: LanguageModelV1FunctionTool[]
+  ) {
+    await memory.activeCompressContext(agentContext, rlm, messages, tools)
   }
 
   private handlePseudoHtmlText(
@@ -832,20 +844,20 @@ function select_option(params: { index: number; option: string }) {
       ),
     };
   }
-  // console.log("option value: ", option.value);
-  // console.log("element: ", { element });
+  console.log("option value: ", option.value);
+  console.log("element: ", { element });
   element.value = option.value;
   element.dispatchEvent(new Event("change"));
-  // const types = ['mousedown', 'mouseup', 'click'];
-  // for (let i = 0; i < types.length; i++) {
-  //   const event = new MouseEvent(types[i], {
-  //     view: window,
-  //     bubbles: true,
-  //     cancelable: true,
-  //     button: 0
-  //   });
-  //   element.dispatchEvent(event);
-  // }
+  const types = ['mousedown', 'mouseup', 'click'];
+  for (let i = 0; i < types.length; i++) {
+    const event = new MouseEvent(types[i], {
+      view: window,
+      bubbles: true,
+      cancelable: true,
+      button: 0
+    });
+    element.dispatchEvent(event);
+  }
   return {
     success: true,
     selectedValue: option.value,
