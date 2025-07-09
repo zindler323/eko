@@ -54,7 +54,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     index: number,
     text: string,
     enter: boolean
-  ): Promise<void> {
+  ): Promise<any> {
     await this.execute_script(agentContext, typing, [{ index, text, enter }]);
     if (enter) {
       await sleep(200);
@@ -66,7 +66,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     index: number,
     num_clicks: number,
     button: "left" | "right" | "middle"
-  ): Promise<void> {
+  ): Promise<any> {
     await this.execute_script(agentContext, do_click, [
       { index, num_clicks, button },
     ]);
