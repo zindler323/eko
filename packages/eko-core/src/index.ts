@@ -28,7 +28,6 @@ export {
   BaseChatAgent,
   BaseFileAgent,
   BaseShellAgent,
-  BaseTimerAgent,
   BaseComputerAgent,
   BaseBrowserAgent,
   BaseBrowserLabelsAgent,

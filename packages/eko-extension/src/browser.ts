@@ -12,6 +12,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
         quality: 60,
       });
     } catch (e) {
+      await this.sleep(1000);
       dataUrl = await chrome.tabs.captureVisibleTab(windowId, {
         format: "jpeg",
         quality: 60,

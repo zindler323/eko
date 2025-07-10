@@ -1,22 +1,27 @@
-import { WorkflowAgent, AgentNode, NormalAgentNode, ParallelAgentNode } from "../types/core.types";
+import {
+  WorkflowAgent,
+  AgentNode,
+  NormalAgentNode,
+  ParallelAgentNode,
+} from "../types/core.types";
 
 export function buildAgentTree(agents: WorkflowAgent[]): AgentNode {
   // Detect and handle circular dependencies
   const safeAgents = detectAndBreakCycles(agents);
-  
+
   if (safeAgents.length === 0) {
-    throw new Error('No executable agent');
+    throw new Error("No executable agent");
   }
-  
+
   // Establish dependency relationship mapping
   const agentMap = new Map<string, WorkflowAgent>();
   const dependents = new Map<string, WorkflowAgent[]>();
-  
+
   for (const agent of safeAgents) {
     agentMap.set(agent.id, agent);
     dependents.set(agent.id, []);
   }
-  
+
   for (const agent of safeAgents) {
     for (const depId of agent.dependsOn) {
       if (dependents.has(depId)) {
@@ -24,15 +29,20 @@ export function buildAgentTree(agents: WorkflowAgent[]): AgentNode {
       }
     }
   }
-  
-  let entryAgents = safeAgents.filter(agent => agent.dependsOn.length === 0);
+
+  let entryAgents = safeAgents.filter((agent) => agent.dependsOn.length === 0);
   if (entryAgents.length === 0) {
-    entryAgents = safeAgents.filter(agent => agent.dependsOn.length == 1 && agent.dependsOn[0].endsWith("00"));
+    entryAgents = safeAgents.filter(
+      (agent) =>
+        agent.dependsOn.length == 1 && agent.dependsOn[0].endsWith("00")
+    );
   }
-  
+
   const processedAgents = new Set<string>();
-  
-  function buildNodeRecursive(currentAgents: WorkflowAgent[]): AgentNode | undefined {
+
+  function buildNodeRecursive(
+    currentAgents: WorkflowAgent[]
+  ): AgentNode | undefined {
     if (currentAgents.length === 0) {
       return undefined;
     }
@@ -41,12 +51,12 @@ export function buildAgentTree(agents: WorkflowAgent[]): AgentNode {
     }
     const nextLevelAgents: WorkflowAgent[] = [];
     const nextLevelSet = new Set<string>();
-    
+
     for (const agent of currentAgents) {
       const dependentAgents = dependents.get(agent.id) || [];
       for (const dependentAgent of dependentAgents) {
-        const allDependenciesProcessed = dependentAgent.dependsOn.every(depId => 
-          processedAgents.has(depId)
+        const allDependenciesProcessed = dependentAgent.dependsOn.every(
+          (depId) => processedAgents.has(depId)
         );
         if (allDependenciesProcessed && !nextLevelSet.has(dependentAgent.id)) {
           nextLevelAgents.push(dependentAgent);
@@ -54,34 +64,37 @@ export function buildAgentTree(agents: WorkflowAgent[]): AgentNode {
         }
       }
     }
-    
+
     const nextNode = buildNodeRecursive(nextLevelAgents);
-    
+
     if (currentAgents.length === 1) {
       return {
         type: "normal",
         agent: currentAgents[0],
-        nextAgent: nextNode
+        nextAgent: nextNode,
       } as NormalAgentNode;
     } else {
-      const parallelNodes: NormalAgentNode[] = currentAgents.map(agent => ({
-        type: "normal",
-        agent: agent,
-        nextAgent: undefined
-      } as NormalAgentNode));
+      const parallelNodes: NormalAgentNode[] = currentAgents.map(
+        (agent) =>
+          ({
+            type: "normal",
+            agent: agent,
+            nextAgent: undefined,
+          } as NormalAgentNode)
+      );
       return {
         type: "parallel",
         agents: parallelNodes,
-        nextAgent: nextNode
+        nextAgent: nextNode,
       } as ParallelAgentNode;
     }
   }
-  
+
   const rootNode = buildNodeRecursive(entryAgents);
   if (!rootNode) {
-    throw new Error('Unable to build execution tree');
+    throw new Error("Unable to build execution tree");
   }
-  
+
   return rootNode;
 }
 
@@ -114,7 +127,7 @@ function detectAndBreakCycles(agents: WorkflowAgent[]): WorkflowAgent[] {
     }
     processedCount.set(agentId, 0);
   }
-  
+
   let processedNodes = 0;
   while (queue.length > 0) {
     const currentId = queue.shift()!;
@@ -127,56 +140,64 @@ function detectAndBreakCycles(agents: WorkflowAgent[]): WorkflowAgent[] {
       }
     }
   }
-  
+
   if (processedNodes < agents.length) {
-    console.warn('Detected a circular dependency, automatically disconnecting the circular link...');
+    console.warn(
+      "Detected a circular dependency, automatically disconnecting the circular link..."
+    );
     const cyclicNodes = new Set<string>();
     for (const [agentId, degree] of inDegree.entries()) {
       if (degree > 0) {
         cyclicNodes.add(agentId);
       }
     }
-    
+
     const fixedAgents: WorkflowAgent[] = [];
-    
+
     for (const agent of agents) {
       if (cyclicNodes.has(agent.id)) {
-        const filteredDependsOn = agent.dependsOn.filter(depId => 
-          !cyclicNodes.has(depId) || !agentMap.has(depId)
+        const filteredDependsOn = agent.dependsOn.filter(
+          (depId) => !cyclicNodes.has(depId) || !agentMap.has(depId)
         );
-        
+
         // Preserve the shortest path dependency
         if (filteredDependsOn.length === 0 && agent.dependsOn.length > 0) {
-          const firstValidDep = agent.dependsOn.find(depId => agentMap.has(depId));
+          const firstValidDep = agent.dependsOn.find((depId) =>
+            agentMap.has(depId)
+          );
           if (firstValidDep && !cyclicNodes.has(firstValidDep)) {
             filteredDependsOn.push(firstValidDep);
           }
         }
-        
+
         fixedAgents.push({
           ...agent,
-          dependsOn: filteredDependsOn
+          dependsOn: filteredDependsOn,
         });
-        
+
         if (filteredDependsOn.length !== agent.dependsOn.length) {
-          console.warn(`The partial cyclic dependency of agent ${agent.id} has been disconnected.`);
+          console.warn(
+            `The partial cyclic dependency of agent ${agent.id} has been disconnected.`
+          );
         }
       } else {
         // Non-cyclic node, filter out non-existent dependencies
-        const validDependsOn = agent.dependsOn.filter(depId => agentMap.has(depId));
+        const validDependsOn = agent.dependsOn.filter((depId) =>
+          agentMap.has(depId)
+        );
         fixedAgents.push({
           ...agent,
-          dependsOn: validDependsOn
+          dependsOn: validDependsOn,
         });
       }
     }
-    
+
     return fixedAgents;
   }
-  
+
   // No loops, just need to filter out non-existent dependencies
-  return agents.map(agent => ({
+  return agents.map((agent) => ({
     ...agent,
-    dependsOn: agent.dependsOn.filter(depId => agentMap.has(depId))
+    dependsOn: agent.dependsOn.filter((depId) => agentMap.has(depId)),
   }));
 }

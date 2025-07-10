@@ -265,7 +265,7 @@ export function resetWorkflowXml(workflow: Workflow) {
   const agents: string[] = [];
   for (let i = 0; i < workflow.agents.length; i++) {
     const agent = workflow.agents[i];
-    const agentDependsAttr = ` id="${i}" dependsOn="${(agent.dependsOn || []).filter(s => parseInt(s.split("-")[1])).join(",")}"`;
+    const agentDependsAttr = ` id="${i}" dependsOn="${(agent.dependsOn || []).filter(s => parseInt(s.split("-")[s.split("-").length - 1])).join(",")}"`;
     const nodes = agent.nodes
       .map((node) => {
         if (node.type == "forEach") {

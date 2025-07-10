@@ -1,6 +1,6 @@
-import { LanguageModelV1FunctionTool } from "@ai-sdk/provider";
-import { Tool, ToolSchema } from "../types/tools.types";
 import { Agent } from "../agent";
+import { Tool, ToolSchema } from "../types/tools.types";
+import { LanguageModelV1FunctionTool } from "@ai-sdk/provider";
 
 export function sleep(time: number): Promise<void> {
   return new Promise((resolve) => setTimeout(() => resolve(), time));

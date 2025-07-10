@@ -1,3 +1,4 @@
+import config from "../config";
 import Context from "./context";
 import { Agent } from "../agent";
 import { Planner } from "./plan";
@@ -5,7 +6,12 @@ import Log from "../common/log";
 import Chain, { AgentChain } from "./chain";
 import { buildAgentTree } from "../common/tree";
 import { mergeAgents, uuidv4 } from "../common/utils";
-import { EkoConfig, EkoResult, Workflow, AgentNode } from "../types/core.types";
+import {
+  EkoConfig,
+  EkoResult,
+  Workflow,
+  NormalAgentNode,
+} from "../types/core.types";
 
 export class Eko {
   private config: EkoConfig;
@@ -22,8 +28,8 @@ export class Eko {
     contextParams?: Record<string, any>
   ): Promise<Workflow> {
     const agents = [...(this.config.agents || [])];
-    let chain: Chain = new Chain(taskPrompt);
-    let context = new Context(taskId, this.config, agents, chain);
+    const chain: Chain = new Chain(taskPrompt);
+    const context = new Context(taskId, this.config, agents, chain);
     if (contextParams) {
       Object.keys(contextParams).forEach((key) =>
         context.variables.set(key, contextParams[key])
@@ -32,10 +38,10 @@ export class Eko {
     try {
       this.taskMap.set(taskId, context);
       if (this.config.a2aClient) {
-        let a2aList = await this.config.a2aClient.listAgents(taskPrompt);
+        const a2aList = await this.config.a2aClient.listAgents(taskPrompt);
         context.agents = mergeAgents(context.agents, a2aList);
       }
-      let planner = new Planner(context);
+      const planner = new Planner(context);
       context.workflow = await planner.plan(taskPrompt);
       return context.workflow;
     } catch (e) {
@@ -48,21 +54,21 @@ export class Eko {
     taskId: string,
     modifyTaskPrompt: string
   ): Promise<Workflow> {
-    let context = this.taskMap.get(taskId);
+    const context = this.taskMap.get(taskId);
     if (!context) {
       return await this.generate(modifyTaskPrompt, taskId);
     }
     if (this.config.a2aClient) {
-      let a2aList = await this.config.a2aClient.listAgents(modifyTaskPrompt);
+      const a2aList = await this.config.a2aClient.listAgents(modifyTaskPrompt);
       context.agents = mergeAgents(context.agents, a2aList);
     }
-    let planner = new Planner(context);
+    const planner = new Planner(context);
     context.workflow = await planner.replan(modifyTaskPrompt);
     return context.workflow;
   }
 
   public async execute(taskId: string): Promise<EkoResult> {
-    let context = this.getTask(taskId);
+    const context = this.getTask(taskId);
     if (!context) {
       throw new Error("The task does not exist");
     }
@@ -100,10 +106,10 @@ export class Eko {
     contextParams?: Record<string, any>
   ): Promise<Context> {
     const agents = this.config.agents || [];
-    let chain: Chain = new Chain(workflow.taskPrompt || workflow.name);
-    let context = new Context(workflow.taskId, this.config, agents, chain);
+    const chain: Chain = new Chain(workflow.taskPrompt || workflow.name);
+    const context = new Context(workflow.taskId, this.config, agents, chain);
     if (this.config.a2aClient) {
-      let a2aList = await this.config.a2aClient.listAgents(
+      const a2aList = await this.config.a2aClient.listAgents(
         workflow.taskPrompt || workflow.name
       );
       context.agents = mergeAgents(context.agents, a2aList);
@@ -119,19 +125,18 @@ export class Eko {
   }
 
   private async doRunWorkflow(context: Context): Promise<EkoResult> {
-    let agents = context.agents as Agent[];
-    let workflow = context.workflow as Workflow;
+    const agents = context.agents as Agent[];
+    const workflow = context.workflow as Workflow;
     if (!workflow || workflow.agents.length == 0) {
       throw new Error("Workflow error");
     }
-    let agentNameMap = agents.reduce((map, item) => {
+    const agentNameMap = agents.reduce((map, item) => {
       map[item.Name] = item;
       return map;
     }, {} as { [key: string]: Agent });
     let agentTree = buildAgentTree(workflow.agents);
-    const agentTreeMap = new Map<string, AgentNode>();
     const results: string[] = [];
-    do {
+    while (true) {
       await context.checkAborted();
       if (agentTree.type === "normal") {
         // normal agent
@@ -140,10 +145,6 @@ export class Eko {
           throw new Error("Unknown Agent: " + agentTree.agent.name);
         }
         const agentNode = agentTree.agent;
-        if (agentNode.name === "Timer") {
-          break;
-        }
-        agentTreeMap.set(agentTree.agent.id, agentTree);
         const agentChain = new AgentChain(agentNode);
         context.chain.push(agentChain);
         agentTree.result = await agent.run(context, agentChain);
@@ -151,20 +152,46 @@ export class Eko {
       } else {
         // parallel agent
         const parallelAgents = agentTree.agents;
-        const agent_results = await Promise.all(parallelAgents.map(async (agentNode) => {
+        const doRunAgent = async (agentNode: NormalAgentNode, index: number) => {
           const agent = agentNameMap[agentNode.agent.name];
           if (!agent) {
             throw new Error("Unknown Agent: " + agentNode.agent.name);
           }
           const agentChain = new AgentChain(agentNode.agent);
-          context.chain.push(agentChain);
           agentNode.result = await agent.run(context, agentChain);
-          return agentNode.result;
-        }));
+          return { result: agentNode.result, agentChain, index };
+        };
+        let agent_results: string[] = [];
+        let agentParallel = context.variables.get("agentParallel");
+        if (agentParallel === undefined) {
+          agentParallel = config.agentParallel;
+        }
+        if (agentParallel) {
+          // parallel execution
+          const parallelResults = await Promise.all(
+            parallelAgents.map((agent, index) => doRunAgent(agent, index))
+          );
+          parallelResults.sort((a, b) => a.index - b.index);
+          parallelResults.forEach(({ agentChain }) => {
+            context.chain.push(agentChain);
+          });
+          agent_results = parallelResults.map(({ result }) => result);
+        } else {
+          // serial execution
+          for (let i = 0; i < parallelAgents.length; i++) {
+            const { result, agentChain } = await doRunAgent(parallelAgents[i], i);
+            context.chain.push(agentChain);
+            agent_results.push(result);
+          }
+        }
         results.push(agent_results.join("\n\n"));
       }
       context.conversation.splice(0, context.conversation.length);
-    } while (agentTree.nextAgent);
+      if (!agentTree.nextAgent) {
+        break;
+      }
+      agentTree = agentTree.nextAgent;
+    }
     return {
       success: true,
       stopReason: "done",
@@ -202,8 +229,13 @@ export class Eko {
     }
   }
 
-  public pauseTask(taskId: string, pause: boolean, abortCurrentStep?: boolean, reason?: string): boolean {
-    let context = this.taskMap.get(taskId);
+  public pauseTask(
+    taskId: string,
+    pause: boolean,
+    abortCurrentStep?: boolean,
+    reason?: string
+  ): boolean {
+    const context = this.taskMap.get(taskId);
     if (context) {
       this.onTaskStatus(context, pause ? "pause" : "resume-pause", reason);
       context.setPause(pause, abortCurrentStep);
@@ -214,7 +246,7 @@ export class Eko {
   }
 
   public chatTask(taskId: string, userPrompt: string): string[] | undefined {
-    let context = this.taskMap.get(taskId);
+    const context = this.taskMap.get(taskId);
     if (context) {
       context.conversation.push(userPrompt);
       return context.conversation;
@@ -226,7 +258,11 @@ export class Eko {
     this.config.agents.push(agent);
   }
 
-  private async onTaskStatus(context: Context, status: string, reason?: string) {
+  private async onTaskStatus(
+    context: Context,
+    status: string,
+    reason?: string
+  ) {
     const [agent] = context.currentAgent() || [];
     if (agent) {
       const onTaskStatus = (agent as any)["onTaskStatus"];

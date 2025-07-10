@@ -9,9 +9,6 @@ test.only("workflowXml", () => {
   <name>AI Daily Morning Report</name>
   <thought>OK, the user needs to collect the latest AI news every morning, summarize it, and send it to a WeChat group named "AI Daily Morning Report" This requires automation, including the steps of data collection, processing, and distribution.</thought>
   <agents>
-    <agent name="Timer">
-      <task>Timing: every morning</task>
-    </agent>
     <agent name="Browser">
       <task>Search for the latest updates on AI</task>
       <nodes>
