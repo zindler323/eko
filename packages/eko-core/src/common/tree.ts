@@ -1,18 +1,4 @@
-import { WorkflowAgent } from "../types/core.types";
-
-export type NormalAgentNode = {
-  type: "normal";
-  agent: WorkflowAgent;
-  nextAgent?: AgentNode;
-}
-
-export type ParallelAgentNode = {
-  type: "parallel";
-  agents: AgentNode[];
-  nextAgent?: AgentNode;
-}
-
-export type AgentNode = NormalAgentNode | ParallelAgentNode;
+import { WorkflowAgent, AgentNode, NormalAgentNode, ParallelAgentNode } from "../types/core.types";
 
 export function buildAgentTree(agents: WorkflowAgent[]): AgentNode {
   // Detect and handle circular dependencies
@@ -78,7 +64,7 @@ export function buildAgentTree(agents: WorkflowAgent[]): AgentNode {
         nextAgent: nextNode
       } as NormalAgentNode;
     } else {
-      const parallelNodes: AgentNode[] = currentAgents.map(agent => ({
+      const parallelNodes: NormalAgentNode[] = currentAgents.map(agent => ({
         type: "normal",
         agent: agent,
         nextAgent: undefined

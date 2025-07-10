@@ -1,10 +1,11 @@
-import { EkoConfig, EkoResult, Workflow } from "../types/core.types";
 import Context from "./context";
 import { Agent } from "../agent";
 import { Planner } from "./plan";
-import Chain, { AgentChain } from "./chain";
-import { mergeAgents, uuidv4 } from "../common/utils";
 import Log from "../common/log";
+import Chain, { AgentChain } from "./chain";
+import { buildAgentTree } from "../common/tree";
+import { mergeAgents, uuidv4 } from "../common/utils";
+import { EkoConfig, EkoResult, Workflow, AgentNode } from "../types/core.types";
 
 export class Eko {
   private config: EkoConfig;
@@ -123,27 +124,47 @@ export class Eko {
     if (!workflow || workflow.agents.length == 0) {
       throw new Error("Workflow error");
     }
-    let agentMap = agents.reduce((map, item) => {
+    let agentNameMap = agents.reduce((map, item) => {
       map[item.Name] = item;
       return map;
-    }, {} as { [key: string]: Agent & { result?: string } });
-    let results: string[] = [];
-    for (let i = 0; i < workflow.agents.length; i++) {
+    }, {} as { [key: string]: Agent });
+    let agentTree = buildAgentTree(workflow.agents);
+    const agentTreeMap = new Map<string, AgentNode>();
+    const results: string[] = [];
+    do {
       await context.checkAborted();
-      let agentNode = workflow.agents[i];
-      let agent = agentMap[agentNode.name];
-      if (!agent) {
-        throw new Error("Unknown Agent: " + agentNode.name);
-      }
-      let agentChain = new AgentChain(agentNode);
-      context.chain.push(agentChain);
-      agent.result = await agent.run(context, agentChain);
-      results.push(agent.result);
-      if (agentNode.name === "Timer") {
-        break;
+      if (agentTree.type === "normal") {
+        // normal agent
+        const agent = agentNameMap[agentTree.agent.name];
+        if (!agent) {
+          throw new Error("Unknown Agent: " + agentTree.agent.name);
+        }
+        const agentNode = agentTree.agent;
+        if (agentNode.name === "Timer") {
+          break;
+        }
+        agentTreeMap.set(agentTree.agent.id, agentTree);
+        const agentChain = new AgentChain(agentNode);
+        context.chain.push(agentChain);
+        agentTree.result = await agent.run(context, agentChain);
+        results.push(agentTree.result);
+      } else {
+        // parallel agent
+        const parallelAgents = agentTree.agents;
+        const agent_results = await Promise.all(parallelAgents.map(async (agentNode) => {
+          const agent = agentNameMap[agentNode.agent.name];
+          if (!agent) {
+            throw new Error("Unknown Agent: " + agentNode.agent.name);
+          }
+          const agentChain = new AgentChain(agentNode.agent);
+          context.chain.push(agentChain);
+          agentNode.result = await agent.run(context, agentChain);
+          return agentNode.result;
+        }));
+        results.push(agent_results.join("\n\n"));
       }
       context.conversation.splice(0, context.conversation.length);
-    }
+    } while (agentTree.nextAgent);
     return {
       success: true,
       stopReason: "done",

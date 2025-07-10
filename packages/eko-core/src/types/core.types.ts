@@ -157,3 +157,19 @@ export type EkoResult = {
   stopReason: "abort" | "error" | "done";
   result?: any;
 };
+
+export type NormalAgentNode = {
+  type: "normal";
+  agent: WorkflowAgent;
+  nextAgent?: AgentNode;
+  result?: string;
+}
+
+export type ParallelAgentNode = {
+  type: "parallel";
+  agents: NormalAgentNode[];
+  nextAgent?: AgentNode;
+  result?: string;
+}
+
+export type AgentNode = NormalAgentNode | ParallelAgentNode;
