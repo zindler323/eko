@@ -192,6 +192,8 @@ export function fixXmlTag(code: string) {
     code += '""';
   } else if (
     endStr == "name" ||
+    endStr == "id" ||
+    endStr == "dependsOn" ||
     endStr == "input" ||
     endStr == "output" ||
     endStr == "items" ||

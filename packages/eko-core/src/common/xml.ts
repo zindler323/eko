@@ -62,10 +62,13 @@ export function parseWorkflow(
       if (!name) {
         break;
       }
+      let index = agentNode.getAttribute("id") || i;
+      let dependsOn = agentNode.getAttribute("dependsOn") || "";
       let nodes: WorkflowNode[] = [];
       let agent: WorkflowAgent = {
         name: name,
-        id: taskId + "-" + (i < 10 ? "0" + i : i),
+        id: getAgentId(taskId, index),
+        dependsOn: dependsOn.split(",").filter(idx => idx.trim() != "").map(idx => getAgentId(taskId, idx)),
         task: agentNode.getElementsByTagName("task")[0]?.textContent || "",
         nodes: nodes,
         xml: agentNode.toString(),
@@ -84,6 +87,10 @@ export function parseWorkflow(
       return _workflow;
     }
   }
+}
+
+function getAgentId(taskId: string, index: number | string) {
+  return taskId + "-" + (+index < 10 ? "0" + index : index);
 }
 
 function parseWorkflowNodes(
@@ -235,6 +242,7 @@ export function buildSimpleAgentWorkflow({
     agents: [
       {
         id: taskId + "-00",
+        dependsOn: [],
         name: agentName,
         task: task,
         nodes: taskNodes.map((node) => {
@@ -257,6 +265,7 @@ export function resetWorkflowXml(workflow: Workflow) {
   const agents: string[] = [];
   for (let i = 0; i < workflow.agents.length; i++) {
     const agent = workflow.agents[i];
+    const agentDependsAttr = ` id="${i}" dependsOn="${(agent.dependsOn || []).filter(s => parseInt(s.split("-")[1])).join(",")}"`;
     const nodes = agent.nodes
       .map((node) => {
         if (node.type == "forEach") {
@@ -297,7 +306,7 @@ ${watchNodes.join("\n")}
         }
       })
       .join("\n");
-    const agentXml = `    <agent name="${agent.name}">
+    const agentXml = `    <agent name="${agent.name}"${agentDependsAttr}>
       <task>${agent.task}</task>
       <nodes>
 ${nodes}

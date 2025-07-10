@@ -111,6 +111,7 @@ export type WorkflowAgent = {
   id: string;
   name: string;
   task: string;
+  dependsOn: string[];
   nodes: WorkflowNode[];
   xml: string; // <agent name="xxx">...</agent>
 };
