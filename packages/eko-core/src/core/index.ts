@@ -147,15 +147,13 @@ export class Eko {
         const agentNode = agentTree.agent;
         const agentChain = new AgentChain(agentNode);
         context.chain.push(agentChain);
-        try {
-          agentNode.status = "running";
-          agentTree.result = await agent.run(context, agentChain);
-          agentNode.status = "done";
-          results.push(agentTree.result);
-        } catch (e) {
-          agentNode.status = "error";
-          throw e;
-        }
+        agentTree.result = await this.runAgent(
+          context,
+          agent,
+          agentTree,
+          agentChain
+        );
+        results.push(agentTree.result);
       } else {
         // parallel agent
         const parallelAgents = agentTree.agents;
@@ -168,15 +166,14 @@ export class Eko {
             throw new Error("Unknown Agent: " + agentNode.agent.name);
           }
           const agentChain = new AgentChain(agentNode.agent);
-          try {
-            agentNode.agent.status = "running";
-            agentNode.result = await agent.run(context, agentChain);
-            agentNode.agent.status = "done";
-          } catch (e) {
-            agentNode.agent.status = "error";
-            throw e;
-          }
-          return { result: agentNode.result, agentChain, index };
+          context.chain.push(agentChain);
+          const result = await this.runAgent(
+            context,
+            agent,
+            agentNode,
+            agentChain
+          );
+          return { result: result, agentChain, index };
         };
         let agent_results: string[] = [];
         let agentParallel = context.variables.get("agentParallel");
@@ -215,6 +212,49 @@ export class Eko {
       result: results[results.length - 1],
       taskId: context.taskId,
     };
+  }
+
+  private async runAgent(
+    context: Context,
+    agent: Agent,
+    agentNode: NormalAgentNode,
+    agentChain: AgentChain
+  ): Promise<string> {
+    try {
+      agentNode.agent.status = "running";
+      this.config.callback &&
+        (await this.config.callback.onMessage({
+          taskId: context.taskId,
+          agentName: agentNode.agent.name,
+          nodeId: agentNode.agent.id,
+          type: "agent_start",
+          agentNode: agentNode.agent,
+        }));
+      agentNode.result = await agent.run(context, agentChain);
+      agentNode.agent.status = "done";
+      this.config.callback &&
+        (await this.config.callback.onMessage({
+          taskId: context.taskId,
+          agentName: agentNode.agent.name,
+          nodeId: agentNode.agent.id,
+          type: "agent_result",
+          agentNode: agentNode.agent,
+          result: agentNode.result,
+        }, agent.AgentContext));
+      return agentNode.result;
+    } catch (e) {
+      agentNode.agent.status = "error";
+      this.config.callback &&
+        (await this.config.callback.onMessage({
+          taskId: context.taskId,
+          agentName: agentNode.agent.name,
+          nodeId: agentNode.agent.id,
+          type: "agent_result",
+          agentNode: agentNode.agent,
+          error: e,
+        }, agent.AgentContext));
+      throw e;
+    }
   }
 
   public getTask(taskId: string): Context | undefined {
