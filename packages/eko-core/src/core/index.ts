@@ -147,18 +147,35 @@ export class Eko {
         const agentNode = agentTree.agent;
         const agentChain = new AgentChain(agentNode);
         context.chain.push(agentChain);
-        agentTree.result = await agent.run(context, agentChain);
-        results.push(agentTree.result);
+        try {
+          agentNode.status = "running";
+          agentTree.result = await agent.run(context, agentChain);
+          agentNode.status = "done";
+          results.push(agentTree.result);
+        } catch (e) {
+          agentNode.status = "error";
+          throw e;
+        }
       } else {
         // parallel agent
         const parallelAgents = agentTree.agents;
-        const doRunAgent = async (agentNode: NormalAgentNode, index: number) => {
+        const doRunAgent = async (
+          agentNode: NormalAgentNode,
+          index: number
+        ) => {
           const agent = agentNameMap[agentNode.agent.name];
           if (!agent) {
             throw new Error("Unknown Agent: " + agentNode.agent.name);
           }
           const agentChain = new AgentChain(agentNode.agent);
-          agentNode.result = await agent.run(context, agentChain);
+          try {
+            agentNode.agent.status = "running";
+            agentNode.result = await agent.run(context, agentChain);
+            agentNode.agent.status = "done";
+          } catch (e) {
+            agentNode.agent.status = "error";
+            throw e;
+          }
           return { result: agentNode.result, agentChain, index };
         };
         let agent_results: string[] = [];

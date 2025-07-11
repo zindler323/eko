@@ -8,6 +8,7 @@ import {
   WorkflowTextNode,
   WorkflowWatchNode,
 } from "../types/core.types";
+import { buildAgentTree } from "./tree";
 
 export function parseWorkflow(
   taskId: string,
@@ -71,6 +72,8 @@ export function parseWorkflow(
         dependsOn: dependsOn.split(",").filter(idx => idx.trim() != "").map(idx => getAgentId(taskId, idx)),
         task: agentNode.getElementsByTagName("task")[0]?.textContent || "",
         nodes: nodes,
+        status: "init",
+        parallel: undefined,
         xml: agentNode.toString(),
       };
       let xmlNodes = agentNode.getElementsByTagName("nodes");
@@ -78,6 +81,24 @@ export function parseWorkflow(
         parseWorkflowNodes(nodes, xmlNodes[0].childNodes);
       }
       agents.push(agent);
+    }
+    if (done) {
+      let agentTree = buildAgentTree(workflow.agents);
+      while (true) {
+        if (agentTree.type === "normal") {
+          agentTree.agent.parallel = false;
+        } else {
+          const parallelAgents = agentTree.agents;
+          for (let i = 0; i < parallelAgents.length; i++) {
+            const agentNode = parallelAgents[i];
+            agentNode.agent.parallel = true;
+          }
+        }
+        if (!agentTree.nextAgent) {
+          break;
+        }
+        agentTree = agentTree.nextAgent;
+      }
     }
     return workflow;
   } catch (e) {
@@ -251,6 +272,8 @@ export function buildSimpleAgentWorkflow({
             text: node,
           };
         }),
+        status: "init",
+        parallel: false,
         xml: "",
       },
     ],

@@ -113,6 +113,8 @@ export type WorkflowAgent = {
   task: string;
   dependsOn: string[];
   nodes: WorkflowNode[];
+  parallel?: boolean;
+  status: "init" | "running" | "done" | "error";
   xml: string; // <agent name="xxx">...</agent>
 };
 
