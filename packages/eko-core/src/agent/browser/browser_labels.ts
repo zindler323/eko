@@ -1,16 +1,21 @@
 import { AgentContext } from "../../core/context";
+import * as memory from "../../memory";
 import { run_build_dom_tree } from "./build_dom_tree";
 import { BaseBrowserAgent, AGENT_NAME } from "./browser_base";
 import {
   LanguageModelV1ImagePart,
   LanguageModelV1Prompt,
+  LanguageModelV1FunctionTool,
+  LanguageModelV1TextPart,
 } from "@ai-sdk/provider";
-import { Tool, ToolResult, IMcpClient } from "../../types";
+import { Tool, ToolResult, IMcpClient, StreamCallback } from "../../types";
 import { mergeTools, sleep, toImage } from "../../common/utils";
+import {RetryLanguageModel} from "../../llm";
+import { callLLM } from "../base";
 
 export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
   constructor(llms?: string[], ext_tools?: Tool[], mcpClient?: IMcpClient) {
-    const description = `You are a browser operation agent, use structured commands to interact with the browser.
+    const openAIDescription = `You are a browser operation agent, use structured commands to interact with the browser.
 * This is a browser GUI interface where you need to analyze webpages by taking screenshot and page element structures, and specify action sequences to complete designated tasks.
 * For the first visit, please call the \`navigate_to\` or \`current_page\` tool first. After that, each of your actions will return a screenshot of the page and structured element information, both of which have been specially processed.
 * Screenshot description:
@@ -30,10 +35,50 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
    - Handle popups/cookies by accepting or closing them
 * BROWSER OPERATION:
    - Use scroll to find elements you are looking for, When extracting content, prioritize using extract_page_content, only scroll when you need to load more content`;
+    const claudeDescription = `You are a browser operation agent, use structured commands to interact with the browser.
+* This is a browser GUI interface where you need to analyze webpages by taking screenshot and page element structures, and specify action sequences to complete designated tasks.
+* For the first visit, please call the \`navigate_to\` or \`current_page\` tool first. After that, each of your actions will return a screenshot of the page and structured element information, both of which have been specially processed.
+* Screenshot description:
+  - Screenshot are used to understand page layouts, with labeled bounding boxes corresponding to element indexes. Each bounding box and its label share the same color, with labels typically positioned in the top-right corner of the box.
+  - Screenshot help verify element positions and relationships. Labels may sometimes overlap, so extracted elements are used to verify the correct elements.
+  - In addition to screenshot, simplified information about interactive elements is returned, with element indexes corresponding to those in the screenshot.
+  - This tool can ONLY screenshot the VISIBLE content. If a complete content is required, use 'extract_page_content' instead.
+  - If the webpage content hasn't loaded, please use the \`wait\` tool to allow time for the content to load.
+* ELEMENT INTERACTION:
+   - Only use indexes that exist in the provided element list
+   - Each element has a unique index number (e.g., "[33]:<button>")
+   - Elements marked with "[]:" are non-interactive (for context only)
+   - Use the latest element index, do not rely on historical outdated element indexes
+* ERROR HANDLING:
+   - If no suitable elements exist, use other functions to complete the task
+   - If stuck, try alternative approaches, don't refuse tasks
+   - Handle popups/cookies by accepting or closing them
+* BROWSER OPERATION:
+   - Use scroll to locate the elements you are looking for. When extracting content, prioritize using extract_page_content; scroll as needed to load more content.
+   - Use the select_option tool when you need to fill dropdown selections in forms.
+   - Do not attempt to bypass login or language selection pop-ups to operate the page.
+* TASK COMPLETION:
+   - Use the finish action as the last action as soon as the ultimate task is complete
+   - Dont use "finish" before you are done with everything the user asked you, except you reach the last step of max_steps.
+   - If you reach your last step, use the finish action even if the task is not fully finished. Provide all the information you have gathered so far. If the ultimate task is completely finished set success to true. If not everything the user asked for is completed set success in finish to false!
+   - Only call finish after the last step.
+   - Don't hallucinate actions
+   - Make sure you include everything you found out for the ultimate task in the finish text parameter. Do not just say you are finished, but include the requested information of the task.
+* TOOL USE GUIDANCE:
+    - Evaluate concisely previous actions (success or fail, consistent with the task goal) based on the screenshot before proceeding to the next step. Format: 👍 Eval:
+    - Think concisely about what you should do next to reach the goal. Format: 🎯 Next goal:
+    - If the element is not structured as an interactive element, try performing a visual click or input on the element. This action should only be done when the element is clearly visible in the screenshot, not just listed in the element index.
+    - Always use the mouse scroll wheel to locate the element when you have the element index but the element is not visible in the current window’s screenshot.
+    - Don't keep using the same tool to do the same thing over and over if it's not working. Also, don't repeat the last tool unless something has changed.
+    - If the plan says to use a specific tool, go with that one first. If it does not work, then try something else.
+    - When dealing with filters, make sure to check if there are any elements on the page which can filter with. Try to use those first. Only look for other methods if there’s no filter or dropdown available.
+    - When the action involves purchasing, payment, placing orders, or entering/collecting sensitive personal information (like phone numbers, addresses, passwords, etc.), always use the confirm tool and wait for the user to take action. The subsequent steps should depend on the user’s clicks.
+    
+   The output language should follow the language corresponding to the user's task.;`
     const _tools_ = [] as Tool[];
     super({
       name: AGENT_NAME,
-      description: description,
+      description: claudeDescription,
       tools: _tools_,
       llms: llms,
       mcpClient: mcpClient,
@@ -114,6 +159,48 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
         page_content
       );
     }
+  }
+
+  protected async scroll_element(
+    agentContext: AgentContext,
+    index: number,
+    direction: 'up' | 'down' = 'down',
+  ): Promise<any> {
+    await this.execute_script(
+      agentContext,
+      (index, direction) => {
+        const $el =  (window as any)
+          .get_highlight_element(index);
+        if (!$el) {
+          console.warn('yc:: element not found');
+          return;
+        }
+
+        console.log("yc $el", $el);
+        let scrollable: HTMLElement | undefined;
+        function searchScrollable(ele: HTMLElement) {
+          if (scrollable) return;
+          if (!ele.children || !ele.children.length) return;
+          if (ele.clientHeight < ele.scrollHeight && ['auto', 'scroll'].includes(getComputedStyle(ele).overflowY)) scrollable = ele;
+          for (let i = 0; i < ele.children.length; i++) {
+            const c = ele.children[i];
+            searchScrollable(c as HTMLElement);
+          }
+        }
+        searchScrollable($el);
+
+        if (!scrollable) {
+          console.warn('yc:: scrollable not found');
+          return;
+        } else {
+          console.log('yc:: scrollable', scrollable);
+          const delta = scrollable.clientHeight;
+          scrollable.scrollBy(0, direction === 'down' ? delta : -delta);
+        }
+      },
+      [index, direction]
+    );
+    await sleep(200);
   }
 
   protected async hover_to_element(
@@ -381,6 +468,41 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
           });
         },
       },
+        {
+        name: "scroll_element",
+        description:
+          "Scroll the mouse wheel at an specific element, e.g. <div>",
+        parameters: {
+          type: "object",
+          properties: {
+            index: {
+              type: "number",
+              description: "The index of the element to scroll",
+            },
+            direction: {
+              type: "string",
+              enum: ["up", "down"],
+            },
+            extract_page_content: {
+              type: "boolean",
+              default: false,
+              description:
+                "After scrolling is completed, whether to extract the current latest page content",
+            },
+          },
+          required: [ "direction", "extract_page_content", "index"],
+        }, execute: async (
+          args: Record<string, unknown>,
+          agentContext: AgentContext
+        ): Promise<ToolResult> => {
+          return await this.callInnerTool(async () => {
+            await this.scroll_element(
+              agentContext,
+              args.index as number,
+              args.direction as 'up' | 'down'
+            );
+          });
+        }},
       {
         name: "hover_to_element",
         description: "Mouse hover over the element",
@@ -554,17 +676,18 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     messages: LanguageModelV1Prompt,
     tools: Tool[]
   ): Promise<void> {
-    const pseudoHtmlDescription =
-      "请你先评估从当前截图中看到的执行结果是否符合预期，用拟人化的语气将看到的结果分点简洁列出，例如当执行有效时使用“太好了! 我看到...”, 或者“完美！我观察到...”, 当执行有误不符合预期，或者没有变化时使用“看起来似乎不太对，我发现...”，注意在描述元素时务必要补充元素所在的位置区域信息描述。" +
-        "再用一句话说明接下来要执行的一个操作是什么，例如“接下来我会执行...”。注意：" +
-        "1. 一步一步思考，从多个角度思考当前的问题。生成操作时不要被plan中的信息限制，任何可以导向最终任务要求的都可以被考虑在内。" +
-        "2. 如果页面元素信息中有操作相关的信息，但没有编号，同时截图中也没有这个元素信息，可能是不在可视网页范围内，需要滚动直到获取到想要的元素或到达页面边界为止。" +
-        "3. 生成的执行操作需要参考上文的评估，确保区域和描述正确。" +
-        "4. 优先处理弹窗、浮层。如果包含信息汇总在内的全部任务都已经完成，明确表达出任务已经完成的意思。" +
-        "5. 操作只能为工具列表相关的操作，信息汇总等非工具相关的操作请在该环节之前输出。" +
-        "6. 不允许一次输出多个操作，即使接下来有一系列操作，只允许输出第一个。\n" +
-        "识别说明：请仔细分辨下拉框（有灰色下拉标志）和输入框，当涉及到“选择”操作时，必须通过点击下拉框/单选框后选择最符合的选项，禁止直接向下拉框中输入文本，禁止向截图中非输入框的元素输入文本。" +
-        "这是最新的截图和页面元素信息.\n元素和对应的index:\n"
+    // const pseudoHtmlDescription =
+      // "请你先评估从当前截图中看到的执行结果是否符合预期，用拟人化的语气将看到的结果分点简洁列出，例如当执行有效时使用“太好了! 我看到...”, 或者“完美！我观察到...”, 当执行有误不符合预期，或者没有变化时使用“看起来似乎不太对，我发现...”，注意在描述元素时务必要补充元素所在的位置区域信息描述。" +
+      //   "再用一句话说明接下来要执行的一个操作是什么，例如“接下来我会执行...”。注意：" +
+      //   "1. 一步一步思考，从多个角度思考当前的问题。生成操作时不要被plan中的信息限制，任何可以导向最终任务要求的都可以被考虑在内。" +
+      //   "2. 如果页面元素信息中有操作相关的信息，但没有编号，同时截图中也没有这个元素信息，可能是不在可视网页范围内，需要滚动直到获取到想要的元素或到达页面边界为止。" +
+      //   "3. 生成的执行操作需要参考上文的评估，确保区域和描述正确。" +
+      //   "4. 优先处理弹窗、浮层。如果包含信息汇总在内的全部任务都已经完成，明确表达出任务已经完成的意思。" +
+      //   "5. 操作只能为工具列表相关的操作，信息汇总等非工具相关的操作请在该环节之前输出。" +
+      //   "6. 不允许一次输出多个操作，即使接下来有一系列操作，只允许输出第一个。\n" +
+      //   "识别说明：请仔细分辨下拉框（有灰色下拉标志）和输入框，当涉及到“选择”操作时，必须通过点击下拉框/单选框后选择最符合的选项，禁止直接向下拉框中输入文本，禁止向截图中非输入框的元素输入文本。" +
+      //   "这是最新的截图和页面元素信息.\n元素和对应的index:\n"
+    const pseudoHtmlDescription = "The latest screenshot and element indexes are shown separately below. Please note that the element indexes are obtained by capturing the DOM elements of the entire page, while the screenshot only displays the current window. You should consider both pieces of information when deciding the next step.\n"
     let lastTool = this.lastToolResult(messages);
     if (
       lastTool &&
@@ -601,8 +724,58 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
         ],
       });
     }
-    super.handleMessages(agentContext, messages, tools);
+    await super.handleMessages(agentContext, messages, tools);
     this.handlePseudoHtmlText(messages, pseudoHtmlDescription);
+  }
+
+  protected async activeCompressContext(
+    agentContext: AgentContext,
+    rlm: RetryLanguageModel,
+    messages: LanguageModelV1Prompt,
+    tools: LanguageModelV1FunctionTool[]
+  ) {
+    await memory.activeCompressContext(agentContext, rlm, messages, tools)
+  }
+
+  protected async summary(
+    agentContext: AgentContext,
+    messages: LanguageModelV1Prompt,
+    callback?: StreamCallback
+  ): Promise<string> {
+    // 使用初始化时的llm创建RetryLanguageModel
+    const rlm = new RetryLanguageModel(
+      agentContext.context.config.llms,
+      this.llms
+    );
+
+    // 构建总结消息
+    const summaryMessages: LanguageModelV1Prompt = [
+      {
+        role: "system",
+        content: "You are a task summarizer. Please provide a concise structured summary in the following format without Markdown:\n\n🎯 Task: [User's specific task requirements]\n📋 Plan: [Execution plan and steps]\n✅ Progress: [Detailed completion status for each step, e.g.: Step1 ✓ Step2 ✗ Step3 ✓]\n📝 Summary: [Main results, concise description]\n⚠️ Notes: [Exceptions or issues, omit if none]\n\nPlease keep output concise and detailed progress for each step.",
+      },
+      ...messages,
+      {
+        role: "user",
+        content: [{ type: "text" as const, text: "Please provide a concise structured summary following the format above based on the conversation context." }]
+      }
+    ];
+
+    // 直接调用callLLM，让上层处理流式输出
+    const results = await callLLM(
+      agentContext,
+      rlm,
+      summaryMessages,
+      [], // 不需要工具
+      false, // noCompress
+      undefined, // toolChoice
+      false, // retry
+      callback
+    );
+
+    // 提取文本结果
+    const textResult = results.find(result => result.type === "text");
+    return textResult ? textResult.text : "";
   }
 
   private handlePseudoHtmlText(
@@ -750,6 +923,9 @@ function do_click(params: {
   num_clicks: number;
 }): boolean {
   let { index, button, num_clicks } = params;
+  console.log('click_el',index)
+  let element = (window as any).get_highlight_element(index);
+  console.log('click_el',element)
   function simulateMouseEvent(
     eventTypes: Array<string>,
     button: 0 | 1 | 2
@@ -832,20 +1008,8 @@ function select_option(params: { index: number; option: string }) {
       ),
     };
   }
-  // console.log("option value: ", option.value);
-  // console.log("element: ", { element });
   element.value = option.value;
   element.dispatchEvent(new Event("change"));
-  // const types = ['mousedown', 'mouseup', 'click'];
-  // for (let i = 0; i < types.length; i++) {
-  //   const event = new MouseEvent(types[i], {
-  //     view: window,
-  //     bubbles: true,
-  //     cancelable: true,
-  //     button: 0
-  //   });
-  //   element.dispatchEvent(event);
-  // }
   return {
     success: true,
     selectedValue: option.value,
@@ -865,7 +1029,7 @@ function scroll_by(params: { amount: number }) {
     return;
   }
 
-  function findNodes(element = document, nodes: any = []): Element[] {
+ function findNodes(element = document, nodes: any = []): Element[] {
     for (const node of Array.from(element.querySelectorAll("*"))) {
       if (node.tagName === "IFRAME" && (node as any).contentDocument) {
         findNodes((node as any).contentDocument, nodes);

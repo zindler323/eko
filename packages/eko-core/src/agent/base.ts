@@ -54,7 +54,6 @@ export class Agent {
   protected mcpClient?: IMcpClient;
   protected planDescription?: string;
   protected callback?: StreamCallback & HumanCallback;
-
   constructor(params: AgentParams) {
     this.name = params.name;
     this.description = params.description;
@@ -116,6 +115,8 @@ export class Agent {
           agentTools = mergeTools(_agentTools, mcpTools);
         }
       }
+      // 自动压缩
+      await this.maybeCompressMessages(agentContext, rlm, messages, tools);
       await this.handleMessages(agentContext, messages, tools);
       let results = await callLLM(
         agentContext,
@@ -527,6 +528,15 @@ export class Agent {
 
   get McpClient() {
     return this.mcpClient;
+  }
+
+  protected async maybeCompressMessages(
+    agentContext: AgentContext,
+    rlm: any,
+    messages: any[],
+    tools: any[]
+  ) {
+    // 基类不做任何处理，子类可重写
   }
 }
 
