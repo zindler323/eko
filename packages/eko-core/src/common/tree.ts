@@ -170,10 +170,8 @@ function detectAndBreakCycles(agents: WorkflowAgent[]): WorkflowAgent[] {
           }
         }
 
-        fixedAgents.push({
-          ...agent,
-          dependsOn: filteredDependsOn,
-        });
+        agent.dependsOn = filteredDependsOn;
+        fixedAgents.push(agent);
 
         if (filteredDependsOn.length !== agent.dependsOn.length) {
           console.warn(
@@ -185,10 +183,8 @@ function detectAndBreakCycles(agents: WorkflowAgent[]): WorkflowAgent[] {
         const validDependsOn = agent.dependsOn.filter((depId) =>
           agentMap.has(depId)
         );
-        fixedAgents.push({
-          ...agent,
-          dependsOn: validDependsOn,
-        });
+        agent.dependsOn = validDependsOn;
+        fixedAgents.push(agent);
       }
     }
 
@@ -196,8 +192,8 @@ function detectAndBreakCycles(agents: WorkflowAgent[]): WorkflowAgent[] {
   }
 
   // No loops, just need to filter out non-existent dependencies
-  return agents.map((agent) => ({
-    ...agent,
-    dependsOn: agent.dependsOn.filter((depId) => agentMap.has(depId)),
-  }));
+  return agents.map((agent) => {
+    agent.dependsOn = agent.dependsOn.filter((depId) => agentMap.has(depId));
+    return agent;
+  });
 }
