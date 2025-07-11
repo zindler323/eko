@@ -6,10 +6,12 @@ import {
   LanguageModelV1ImagePart,
   LanguageModelV1Prompt,
   LanguageModelV1FunctionTool,
+  LanguageModelV1TextPart,
 } from "@ai-sdk/provider";
-import { Tool, ToolResult, IMcpClient } from "../../types";
+import { Tool, ToolResult, IMcpClient, StreamCallback } from "../../types";
 import { mergeTools, sleep, toImage } from "../../common/utils";
 import {RetryLanguageModel} from "../../llm";
+import { callLLM } from "../base";
 
 export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
   constructor(llms?: string[], ext_tools?: Tool[], mcpClient?: IMcpClient) {
@@ -62,11 +64,15 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
    - Only call finish after the last step.
    - Don't hallucinate actions
    - Make sure you include everything you found out for the ultimate task in the finish text parameter. Do not just say you are finished, but include the requested information of the task.
-# TOOL USE GUIDANCE:
+* TOOL USE GUIDANCE:
     - Evaluate concisely previous actions (success or fail, consistent with the task goal) based on the screenshot before proceeding to the next step. Format: 👍 Eval:
     - Think concisely about what you should do next to reach the goal. Format: 🎯 Next goal:
     - If the element is not structured as an interactive element, try performing a visual click or input on the element. This action should only be done when the element is clearly visible in the screenshot, not just listed in the element index.
     - Always use the mouse scroll wheel to locate the element when you have the element index but the element is not visible in the current window’s screenshot.
+    - Don't keep using the same tool to do the same thing over and over if it's not working. Also, don't repeat the last tool unless something has changed.
+    - If the plan says to use a specific tool, go with that one first. If it does not work, then try something else.
+    - When dealing with filters, make sure to check if there are any elements on the page which can filter with. Try to use those first. Only look for other methods if there’s no filter or dropdown available.
+    - When the action involves purchasing, payment, placing orders, or entering/collecting sensitive personal information (like phone numbers, addresses, passwords, etc.), always use the confirm tool and wait for the user to take action. The subsequent steps should depend on the user’s clicks.
     
    The output language should follow the language corresponding to the user's task.;`
     const _tools_ = [] as Tool[];
@@ -729,6 +735,47 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     tools: LanguageModelV1FunctionTool[]
   ) {
     await memory.activeCompressContext(agentContext, rlm, messages, tools)
+  }
+
+  protected async summary(
+    agentContext: AgentContext,
+    messages: LanguageModelV1Prompt,
+    callback?: StreamCallback
+  ): Promise<string> {
+    // 使用初始化时的llm创建RetryLanguageModel
+    const rlm = new RetryLanguageModel(
+      agentContext.context.config.llms,
+      this.llms
+    );
+
+    // 构建总结消息
+    const summaryMessages: LanguageModelV1Prompt = [
+      {
+        role: "system",
+        content: "You are a task summarizer. Please provide a concise structured summary in the following format without Markdown:\n\n🎯 Task: [User's specific task requirements]\n📋 Plan: [Execution plan and steps]\n✅ Progress: [Detailed completion status for each step, e.g.: Step1 ✓ Step2 ✗ Step3 ✓]\n📝 Summary: [Main results, concise description]\n⚠️ Notes: [Exceptions or issues, omit if none]\n\nPlease keep output concise and detailed progress for each step.",
+      },
+      ...messages,
+      {
+        role: "user",
+        content: [{ type: "text" as const, text: "Please provide a concise structured summary following the format above based on the conversation context." }]
+      }
+    ];
+
+    // 直接调用callLLM，让上层处理流式输出
+    const results = await callLLM(
+      agentContext,
+      rlm,
+      summaryMessages,
+      [], // 不需要工具
+      false, // noCompress
+      undefined, // toolChoice
+      false, // retry
+      callback
+    );
+
+    // 提取文本结果
+    const textResult = results.find(result => result.type === "text");
+    return textResult ? textResult.text : "";
   }
 
   private handlePseudoHtmlText(
