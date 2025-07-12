@@ -43,7 +43,7 @@ During the task execution process, you can use the \`${human_interact}\` tool to
 
 const VARIABLE_PROMPT = `
 * VARIABLE STORAGE
-If you need to read and write the input/output variables in the node, require the use of the \`${variable_storage}\` tool.
+When a step node has input/output variable attributes, use the \`${variable_storage}\` tool to read from and write to these variables, these variables enable context sharing and coordination between multiple agents.
 `;
 
 const FOR_EACH_NODE = `

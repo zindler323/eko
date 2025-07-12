@@ -12,7 +12,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
   constructor(llms?: string[], ext_tools?: Tool[], mcpClient?: IMcpClient) {
     const description = `You are a browser operation agent, use structured commands to interact with the browser.
 * This is a browser GUI interface where you need to analyze webpages by taking screenshot and page element structures, and specify action sequences to complete designated tasks.
-* For the first visit, please call the \`navigate_to\` or \`current_page\` tool first. After that, each of your actions will return a screenshot of the page and structured element information, both of which have been specially processed.
+* For your first visit, please start by calling either the \`navigate_to\` or \`current_page\` tool. After each action you perform, I will provide you with updated information about the current state, including page screenshots and structured element data that has been specially processed for easier analysis.
 * Screenshot description:
   - Screenshot are used to understand page layouts, with labeled bounding boxes corresponding to element indexes. Each bounding box and its label share the same color, with labels typically positioned in the top-right corner of the box.
   - Screenshot help verify element positions and relationships. Labels may sometimes overlap, so extracted elements are used to verify the correct elements.
@@ -30,7 +30,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
    - Handle popups/cookies by accepting or closing them
 * BROWSER OPERATION:
    - Use scroll to find elements you are looking for, When extracting content, prioritize using extract_page_content, only scroll when you need to load more content
-* During execution, please output user-friendly step information. Do not output element and index information to users, as this would cause user confusion.
+* During execution, please output user-friendly step information. Do not output HTML-related element and index information to users, as this would cause user confusion.
 `;
     const _tools_ = [] as Tool[];
     super({
@@ -565,7 +565,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     tools: Tool[]
   ): Promise<void> {
     const pseudoHtmlDescription =
-      "This is the latest screenshot and page element information.\nindex and element:\n";
+      "This is the environmental information after the operation, including the latest browser screenshot and page elements. Please perform the next operation based on the environmental information. Do not output the following elements and index information in your response.\n\nIndex and elements:\n";
     let lastTool = this.lastToolResult(messages);
     if (
       lastTool &&
@@ -597,7 +597,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
           ...image_contents,
           {
             type: "text",
-            text: pseudoHtmlDescription + result.pseudoHtml,
+            text: pseudoHtmlDescription + "```html\n" + result.pseudoHtml + "\n```",
           },
         ],
       });
