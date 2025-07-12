@@ -21,8 +21,9 @@ Eko (pronounced like 'echo') is a production-ready JavaScript framework that ena
 |--------------------------------------|-------|------------|--------------|----------|--------|
 | **Supported Platform**               | **All platform**  | Server side  | Browser  | Web  | Web  |
 | **One sentence to multi-step workflow** | ✅    | ❌          | ✅            | ❌        | ❌      |
-| **Intervenability**                  | ✅    | ✅          | ❌            | ❌        | ❌      | 
-| **Development Efficiency**           | **High**  | Low      | Middle        | Middle    | Low    | 
+| **Intervenability**                  | ✅    | ✅          | ❌            | ❌        | ❌      |
+| **Task Parallel** | ✅    | ❌          | ❌            | ❌        | ❌      |
+| **Development Efficiency**           | **High**  | Low      | Middle        | Middle    | Low    |
 | **Task Complexity**           | **High**  | High      | Low        | Middle    | Middle    | Middle       |
 | **Open-source**                      | ✅    | ✅          | ✅            | ✅        | ❌      |
 | **Access to private web resources** | ✅ | ❌          | ❌            | ❌        | ❌      |
@@ -59,6 +60,11 @@ const llms: LLMs = {
   default: {
     provider: "anthropic",
     model: "claude-sonnet-4-20250514",
+    apiKey: "your-api-key"
+  },
+  gemini: {
+    provider: "google",
+    model: "gemini-2.5-pro",
     apiKey: "your-api-key"
   },
   openai: {
