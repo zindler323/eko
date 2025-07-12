@@ -61,15 +61,16 @@ const OptionsPage = () => {
     openai: [
       { value: "gpt-4.1", label: "gpt-4.1 (default)" },
       { value: "gpt-4.1-mini", label: "gpt-4.1-mini" },
-      { value: "gpt-4o", label: "gpt-4o" },
+      { value: "o4-mini", label: "o4-mini" },
     ],
     openrouter: [
       { value: "anthropic/claude-sonnet-4", label: "claude-sonnet-4 (default)" },
       { value: "anthropic/claude-3.7-sonnet", label: "claude-3.7-sonnet (default)" },
       { value: "google/gemini-2.5-pro", label: "gemini-2.5-pro" },
       { value: "openai/gpt-4.1", label: "gpt-4.1" },
+      { value: "openai/o4-mini", label: "o4-mini" },
       { value: "openai/gpt-4.1-mini", label: "gpt-4.1-mini" },
-      { value: "openai/gpt-4o", label: "gpt-4o" },
+      { value: "x-ai/grok-4", label: "grok-4" },
     ],
   };
 
