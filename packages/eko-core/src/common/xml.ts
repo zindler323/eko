@@ -8,6 +8,7 @@ import {
   WorkflowTextNode,
   WorkflowWatchNode,
 } from "../types/core.types";
+import { buildAgentTree } from "./tree";
 
 export function parseWorkflow(
   taskId: string,
@@ -62,12 +63,17 @@ export function parseWorkflow(
       if (!name) {
         break;
       }
+      let index = agentNode.getAttribute("id") || i;
+      let dependsOn = agentNode.getAttribute("dependsOn") || "";
       let nodes: WorkflowNode[] = [];
       let agent: WorkflowAgent = {
         name: name,
-        id: taskId + "-" + (i < 10 ? "0" + i : i),
+        id: getAgentId(taskId, index),
+        dependsOn: dependsOn.split(",").filter(idx => idx.trim() != "").map(idx => getAgentId(taskId, idx)),
         task: agentNode.getElementsByTagName("task")[0]?.textContent || "",
         nodes: nodes,
+        status: "init",
+        parallel: undefined,
         xml: agentNode.toString(),
       };
       let xmlNodes = agentNode.getElementsByTagName("nodes");
@@ -75,6 +81,24 @@ export function parseWorkflow(
         parseWorkflowNodes(nodes, xmlNodes[0].childNodes);
       }
       agents.push(agent);
+    }
+    if (done) {
+      let agentTree = buildAgentTree(workflow.agents);
+      while (true) {
+        if (agentTree.type === "normal") {
+          agentTree.agent.parallel = false;
+        } else {
+          const parallelAgents = agentTree.agents;
+          for (let i = 0; i < parallelAgents.length; i++) {
+            const agentNode = parallelAgents[i];
+            agentNode.agent.parallel = true;
+          }
+        }
+        if (!agentTree.nextAgent) {
+          break;
+        }
+        agentTree = agentTree.nextAgent;
+      }
     }
     return workflow;
   } catch (e) {
@@ -84,6 +108,10 @@ export function parseWorkflow(
       return _workflow;
     }
   }
+}
+
+function getAgentId(taskId: string, index: number | string) {
+  return taskId + "-" + (+index < 10 ? "0" + index : index);
 }
 
 function parseWorkflowNodes(
@@ -235,6 +263,7 @@ export function buildSimpleAgentWorkflow({
     agents: [
       {
         id: taskId + "-00",
+        dependsOn: [],
         name: agentName,
         task: task,
         nodes: taskNodes.map((node) => {
@@ -243,6 +272,8 @@ export function buildSimpleAgentWorkflow({
             text: node,
           };
         }),
+        status: "init",
+        parallel: false,
         xml: "",
       },
     ],
@@ -257,6 +288,7 @@ export function resetWorkflowXml(workflow: Workflow) {
   const agents: string[] = [];
   for (let i = 0; i < workflow.agents.length; i++) {
     const agent = workflow.agents[i];
+    const agentDependsAttr = ` id="${i}" dependsOn="${(agent.dependsOn || []).filter(s => parseInt(s.split("-")[s.split("-").length - 1])).join(",")}"`;
     const nodes = agent.nodes
       .map((node) => {
         if (node.type == "forEach") {
@@ -297,7 +329,7 @@ ${watchNodes.join("\n")}
         }
       })
       .join("\n");
-    const agentXml = `    <agent name="${agent.name}">
+    const agentXml = `    <agent name="${agent.name}"${agentDependsAttr}>
       <task>${agent.task}</task>
       <nodes>
 ${nodes}

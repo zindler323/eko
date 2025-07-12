@@ -42,6 +42,7 @@ export type AgentParams = {
   llms?: string[];
   mcpClient?: IMcpClient;
   planDescription?: string;
+  requestHandler?: (request: LLMRequest) => void;
 };
 
 export class Agent {
@@ -51,6 +52,7 @@ export class Agent {
   protected llms?: string[];
   protected mcpClient?: IMcpClient;
   protected planDescription?: string;
+  protected requestHandler?: (request: LLMRequest) => void;
   protected callback?: StreamCallback & HumanCallback;
   protected agentContext?: AgentContext;
 
@@ -61,6 +63,7 @@ export class Agent {
     this.llms = params.llms;
     this.mcpClient = params.mcpClient;
     this.planDescription = params.planDescription;
+    this.requestHandler = params.requestHandler;
   }
 
   public async run(context: Context, agentChain: AgentChain): Promise<string> {
@@ -129,7 +132,8 @@ export class Agent {
         false,
         undefined,
         0,
-        this.callback
+        this.callback,
+        this.requestHandler
       );
       let finalResult = await this.handleCallResult(
         agentContext,

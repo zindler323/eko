@@ -28,7 +28,6 @@ export {
   BaseChatAgent,
   BaseFileAgent,
   BaseShellAgent,
-  BaseTimerAgent,
   BaseComputerAgent,
   BaseBrowserAgent,
   BaseBrowserLabelsAgent,
@@ -69,4 +68,5 @@ export {
   buildSimpleAgentWorkflow,
 } from "./common/xml";
 
+export { buildAgentTree } from "./common/tree";
 export { extract_page_content } from "./agent/browser/utils";

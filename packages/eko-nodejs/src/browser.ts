@@ -104,7 +104,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     index: number,
     text: string,
     enter: boolean
-  ): Promise<void> {
+  ): Promise<any> {
     try {
       let elementHandle = await this.get_element(index, true);
       await elementHandle.fill("");
@@ -123,7 +123,7 @@ export default class BrowserAgent extends BaseBrowserLabelsAgent {
     index: number,
     num_clicks: number,
     button: "left" | "right" | "middle"
-  ): Promise<void> {
+  ): Promise<any> {
     try {
       let elementHandle = await this.get_element(index, true);
       await elementHandle.click({

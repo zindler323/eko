@@ -52,6 +52,7 @@ export class RetryLanguageModel {
       temperature: request.temperature,
       topP: request.topP,
       topK: request.topK,
+      stopSequences: request.stopSequences,
       abortSignal: request.abortSignal,
     });
   }
@@ -124,6 +125,7 @@ export class RetryLanguageModel {
       temperature: request.temperature,
       topP: request.topP,
       topK: request.topK,
+      stopSequences: request.stopSequences,
       abortSignal: request.abortSignal,
     });
   }
