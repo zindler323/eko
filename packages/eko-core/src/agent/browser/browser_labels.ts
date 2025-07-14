@@ -6,10 +6,12 @@ import {
   LanguageModelV1ImagePart,
   LanguageModelV1Prompt,
   LanguageModelV1FunctionTool,
+  LanguageModelV1TextPart,
 } from "@ai-sdk/provider";
-import { Tool, ToolResult, IMcpClient } from "../../types";
+import { Tool, ToolResult, IMcpClient, StreamCallback } from "../../types";
 import { mergeTools, sleep, toImage } from "../../common/utils";
 import {RetryLanguageModel} from "../../llm";
+import { callLLM } from "../base";
 
 export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
   constructor(llms?: string[], ext_tools?: Tool[], mcpClient?: IMcpClient) {
@@ -728,6 +730,47 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     tools: LanguageModelV1FunctionTool[]
   ) {
     await memory.activeCompressContext(agentContext, rlm, messages, tools)
+  }
+
+  protected async summary(
+    agentContext: AgentContext,
+    messages: LanguageModelV1Prompt,
+    callback?: StreamCallback
+  ): Promise<string> {
+    // 使用初始化时的llm创建RetryLanguageModel
+    const rlm = new RetryLanguageModel(
+      agentContext.context.config.llms,
+      this.llms
+    );
+
+    // 构建总结消息
+    const summaryMessages: LanguageModelV1Prompt = [
+      {
+        role: "system",
+        content: "You are a task summarizer. Please provide a concise structured summary in the following format without Markdown:\n\n🎯 Task: [User's specific task requirements]\n📋 Plan: [Execution plan and steps]\n✅ Progress: [Detailed completion status for each step, e.g.: Step1 ✓ Step2 ✗ Step3 ✓]\n📝 Summary: [Main results, concise description]\n⚠️ Notes: [Exceptions or issues, omit if none]\n\nPlease keep output concise and detailed progress for each step.",
+      },
+      ...messages,
+      {
+        role: "user",
+        content: [{ type: "text" as const, text: "Please provide a concise structured summary following the format above based on the conversation context." }]
+      }
+    ];
+
+    // 直接调用callLLM，让上层处理流式输出
+    const results = await callLLM(
+      agentContext,
+      rlm,
+      summaryMessages,
+      [], // 不需要工具
+      false, // noCompress
+      undefined, // toolChoice
+      false, // retry
+      callback
+    );
+
+    // 提取文本结果
+    const textResult = results.find(result => result.type === "text");
+    return textResult ? textResult.text : "";
   }
 
   private handlePseudoHtmlText(
