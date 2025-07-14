@@ -20,6 +20,7 @@ Your task is to understand the user's requirements, dynamically plan the user's 
 {agents}
 
 ## Output Rules and Format
+ChatAgent don't output the <thought></thought>
 <root>
   <name>Task Name</name>
   <thought>Your thought process on user demand planning</thought>
@@ -58,7 +59,7 @@ const PLAN_CHAT_EXAMPLE = `User: hello.
 Output result:
 <root>
   <name>Chat</name>
-  <thought>Alright, the user wrote "hello". That's pretty straightforward. I need to respond in a friendly and welcoming manner.</thought>
+  <!-- <thought>Alright, the user wrote "hello". That's pretty straightforward. I need to respond in a friendly and welcoming manner.</thought> -->
   <agents>
     <!-- Chat agents can exist without the <task> and <nodes> nodes. -->
     <agent name="Chat"></agent>

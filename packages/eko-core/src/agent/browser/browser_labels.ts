@@ -63,10 +63,9 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
    - Don't hallucinate actions
    - Make sure you include everything you found out for the ultimate task in the finish text parameter. Do not just say you are finished, but include the requested information of the task.
 # TOOL USE GUIDANCE:
-    - Evaluate concisely previous actions (success or fail, consistent with the task goal) based on the screenshot before proceeding to the next step. Format: 👍 Eval:
-    - Think concisely about what you should do next to reach the goal. Format: 🎯 Next goal:
+    - Concise evaluation of previous actions' success or failure based on the screenshot should guide your next step toward achieving the goal, without referencing any element indexes.
     - If the element is not structured as an interactive element, try performing a visual click or input on the element. This action should only be done when the element is clearly visible in the screenshot, not just listed in the element index.
-    - Always use the mouse scroll wheel to locate the element when you have the element index but the element is not visible in the current window’s screenshot.
+    - If you use a tool more than twice without achieving the desired result, explore another approach to solve the problem.
     
    The output language should follow the language corresponding to the user's task.;`
     const _tools_ = [] as Tool[];
