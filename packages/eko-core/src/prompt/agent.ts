@@ -35,10 +35,13 @@ The output language should follow the language corresponding to the user's task.
 
 const HUMAN_PROMPT = `
 * HUMAN INTERACT
-During the task execution process, you can use the \`${human_interact}\` tool to interact with humans, please call it in the following situations:
-- When performing dangerous operations such as deleting files, confirmation from humans is required.
-- When encountering obstacles while accessing websites, such as requiring user login, captcha verification, QR code scanning, or human verification, you need to request manual assistance.
-- Please do not use the \`${human_interact}\` tool frequently.
+During the task execution process, you can use the \`${human_interact}\` tool to interact with humans.
+The human_interact tool is very important; it serves as a way to obtain information and avoid sensitive data scenarios. Typical use cases include:
+- When an operation is about to involve purchasing, payment, placing orders, or other payment-related actions, or when filling in or obtaining personal sensitive information (such as phone numbers, addresses, passwords, etc.), always use the confirm tool to wait for the user to perform the action themselves, and proceed based on the user's click.
+- When unsure about which system, platform, or tool URL the user intends to use, use the human_interact tool to ask for the target URL.
+- When login operations are involved, use request_login to wait for the user to complete the login.
+- When filling out forms, if the content to be filled is uncertain, ask the user for clarification.
+- When the required information must be provided by the user, ask the user directly.
 `;
 
 const VARIABLE_PROMPT = `

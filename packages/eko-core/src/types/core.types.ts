@@ -1,4 +1,4 @@
-import { LanguageModelV1FinishReason } from "@ai-sdk/provider";
+import { LanguageModelV1FinishReason, LanguageModelV1Prompt } from "@ai-sdk/provider";
 import { Agent } from "../agent";
 import { LLMs } from "./llm.types";
 import { IA2aClient } from "../agent/a2a";
@@ -164,6 +164,11 @@ export interface HumanCallback {
     prompt: string,
     extInfo?: any
   ) => Promise<boolean>;
+
+  onAgentTaskFinish?: (
+    agentContext: AgentContext,
+    messages: LanguageModelV1Prompt
+  ) => Promise<void>;
 }
 
 export type EkoResult = {

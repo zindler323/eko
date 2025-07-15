@@ -131,6 +131,7 @@ export class RetryLanguageModel {
   }
 
   async doStream(options: LanguageModelV1CallOptions): Promise<StreamResult> {
+    console.log('【zindler】params to llm: ', options);
     const maxTokens = options.maxTokens;
     const providerMetadata = options.providerMetadata;
     const names = [...this.names, ...this.names];

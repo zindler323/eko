@@ -123,6 +123,8 @@ export class Agent {
           agentTools = mergeTools(_agentTools, mcpTools);
         }
       }
+      // 自动压缩
+      await this.maybeCompressMessages(agentContext, rlm, messages, tools);
       await this.handleMessages(agentContext, messages, tools);
       let results = await callAgentLLM(
         agentContext,
@@ -142,6 +144,10 @@ export class Agent {
         results
       );
       if (finalResult) {
+        context.config.callback?.onAgentTaskFinish?.(
+          agentContext,
+          messages,
+        );
         return finalResult;
       }
       loopNum++;
@@ -526,5 +532,14 @@ export class Agent {
 
   get AgentContext(): AgentContext | undefined {
     return this.agentContext;
+  }
+
+  protected async maybeCompressMessages(
+    agentContext: AgentContext,
+    rlm: any,
+    messages: any[],
+    tools: any[]
+  ) {
+    // 基类不做任何处理，子类可重写
   }
 }

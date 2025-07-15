@@ -387,8 +387,11 @@ export function run_build_dom_tree() {
       const ariaRole = element.getAttribute('aria-role');
       const tabIndex = element.getAttribute('tabindex');
 
+      const contentEditable = element.getAttribute('contenteditable');
+
       // Basic role/attribute checks
       const hasInteractiveRole =
+        contentEditable === 'true' ||
         interactiveElements.has(tagName) ||
         interactiveRoles.has(role) ||
         interactiveRoles.has(ariaRole) ||
