@@ -6,12 +6,11 @@ import {
   LanguageModelV1ImagePart,
   LanguageModelV1Prompt,
   LanguageModelV1FunctionTool,
-  LanguageModelV1TextPart,
 } from "@ai-sdk/provider";
 import { Tool, ToolResult, IMcpClient, StreamCallback } from "../../types";
 import { mergeTools, sleep, toImage } from "../../common/utils";
 import {RetryLanguageModel} from "../../llm";
-import { callLLM } from "../base";
+import { callAgentLLM } from "../llm";
 
 export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
   constructor(llms?: string[], ext_tools?: Tool[], mcpClient?: IMcpClient) {
@@ -772,14 +771,14 @@ The output language should follow the language corresponding to the user's task.
     ];
 
     // 直接调用callLLM，让上层处理流式输出
-    const results = await callLLM(
+    const results = await callAgentLLM(
       agentContext,
       rlm,
       summaryMessages,
       [], // 不需要工具
       false, // noCompress
       undefined, // toolChoice
-      false, // retry
+      0,
       callback
     );
 

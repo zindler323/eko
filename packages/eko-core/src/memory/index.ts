@@ -206,7 +206,7 @@ export async function activeCompressContext(
   };
 
   // 执行压缩，使用静默回调
-  let result = await callLLM(
+  let result = await callAgentLLM(
     agentContext,
     rlm,
     compressPrompt,
@@ -216,7 +216,7 @@ export async function activeCompressContext(
       type: "tool",
       toolName: snapshotTool.name,
     },
-    false,
+    0,
     silentCallback
   );
 
