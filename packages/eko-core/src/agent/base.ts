@@ -144,10 +144,6 @@ export class Agent {
         results
       );
       if (finalResult) {
-        context.config.callback?.onAgentTaskFinish?.(
-          agentContext,
-          messages,
-        );
         return finalResult;
       }
       loopNum++;
