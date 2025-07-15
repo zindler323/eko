@@ -1,13 +1,14 @@
-import { parseWorkflow, buildAgentRootXml } from "../../src/common/xml";
+import {
+  parseWorkflow,
+  buildAgentRootXml,
+  buildSimpleAgentWorkflow,
+} from "../../src/common/xml";
 
 test.only("workflowXml", () => {
   const xml = `<root>
   <name>AI Daily Morning Report</name>
   <thought>OK, the user needs to collect the latest AI news every morning, summarize it, and send it to a WeChat group named "AI Daily Morning Report" This requires automation, including the steps of data collection, processing, and distribution.</thought>
   <agents>
-    <agent name="Timer">
-      <task>Timing: every morning</task>
-    </agent>
     <agent name="Browser">
       <task>Search for the latest updates on AI</task>
       <nodes>
@@ -52,4 +53,14 @@ test.only("agentXml", () => {
     node.setAttribute("status", "todo");
   });
   console.log(agentXml);
+});
+
+test.only("buildWorkflow", () => {
+  const workflow = buildSimpleAgentWorkflow({
+    taskId: "test",
+    name: "Test workflow",
+    agentName: "Browser",
+    task: "Open google",
+  });
+  console.log("workflow: \n", JSON.stringify(workflow, null, 2));
 });

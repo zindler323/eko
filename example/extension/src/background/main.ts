@@ -46,7 +46,7 @@ export async function main(prompt: string): Promise<Eko> {
       console.log("message: ", JSON.stringify(message, null, 2));
     },
     onHumanConfirm: async (context, prompt) => {
-      return confirm(prompt);
+      return doConfirm(prompt);
     },
   };
 
@@ -65,6 +65,21 @@ export async function main(prompt: string): Promise<Eko> {
       chrome.runtime.sendMessage({ type: "stop" });
     });
   return eko;
+}
+
+async function doConfirm(prompt: string) {
+  let tabs = (await chrome.tabs.query({
+    active: true,
+    windowType: "normal",
+  })) as any[];
+  let frameResults = await chrome.scripting.executeScript({
+    target: { tabId: tabs[0].id },
+    func: (prompt) => {
+      return window.confirm(prompt);
+    },
+    args: [prompt],
+  });
+  return frameResults[0].result;
 }
 
 function printLog(

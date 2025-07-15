@@ -26,6 +26,10 @@ export type StreamCallbackMessage = {
       workflow: Workflow;
     }
   | {
+      type: "agent_start";
+      agentNode: WorkflowAgent;
+    }
+  | {
       type: "text" | "thinking";
       streamId: string;
       streamDone: boolean;
@@ -64,6 +68,12 @@ export type StreamCallbackMessage = {
       toolResult: ToolResult;
     }
   | {
+      type: "agent_result";
+      agentNode: WorkflowAgent;
+      error?: any;
+      result?: string;
+    }
+  | {
       type: "error";
       error: unknown;
     }
@@ -78,24 +88,27 @@ export type StreamCallbackMessage = {
 );
 
 export interface StreamCallback {
-  onMessage: (message: StreamCallbackMessage, agentContext?: AgentContext) => Promise<void>;
+  onMessage: (
+    message: StreamCallbackMessage,
+    agentContext?: AgentContext
+  ) => Promise<void>;
 }
 
 export type WorkflowTextNode = {
-  type: "normal",
+  type: "normal";
   text: string;
   input?: string | null;
   output?: string | null;
 };
 
 export type WorkflowForEachNode = {
-  type: "forEach",
+  type: "forEach";
   items: string; // list or variable name
   nodes: WorkflowNode[];
 };
 
 export type WorkflowWatchNode = {
-  type: "watch",
+  type: "watch";
   event: "dom" | "gui" | "file";
   loop: boolean;
   description: string;
@@ -111,7 +124,10 @@ export type WorkflowAgent = {
   id: string;
   name: string;
   task: string;
+  dependsOn: string[];
   nodes: WorkflowNode[];
+  parallel?: boolean;
+  status: "init" | "running" | "done" | "error";
   xml: string; // <agent name="xxx">...</agent>
 };
 
@@ -127,22 +143,26 @@ export type Workflow = {
 export interface HumanCallback {
   onHumanConfirm?: (
     agentContext: AgentContext,
-    prompt: string
+    prompt: string,
+    extInfo?: any
   ) => Promise<boolean>;
   onHumanInput?: (
     agentContext: AgentContext,
-    prompt: string
+    prompt: string,
+    extInfo?: any
   ) => Promise<string>;
   onHumanSelect?: (
     agentContext: AgentContext,
     prompt: string,
     options: string[],
-    multiple?: boolean
+    multiple?: boolean,
+    extInfo?: any
   ) => Promise<string[]>;
   onHumanHelp?: (
     agentContext: AgentContext,
     helpType: "request_login" | "request_assistance",
-    prompt: string
+    prompt: string,
+    extInfo?: any
   ) => Promise<boolean>;
 
   onAgentTaskFinish?: (
@@ -157,3 +177,19 @@ export type EkoResult = {
   stopReason: "abort" | "error" | "done";
   result?: any;
 };
+
+export type NormalAgentNode = {
+  type: "normal";
+  agent: WorkflowAgent;
+  nextAgent?: AgentNode;
+  result?: string;
+};
+
+export type ParallelAgentNode = {
+  type: "parallel";
+  agents: NormalAgentNode[];
+  nextAgent?: AgentNode;
+  result?: string;
+};
+
+export type AgentNode = NormalAgentNode | ParallelAgentNode;

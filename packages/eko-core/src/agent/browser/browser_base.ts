@@ -6,6 +6,7 @@ import { Agent } from "../base";
 import { sleep } from "../../common/utils";
 import { AgentContext } from "../../core/context";
 import { ToolExecuter, ToolResult, IMcpClient } from "../../types";
+import * as utils from "./utils";
 
 export const AGENT_NAME = "Browser";
 
@@ -53,19 +54,17 @@ export default abstract class BaseBrowserAgent extends Agent {
     } catch (e) {}
   }
 
-  protected async extract_page_content(agentContext: AgentContext, variable_name?: string): Promise<string> {
+  protected async extract_page_content(
+    agentContext: AgentContext,
+    variable_name?: string
+  ): Promise<{
+    title: string;
+    page_url: string;
+    page_content: string;
+  }> {
     let content = await this.execute_script(
       agentContext,
-      () => {
-        let str = (window as any).document.body.innerText
-          .replaceAll(/\n+/g, "\n")
-          .replaceAll(/ +/g, " ")
-          .trim();
-        if (str.length > 20000) {
-          str = str.substring(0, 20000) + "...";
-        }
-        return str;
-      },
+      utils.extract_page_content,
       []
     );
     let pageInfo = await this.get_current_page(agentContext);
@@ -73,7 +72,11 @@ export default abstract class BaseBrowserAgent extends Agent {
     if (variable_name) {
       agentContext.context.variables.set(variable_name, result);
     }
-    return result;
+    return {
+      title: pageInfo.title || "",
+      page_url: pageInfo.url,
+      page_content: content,
+    };
   }
 
   protected async controlMcpTools(

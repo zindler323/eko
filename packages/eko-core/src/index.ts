@@ -1,6 +1,7 @@
 import config from "./config";
 import Log from "./common/log";
 import { Eko } from "./core/index";
+import { Planner } from "./core/plan";
 import { RetryLanguageModel } from "./llm";
 import { SimpleSseMcpClient } from "./mcp";
 import Chain, { AgentChain, ToolChain } from "./core/chain";
@@ -13,6 +14,7 @@ export {
   Log,
   config,
   Context,
+  Planner,
   AgentContext,
   Chain,
   AgentChain,
@@ -27,7 +29,6 @@ export {
   BaseChatAgent,
   BaseFileAgent,
   BaseShellAgent,
-  BaseTimerAgent,
   BaseComputerAgent,
   BaseBrowserAgent,
   BaseBrowserLabelsAgent,
@@ -61,3 +62,12 @@ export {
   uuidv4,
   call_timeout,
 } from "./common/utils";
+
+export {
+  parseWorkflow,
+  resetWorkflowXml,
+  buildSimpleAgentWorkflow,
+} from "./common/xml";
+
+export { buildAgentTree } from "./common/tree";
+export { extract_page_content } from "./agent/browser/utils";

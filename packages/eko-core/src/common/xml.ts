@@ -8,16 +8,28 @@ import {
   WorkflowTextNode,
   WorkflowWatchNode,
 } from "../types/core.types";
+import { buildAgentTree } from "./tree";
 
 export function parseWorkflow(
   taskId: string,
   xml: string,
-  done: boolean
+  done: boolean,
+  thinking?: string
 ): Workflow | null {
+  let _workflow: Workflow | null = null;
   try {
+    if (thinking) {
+      _workflow = {
+        taskId: taskId,
+        name: "",
+        thought: thinking,
+        agents: [],
+        xml: xml,
+      };
+    }
     let sIdx = xml.indexOf("<root>");
     if (sIdx == -1) {
-      return null;
+      return _workflow;
     }
     xml = xml.substring(sIdx);
     let eIdx = xml.indexOf("</root>");
@@ -31,13 +43,14 @@ export function parseWorkflow(
     const doc = parser.parseFromString(xml, "text/xml");
     let root = doc.documentElement;
     if (root.tagName !== "root") {
-      return null;
+      return _workflow;
     }
-    let agents: WorkflowAgent[] = [];
+    const agents: WorkflowAgent[] = [];
+    const thought = root.getElementsByTagName("thought")[0]?.textContent || "";
     const workflow: Workflow = {
       taskId: taskId,
       name: root.getElementsByTagName("name")[0]?.textContent || "",
-      thought: root.getElementsByTagName("thought")[0]?.textContent || "",
+      thought: thinking ? thinking + "\n" + thought : thought,
       agents: agents,
       xml: xml,
     };
@@ -50,12 +63,17 @@ export function parseWorkflow(
       if (!name) {
         break;
       }
+      let index = agentNode.getAttribute("id") || i;
+      let dependsOn = agentNode.getAttribute("dependsOn") || "";
       let nodes: WorkflowNode[] = [];
       let agent: WorkflowAgent = {
         name: name,
-        id: taskId + "-" + (i < 10 ? "0" + i : i),
+        id: getAgentId(taskId, index),
+        dependsOn: dependsOn.split(",").filter(idx => idx.trim() != "").map(idx => getAgentId(taskId, idx)),
         task: agentNode.getElementsByTagName("task")[0]?.textContent || "",
         nodes: nodes,
+        status: "init",
+        parallel: undefined,
         xml: agentNode.toString(),
       };
       let xmlNodes = agentNode.getElementsByTagName("nodes");
@@ -64,14 +82,36 @@ export function parseWorkflow(
       }
       agents.push(agent);
     }
+    if (done) {
+      let agentTree = buildAgentTree(workflow.agents);
+      while (true) {
+        if (agentTree.type === "normal") {
+          agentTree.agent.parallel = false;
+        } else {
+          const parallelAgents = agentTree.agents;
+          for (let i = 0; i < parallelAgents.length; i++) {
+            const agentNode = parallelAgents[i];
+            agentNode.agent.parallel = true;
+          }
+        }
+        if (!agentTree.nextAgent) {
+          break;
+        }
+        agentTree = agentTree.nextAgent;
+      }
+    }
     return workflow;
   } catch (e) {
     if (done) {
       throw e;
     } else {
-      return null;
+      return _workflow;
     }
   }
+}
+
+function getAgentId(taskId: string, index: number | string) {
+  return taskId + "-" + (+index < 10 ? "0" + index : index);
 }
 
 function parseWorkflowNodes(
@@ -156,7 +196,8 @@ export function buildAgentRootXml(
   agentInnerHTML = agentInnerHTML
     .replace("<task>", "<currentTask>")
     .replace("</task>", "</currentTask>");
-  return `<root>${prefix}<mainTask>${mainTaskPrompt}</mainTask>${agentInnerHTML}</root>`;
+  const xmlPrompt = `<root>${prefix}<mainTask>${mainTaskPrompt}</mainTask>${agentInnerHTML}</root>`;
+  return xmlPrompt.replace(/      /g, "  ").replace("    </root>", "</root>");
 }
 
 export function extractAgentXmlNode(
@@ -197,4 +238,112 @@ export function getInnerXML(node: Element): string {
 export function getOuterXML(node: Element): string {
   const serializer = new XMLSerializer();
   return serializer.serializeToString(node);
+}
+
+export function buildSimpleAgentWorkflow({
+  taskId,
+  name,
+  agentName,
+  task,
+  taskNodes,
+}: {
+  taskId: string;
+  name: string;
+  agentName: string;
+  task: string;
+  taskNodes?: string[];
+}): Workflow {
+  if (!taskNodes || taskNodes.length == 0) {
+    taskNodes = [task];
+  }
+  const workflow: Workflow = {
+    taskId: taskId,
+    name: name,
+    thought: "",
+    agents: [
+      {
+        id: taskId + "-00",
+        dependsOn: [],
+        name: agentName,
+        task: task,
+        nodes: taskNodes.map((node) => {
+          return {
+            type: "normal",
+            text: node,
+          };
+        }),
+        status: "init",
+        parallel: false,
+        xml: "",
+      },
+    ],
+    xml: "",
+  };
+  workflow.taskPrompt = task;
+  resetWorkflowXml(workflow);
+  return workflow;
+}
+
+export function resetWorkflowXml(workflow: Workflow) {
+  const agents: string[] = [];
+  for (let i = 0; i < workflow.agents.length; i++) {
+    const agent = workflow.agents[i];
+    const agentDependsAttr = ` id="${i}" dependsOn="${(agent.dependsOn || []).filter(s => parseInt(s.split("-")[s.split("-").length - 1])).join(",")}"`;
+    const nodes = agent.nodes
+      .map((node) => {
+        if (node.type == "forEach") {
+          const forEachNodes: string[] = [];
+          for (let j = 0; j < node.nodes.length; j++) {
+            const _node = node.nodes[j] as WorkflowTextNode;
+            const input = _node.input ? ` input="${_node.input}"` : "";
+            const output = _node.output ? ` output="${_node.output}"` : "";
+            forEachNodes.push(
+              `          <node${input}${output}>${_node.text}</node>`
+            );
+          }
+          return `        <forEach items="${node.items || ""}">
+${forEachNodes.join("\n")}
+        </forEach>`;
+        } else if (node.type == "watch") {
+          const watchNodes: string[] = [];
+          for (let j = 0; j < node.triggerNodes.length; j++) {
+            const _node = node.triggerNodes[j] as WorkflowTextNode;
+            const input = _node.input ? ` input="${_node.input}"` : "";
+            const output = _node.output ? ` output="${_node.output}"` : "";
+            watchNodes.push(
+              `            <node${input}${output}>${_node.text}</node>`
+            );
+          }
+          return `        <watch event="${node.event || "dom"}" loop="${
+            node.loop ? "true" : "false"
+          }">
+          <description>${node.description}</description>
+          <trigger>
+${watchNodes.join("\n")}
+          </trigger>
+        </watch>`;
+        } else {
+          const input = node.input ? ` input="${node.input}"` : "";
+          const output = node.output ? ` output="${node.output}"` : "";
+          return `        <node${input}${output}>${node.text}</node>`;
+        }
+      })
+      .join("\n");
+    const agentXml = `    <agent name="${agent.name}"${agentDependsAttr}>
+      <task>${agent.task}</task>
+      <nodes>
+${nodes}
+      </nodes>
+    </agent>`;
+    agent.xml = agentXml;
+    agents.push(agentXml);
+  }
+  const xml = `<root>
+  <name>${workflow.name}</name>
+  <thought>${workflow.thought}</thought>
+  <agents>
+${agents.join("\n")}
+  </agents>
+</root>`;
+  workflow.xml = xml;
 }
