@@ -196,6 +196,8 @@ export class BrowserUse extends ToolReturnsScreenshot<BrowserUseParam> {
             console.log("browser.screenshot...");
             let screenshot = await browser.screenshot(context.ekoConfig.chromeProxy, windowId, true);
             result = { image: screenshot.image, text: element_result.element_str };
+          } catch (e) {
+            throw new Error("Oops! Something went wrong, and the page crashed. Please reload.");
           } finally {
             console.log("executeScript #2...");
             await executeScript(context.ekoConfig.chromeProxy, tabId, () => {

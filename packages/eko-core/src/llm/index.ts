@@ -87,7 +87,7 @@ export class RetryLanguageModel {
         Log.error(`LLM error, name: ${name} => `, e);
       }
     }
-    return Promise.reject(new Error("No LLM available"));
+    return Promise.reject(new Error("Request Timeout. Please try again."));
   }
 
   async callStream(request: LLMRequest): Promise<StreamResult> {
@@ -174,7 +174,7 @@ export class RetryLanguageModel {
         Log.error(`LLM error, name: ${name} => `, e);
       }
     }
-    return Promise.reject(new Error("No LLM available"));
+    return Promise.reject(new Error("Request Timeout. Please try again."));
   }
 
   private async getLLM(name: string): Promise<LanguageModelV1 | null> {

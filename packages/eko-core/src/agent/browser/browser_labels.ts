@@ -1,6 +1,6 @@
 import { AgentContext } from "../../core/context";
 import * as memory from "../../memory";
-import { run_build_dom_tree } from "./build_dom_tree";
+import { run_build_dom_tree } from "./optimized_dom_tree";
 import { BaseBrowserAgent, AGENT_NAME } from "./browser_base";
 import {
   LanguageModelV1ImagePart,
@@ -65,15 +65,16 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
    - Don't hallucinate actions
    - Make sure you include everything you found out for the ultimate task in the finish text parameter. Do not just say you are finished, but include the requested information of the task.
 * TOOL USE GUIDANCE:
-    - Evaluate concisely previous actions (success or fail, consistent with the task goal) based on the screenshot before proceeding to the next step. Format: 👍 Eval:
-    - Think concisely about what you should do next to reach the goal. Format: 🎯 Next goal:
-    - If the element is not structured as an interactive element, try performing a visual click or input on the element. This action should only be done when the element is clearly visible in the screenshot, not just listed in the element index.
-    - Always use the mouse scroll wheel to locate the element when you have the element index but the element is not visible in the current window’s screenshot.
-    - Don't keep using the same tool to do the same thing over and over if it's not working. Also, don't repeat the last tool unless something has changed.
-    - If the plan says to use a specific tool, go with that one first. If it does not work, then try something else.
-    - When dealing with filters, make sure to check if there are any elements on the page which can filter with. Try to use those first. Only look for other methods if there’s no filter or dropdown available.
-    - When the action involves purchasing, payment, placing orders, or entering/collecting sensitive personal information (like phone numbers, addresses, passwords, etc.), always use the confirm tool and wait for the user to take action. The subsequent steps should depend on the user’s clicks.
-    
+   - Evaluate concisely previous actions (success or fail, consistent with the task goal) based on the screenshot before proceeding to the next step. Format: 👍 Eval:
+   - Think concisely about what you should do next to reach the goal. Format: 🎯 Next goal:
+   - If the element is not structured as an interactive element, try performing a visual click or input on the element. This action should only be done when the element is clearly visible in the screenshot, not just listed in the element index.
+   - Always use the mouse scroll wheel to locate the element when you have the element index but the element is not visible in the current window’s screenshot.
+   - Don't keep using the same tool to do the same thing over and over if it's not working. Also, don't repeat the last tool unless something has changed.
+   - If the plan says to use a specific tool, use that one first. If it does not work, then try something else.
+   - When a click is required, prioritize using the click_by_point method. If there is no effect, use the click_element method. When switching between the element and point methods, ensure that there are no repeated invalid operations.
+   - When dealing with filters, make sure to check if there are any elements on the page which can filter with. Try to use those first. Only look for other methods if there’s no filter or dropdown available.
+   - When the action involves purchasing, payment, placing orders, or entering/collecting sensitive personal information (like phone numbers, addresses, passwords, etc.), always use the confirm tool and wait for the user to take action. The subsequent steps should depend on the user’s clicks.
+  
    The output language should follow the language corresponding to the user's task.;`
     const _tools_ = [] as Tool[];
     super({
@@ -260,6 +261,8 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
         imageType: screenshot.imageType,
         pseudoHtml: pseudoHtml,
       };
+    } catch (e) {
+      throw new Error("Oops! Something went wrong, and the page crashed. Please reload.");
     } finally {
       try {
         await this.execute_script(
@@ -687,7 +690,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       //   "6. 不允许一次输出多个操作，即使接下来有一系列操作，只允许输出第一个。\n" +
       //   "识别说明：请仔细分辨下拉框（有灰色下拉标志）和输入框，当涉及到“选择”操作时，必须通过点击下拉框/单选框后选择最符合的选项，禁止直接向下拉框中输入文本，禁止向截图中非输入框的元素输入文本。" +
       //   "这是最新的截图和页面元素信息.\n元素和对应的index:\n"
-    const pseudoHtmlDescription = "The latest screenshot and element indexes are shown separately below. Please note that the element indexes are obtained by capturing the DOM elements of the entire page, while the screenshot only displays the current window. You should consider both pieces of information when deciding the next step.\n"
+    const pseudoHtmlDescription = "The latest screenshot and element indexes are shown separately below. Please note that the element indexes are obtained by capturing the DOM elements of the entire page, while the screenshot only displays the current window. You should consider both pieces of information when deciding the next step. The screenshot has a higher priority in the reference information. When deciding the next step, you need to pay attention to the position of the target in the screenshot. The element-related methods can only be used if there is an element index at the corresponding position.\n"
     let lastTool = this.lastToolResult(messages);
     if (
       lastTool &&

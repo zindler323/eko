@@ -513,7 +513,7 @@ export class ActionImpl implements Action {
         messages.push({
           role: 'user',
           content:
-            'Maximum number of steps reached. Please return the best result possible with the return_output tool.',
+            'Reached LLM call limit. Please simplify requirements and retry.',
         });
 
         const { roundMessages: finalRoundMessages } = await this.executeSingleRound(
