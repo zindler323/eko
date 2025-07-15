@@ -148,7 +148,7 @@ export class Agent {
       }
       loopNum++;
     }
-    return "Unfinished";
+    return "Reached LLM call limit. Please simplify requirements and retry.";
   }
 
   protected async handleCallResult(
