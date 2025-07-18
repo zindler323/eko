@@ -65,18 +65,12 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
    - Only call finish after the last step.
    - Don't hallucinate actions
    - Make sure you include everything you found out for the ultimate task in the finish text parameter. Do not just say you are finished, but include the requested information of the task.
-* TOOL USE GUIDANCE:
-   - Evaluate concisely previous actions (success or fail, consistent with the task goal) based on the screenshot before proceeding to the next step. Format: 👍 Eval:
-   - Think concisely about what you should do next to reach the goal. Format: 🎯 Next goal:
-   - If the element is not structured as an interactive element, try performing a visual click or input on the element. This action should only be done when the element is clearly visible in the screenshot, not just listed in the element index.
-   - Always use the mouse scroll wheel to locate the element when you have the element index but the element is not visible in the current window’s screenshot.
-   - Don't keep using the same tool to do the same thing over and over if it's not working. Also, don't repeat the last tool unless something has changed.
-   - If the plan says to use a specific tool, use that one first. If it does not work, then try something else.
-   - When a click is required, prioritize using the click_by_point method. If there is no effect, use the click_element method. When switching between the element and point methods, ensure that there are no repeated invalid operations.
-   - When dealing with filters, make sure to check if there are any elements on the page which can filter with. Try to use those first. Only look for other methods if there’s no filter or dropdown available.
-   - When the action involves purchasing, payment, placing orders, or entering/collecting sensitive personal information (like phone numbers, addresses, passwords, etc.), always use the confirm tool and wait for the user to take action. The subsequent steps should depend on the user’s clicks.
-* During execution, please output user-friendly step information. Do not output HTML-related element and index information to users, as this would cause user confusion.
-  The output language should follow the language corresponding to the user's task.;`
+# TOOL USE GUIDANCE:
+    - Concise evaluation of previous actions' success or failure based on the screenshot should guide your next step toward achieving the goal, without referencing any element indexes.
+    - If the element is not structured as an interactive element, try performing a visual click or input on the element. This action should only be done when the element is clearly visible in the screenshot, not just listed in the element index.
+    - If you use a tool more than twice without achieving the desired result, explore another approach to solve the problem.
+    
+   The output language should follow the language corresponding to the user's task.;`
     const _tools_ = [] as Tool[];
     super({
       name: AGENT_NAME,
