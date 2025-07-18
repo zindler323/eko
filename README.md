@@ -13,7 +13,7 @@
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://example.com/build-status) [![Version](https://img.shields.io/github/package-json/v/FellouAI/eko?color=yellow)](https://eko.fellou.ai/docs/release/versions/)
 
-Eko (pronounced like ‘echo’) is a production-ready JavaScript framework that enables developers to create reliable agents, **from simple commands to complex workflows**. It provides a unified interface for running agents in both **computer and browser environments**.
+Eko (pronounced like 'echo') is a production-ready JavaScript framework that enables developers to create reliable agents, **from simple commands to complex workflows**. It provides a unified interface for running agents in both **computer and browser environments**.
 
 ## Framework Comparison
 
@@ -21,8 +21,9 @@ Eko (pronounced like ‘echo’) is a production-ready JavaScript framework that
 |--------------------------------------|-------|------------|--------------|----------|--------|
 | **Supported Platform**               | **All platform**  | Server side  | Browser  | Web  | Web  |
 | **One sentence to multi-step workflow** | ✅    | ❌          | ✅            | ❌        | ❌      |
-| **Intervenability**                  | ✅    | ✅          | ❌            | ❌        | ❌      | 
-| **Development Efficiency**           | **High**  | Low      | Middle        | Middle    | Low    | 
+| **Intervenability**                  | ✅    | ✅          | ❌            | ❌        | ❌      |
+| **Task Parallel** | ✅    | ❌          | ❌            | ❌        | ❌      |
+| **Development Efficiency**           | **High**  | Low      | Middle        | Middle    | Low    |
 | **Task Complexity**           | **High**  | High      | Low        | Middle    | Middle    | Middle       |
 | **Open-source**                      | ✅    | ✅          | ✅            | ✅        | ❌      |
 | **Access to private web resources** | ✅ | ❌          | ❌            | ❌        | ❌      |
@@ -59,6 +60,11 @@ const llms: LLMs = {
   default: {
     provider: "anthropic",
     model: "claude-sonnet-4-20250514",
+    apiKey: "your-api-key"
+  },
+  gemini: {
+    provider: "google",
+    model: "gemini-2.5-pro",
     apiKey: "your-api-key"
   },
   openai: {

@@ -9,6 +9,7 @@ import {
   LanguageModelV1FunctionTool,
   LanguageModelV1ToolChoice,
   LanguageModelV1Prompt,
+  LanguageModelV1CallOptions,
 } from "@ai-sdk/provider";
 
 export type LLMprovider =
@@ -31,6 +32,9 @@ export type LLMConfig = {
     maxTokens?: number;
     [key: string]: any;
   };
+  options?: Record<string, any>;
+  fetch?: typeof globalThis.fetch;
+  handler?: (options: LanguageModelV1CallOptions) => Promise<LanguageModelV1CallOptions>;
 };
 
 export type LLMs = {
@@ -39,6 +43,8 @@ export type LLMs = {
 };
 
 export type GenerateResult = {
+  llm: string;
+  llmConfig: LLMConfig;
   text?: string;
   reasoning?:
     | string
@@ -85,6 +91,8 @@ export type GenerateResult = {
 };
 
 export type StreamResult = {
+  llm: string;
+  llmConfig: LLMConfig;
   stream: ReadableStream<LanguageModelV1StreamPart>;
   rawCall: {
     rawPrompt: unknown;
@@ -107,5 +115,6 @@ export type LLMRequest = {
   temperature?: number;
   topP?: number;
   topK?: number;
+  stopSequences?: string[];
   abortSignal?: AbortSignal;
 };

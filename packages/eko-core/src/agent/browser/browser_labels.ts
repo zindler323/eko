@@ -6,18 +6,17 @@ import {
   LanguageModelV1ImagePart,
   LanguageModelV1Prompt,
   LanguageModelV1FunctionTool,
-  LanguageModelV1TextPart,
 } from "@ai-sdk/provider";
 import { Tool, ToolResult, IMcpClient, StreamCallback } from "../../types";
 import { mergeTools, sleep, toImage } from "../../common/utils";
 import {RetryLanguageModel} from "../../llm";
-import { callLLM } from "../base";
+import { callAgentLLM } from "../llm";
 
 export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
   constructor(llms?: string[], ext_tools?: Tool[], mcpClient?: IMcpClient) {
     const openAIDescription = `You are a browser operation agent, use structured commands to interact with the browser.
 * This is a browser GUI interface where you need to analyze webpages by taking screenshot and page element structures, and specify action sequences to complete designated tasks.
-* For the first visit, please call the \`navigate_to\` or \`current_page\` tool first. After that, each of your actions will return a screenshot of the page and structured element information, both of which have been specially processed.
+* For your first visit, please start by calling either the \`navigate_to\` or \`current_page\` tool. After each action you perform, I will provide you with updated information about the current state, including page screenshots and structured element data that has been specially processed for easier analysis.
 * Screenshot description:
   - Screenshot are used to understand page layouts, with labeled bounding boxes corresponding to element indexes. Each bounding box and its label share the same color, with labels typically positioned in the top-right corner of the box.
   - Screenshot help verify element positions and relationships. Labels may sometimes overlap, so extracted elements are used to verify the correct elements.
@@ -34,7 +33,9 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
    - If stuck, try alternative approaches, don't refuse tasks
    - Handle popups/cookies by accepting or closing them
 * BROWSER OPERATION:
-   - Use scroll to find elements you are looking for, When extracting content, prioritize using extract_page_content, only scroll when you need to load more content`;
+   - Use scroll to find elements you are looking for, When extracting content, prioritize using extract_page_content, only scroll when you need to load more content
+* During execution, please output user-friendly step information. Do not output HTML-related element and index information to users, as this would cause user confusion.
+`;
     const claudeDescription = `You are a browser operation agent, use structured commands to interact with the browser.
 * This is a browser GUI interface where you need to analyze webpages by taking screenshot and page element structures, and specify action sequences to complete designated tasks.
 * For the first visit, please call the \`navigate_to\` or \`current_page\` tool first. After that, each of your actions will return a screenshot of the page and structured element information, both of which have been specially processed.
@@ -54,7 +55,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
    - If stuck, try alternative approaches, don't refuse tasks
    - Handle popups/cookies by accepting or closing them
 * BROWSER OPERATION:
-   - Use scroll to locate the elements you are looking for. When extracting content, prioritize using extract_page_content; scroll as needed to load more content.
+   - Use scroll to find elements you are looking for, When extracting content, prioritize using extract_page_content, only scroll when you need to load more content.
    - Use the select_option tool when you need to fill dropdown selections in forms.
    - Do not attempt to bypass login or language selection pop-ups to operate the page.
 * TASK COMPLETION:
@@ -74,8 +75,8 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
    - When a click is required, prioritize using the click_by_point method. If there is no effect, use the click_element method. When switching between the element and point methods, ensure that there are no repeated invalid operations.
    - When dealing with filters, make sure to check if there are any elements on the page which can filter with. Try to use those first. Only look for other methods if there’s no filter or dropdown available.
    - When the action involves purchasing, payment, placing orders, or entering/collecting sensitive personal information (like phone numbers, addresses, passwords, etc.), always use the confirm tool and wait for the user to take action. The subsequent steps should depend on the user’s clicks.
-  
-   The output language should follow the language corresponding to the user's task.;`
+* During execution, please output user-friendly step information. Do not output HTML-related element and index information to users, as this would cause user confusion.
+  The output language should follow the language corresponding to the user's task.;`
     const _tools_ = [] as Tool[];
     super({
       name: AGENT_NAME,
@@ -98,7 +99,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     index: number,
     text: string,
     enter: boolean
-  ): Promise<void> {
+  ): Promise<any> {
     await this.execute_script(agentContext, typing, [{ index, text, enter }]);
     if (enter) {
       await sleep(200);
@@ -110,7 +111,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     index: number,
     num_clicks: number,
     button: "left" | "right" | "middle"
-  ): Promise<void> {
+  ): Promise<any> {
     await this.execute_script(agentContext, do_click, [
       { index, num_clicks, button },
     ]);
@@ -154,11 +155,19 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       }
     }
     if (extract_page_content) {
-      let page_content = await this.extract_page_content(agentContext);
-      return (
-        "The current page content has been extracted, latest page content:\n" +
-        page_content
-      );
+      let page_result = await this.extract_page_content(agentContext);
+      return {
+        result:
+          "The current page content has been extracted, latest page content:\n" +
+          "title: " +
+          page_result.title +
+          "\n" +
+          "page_url: " +
+          page_result.page_url +
+          "\n" +
+          "page_content: " +
+          page_result.page_content,
+      };
     }
   }
 
@@ -531,7 +540,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       {
         name: "extract_page_content",
         description:
-          "Extract the text content of the current webpage, please use this tool to obtain webpage data.",
+          "Extract the text content and image links of the current webpage, please use this tool to obtain webpage data.",
         parameters: {
           type: "object",
           properties: {},
@@ -679,7 +688,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     messages: LanguageModelV1Prompt,
     tools: Tool[]
   ): Promise<void> {
-    // const pseudoHtmlDescription =
+      // const pseudoHtmlDescription =
       // "请你先评估从当前截图中看到的执行结果是否符合预期，用拟人化的语气将看到的结果分点简洁列出，例如当执行有效时使用“太好了! 我看到...”, 或者“完美！我观察到...”, 当执行有误不符合预期，或者没有变化时使用“看起来似乎不太对，我发现...”，注意在描述元素时务必要补充元素所在的位置区域信息描述。" +
       //   "再用一句话说明接下来要执行的一个操作是什么，例如“接下来我会执行...”。注意：" +
       //   "1. 一步一步思考，从多个角度思考当前的问题。生成操作时不要被plan中的信息限制，任何可以导向最终任务要求的都可以被考虑在内。" +
@@ -690,7 +699,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       //   "6. 不允许一次输出多个操作，即使接下来有一系列操作，只允许输出第一个。\n" +
       //   "识别说明：请仔细分辨下拉框（有灰色下拉标志）和输入框，当涉及到“选择”操作时，必须通过点击下拉框/单选框后选择最符合的选项，禁止直接向下拉框中输入文本，禁止向截图中非输入框的元素输入文本。" +
       //   "这是最新的截图和页面元素信息.\n元素和对应的index:\n"
-    const pseudoHtmlDescription = "The latest screenshot and element indexes are shown separately below. Please note that the element indexes are obtained by capturing the DOM elements of the entire page, while the screenshot only displays the current window. You should consider both pieces of information when deciding the next step. The screenshot has a higher priority in the reference information. When deciding the next step, you need to pay attention to the position of the target in the screenshot. The element-related methods can only be used if there is an element index at the corresponding position.\n"
+    const pseudoHtmlDescription = "This is the environmental information after the operation, including the latest browser screenshot and page elements. Please note that the element indexes are obtained by capturing the DOM elements of the entire page, while the screenshot only displays the current window. You should consider both pieces of information when deciding the next step. Please perform the next operation based on the environmental information. Do not output the following elements and index information in your response.\n\nIndex and elements:\n";
     let lastTool = this.lastToolResult(messages);
     if (
       lastTool &&
@@ -722,7 +731,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
           ...image_contents,
           {
             type: "text",
-            text: pseudoHtmlDescription + result.pseudoHtml,
+            text: pseudoHtmlDescription + "```html\n" + result.pseudoHtml + "\n```",
           },
         ],
       });
@@ -765,14 +774,14 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     ];
 
     // 直接调用callLLM，让上层处理流式输出
-    const results = await callLLM(
+    const results = await callAgentLLM(
       agentContext,
       rlm,
       summaryMessages,
       [], // 不需要工具
       false, // noCompress
       undefined, // toolChoice
-      false, // retry
+      0,
       callback
     );
 
@@ -835,9 +844,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
           if (eIdx == -1) {
             continue;
           }
-          line =
-            line.substring(0, sIdx) +
-            line.substring(eIdx + 1).trim();
+          line = line.substring(0, sIdx) + line.substring(eIdx + 1).trim();
         }
         return line.replace('" >', '">').replace(" >", ">");
       })
@@ -1081,6 +1088,23 @@ function scroll_by(params: { amount: number }) {
     const visibleHeight = visibleBottom - visibleTop;
     return visibleWidth * visibleHeight;
   }
+
+  function getComputedZIndex(element: Element | null) {
+    while (
+      element &&
+      element !== document.body &&
+      element !== document.body.parentElement
+    ) {
+      const style = window.getComputedStyle(element);
+      let zIndex = style.zIndex === "auto" ? 0 : parseInt(style.zIndex) || 0;
+      if (zIndex > 0) {
+        return zIndex;
+      }
+      element = element.parentElement;
+    }
+    return 0;
+  }
+
   const scrollableElements = findScrollableElements();
   if (scrollableElements.length === 0) {
     const y = Math.max(
@@ -1091,7 +1115,19 @@ function scroll_by(params: { amount: number }) {
     return false;
   }
   const sortedElements = scrollableElements.sort((a, b) => {
-    return getVisibleArea(b) - getVisibleArea(a);
+    let z = getComputedZIndex(b) - getComputedZIndex(a);
+    if (z > 0) {
+      return 1;
+    } else if (z < 0) {
+      return -1;
+    }
+    let v = getVisibleArea(b) - getVisibleArea(a);
+    if (v > 0) {
+      return 1;
+    } else if (v < 0) {
+      return -1;
+    }
+    return 0;
   });
   const largestElement = sortedElements[0];
   const viewportHeight = largestElement.clientHeight;

@@ -1,6 +1,6 @@
-import { LanguageModelV1FunctionTool } from "@ai-sdk/provider";
-import { Tool, ToolSchema } from "../types/tools.types";
 import { Agent } from "../agent";
+import { Tool, ToolSchema } from "../types/tools.types";
+import { LanguageModelV1FunctionTool } from "@ai-sdk/provider";
 
 export function sleep(time: number): Promise<void> {
   return new Promise((resolve) => setTimeout(() => resolve(), time));
@@ -192,6 +192,8 @@ export function fixXmlTag(code: string) {
     code += '""';
   } else if (
     endStr == "name" ||
+    endStr == "id" ||
+    endStr == "dependsOn" ||
     endStr == "input" ||
     endStr == "output" ||
     endStr == "items" ||
@@ -232,8 +234,10 @@ export function fixXmlTag(code: string) {
     const top = stack.pop() as string;
     if (top.startsWith("<")) {
       let arr = top.match(/<(\w+)/) as string[];
-      const tagName = arr[1];
-      missingParts.push(`</${tagName}>`);
+      if (arr) {
+        const tagName = arr[1];
+        missingParts.push(`</${tagName}>`);
+      }
     } else {
       missingParts.push(top);
     }

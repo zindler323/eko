@@ -22,11 +22,18 @@ export class RetryLanguageModel {
   private llms: LLMs;
   private names: string[];
   private stream_first_timeout: number;
+  private stream_token_timeout: number;
 
-  constructor(llms: LLMs, names?: string[], stream_first_timeout?: number) {
+  constructor(
+    llms: LLMs,
+    names?: string[],
+    stream_first_timeout?: number,
+    stream_token_timeout?: number
+  ) {
     this.llms = llms;
     this.names = names || [];
     this.stream_first_timeout = stream_first_timeout || 30_000;
+    this.stream_token_timeout = stream_token_timeout || 180_000;
     if (this.names.indexOf("default") == -1) {
       this.names.push("default");
     }
@@ -45,7 +52,7 @@ export class RetryLanguageModel {
       temperature: request.temperature,
       topP: request.topP,
       topK: request.topK,
-      providerMetadata: {},
+      stopSequences: request.stopSequences,
       abortSignal: request.abortSignal,
     });
   }
@@ -54,34 +61,47 @@ export class RetryLanguageModel {
     options: LanguageModelV1CallOptions
   ): Promise<GenerateResult> {
     const maxTokens = options.maxTokens;
+    const providerMetadata = options.providerMetadata;
     const names = [...this.names, ...this.names];
+    let lastError;
     for (let i = 0; i < names.length; i++) {
       const name = names[i];
+      const llmConfig = this.llms[name];
       const llm = await this.getLLM(name);
       if (!llm) {
         continue;
       }
       if (!maxTokens) {
-        options.maxTokens =
-          this.llms[name].config?.maxTokens || config.maxTokens;
+        options.maxTokens = llmConfig.config?.maxTokens || config.maxTokens;
+      }
+      if (!providerMetadata) {
+        options.providerMetadata = {};
+        options.providerMetadata[llm.provider] = llmConfig.options || {};
+      }
+      let _options = options;
+      if (llmConfig.handler) {
+        _options = await llmConfig.handler(_options);
       }
       try {
-        let result = await llm.doGenerate(options);
+        let result = (await llm.doGenerate(_options)) as GenerateResult;
         if (Log.isEnableDebug()) {
           Log.debug(
             `LLM nonstream body, name: ${name} => `,
             result.request?.body
           );
         }
+        result.llm = name;
+        result.llmConfig = llmConfig;
         return result;
       } catch (e: any) {
         if (e?.name === "AbortError") {
           throw e;
         }
+        lastError = e;
         if (Log.isEnableInfo()) {
           Log.info(`LLM nonstream request, name: ${name} => `, {
-            tools: (options.mode as any)?.tools,
-            messages: options.prompt,
+            tools: (_options.mode as any)?.tools,
+            messages: _options.prompt,
           });
         }
         Log.error(`LLM error, name: ${name} => `, e);
@@ -103,37 +123,46 @@ export class RetryLanguageModel {
       temperature: request.temperature,
       topP: request.topP,
       topK: request.topK,
-      providerMetadata: {},
+      stopSequences: request.stopSequences,
       abortSignal: request.abortSignal,
     });
   }
 
   async doStream(options: LanguageModelV1CallOptions): Promise<StreamResult> {
-    console.log('【zindler】params to llm: ', options);
     const maxTokens = options.maxTokens;
+    const providerMetadata = options.providerMetadata;
     const names = [...this.names, ...this.names];
+    let lastError;
     for (let i = 0; i < names.length; i++) {
       const name = names[i];
+      const llmConfig = this.llms[name];
       const llm = await this.getLLM(name);
       if (!llm) {
         continue;
       }
       if (!maxTokens) {
-        options.maxTokens =
-          this.llms[name].config?.maxTokens || config.maxTokens;
+        options.maxTokens = llmConfig.config?.maxTokens || config.maxTokens;
+      }
+      if (!providerMetadata) {
+        options.providerMetadata = {};
+        options.providerMetadata[llm.provider] = llmConfig.options || {};
+      }
+      let _options = options;
+      if (llmConfig.handler) {
+        _options = await llmConfig.handler(_options);
       }
       try {
         const controller = new AbortController();
-        const signal = options.abortSignal
-          ? AbortSignal.any([options.abortSignal, controller.signal])
+        const signal = _options.abortSignal
+          ? AbortSignal.any([_options.abortSignal, controller.signal])
           : controller.signal;
-        const result = await call_timeout(
-          async () => await llm.doStream({ ...options, abortSignal: signal }),
+        const result = (await call_timeout(
+          async () => await llm.doStream({ ..._options, abortSignal: signal }),
           this.stream_first_timeout,
           (e) => {
             controller.abort();
           }
-        );
+        )) as StreamResult;
         const stream = result.stream;
         const reader = stream.getReader();
         const { done, value } = await call_timeout(
@@ -159,16 +188,19 @@ export class RetryLanguageModel {
           reader.releaseLock();
           continue;
         }
-        result.stream = this.streamWrapper([chunk], reader);
+        result.llm = name;
+        result.llmConfig = llmConfig;
+        result.stream = this.streamWrapper([chunk], reader, controller);
         return result;
       } catch (e: any) {
         if (e?.name === "AbortError") {
           throw e;
         }
+        lastError = e;
         if (Log.isEnableInfo()) {
           Log.info(`LLM stream request, name: ${name} => `, {
-            tools: (options.mode as any)?.tools,
-            messages: options.prompt,
+            tools: (_options.mode as any)?.tools,
+            messages: _options.prompt,
           });
         }
         Log.error(`LLM error, name: ${name} => `, e);
@@ -200,16 +232,25 @@ export class RetryLanguageModel {
       return createOpenAI({
         apiKey: apiKey,
         baseURL: baseURL,
+        fetch: llm.fetch,
+        organization: llm.config?.organization,
+        project: llm.config?.project,
+        headers: llm.config?.headers,
+        compatibility: llm.config?.compatibility,
       }).languageModel(llm.model);
     } else if (llm.provider == "anthropic") {
       return createAnthropic({
         apiKey: apiKey,
         baseURL: baseURL,
+        fetch: llm.fetch,
+        headers: llm.config?.headers,
       }).languageModel(llm.model);
     } else if (llm.provider == "google") {
       return createGoogleGenerativeAI({
         apiKey: apiKey,
         baseURL: baseURL,
+        fetch: llm.fetch,
+        headers: llm.config?.headers,
       }).languageModel(llm.model);
     } else if (llm.provider == "aws") {
       let keys = apiKey.split("=");
@@ -218,11 +259,17 @@ export class RetryLanguageModel {
         secretAccessKey: keys[1],
         baseURL: baseURL,
         region: llm.config?.region || "us-west-1",
+        fetch: llm.fetch,
+        headers: llm.config?.headers,
+        sessionToken: llm.config?.sessionToken,
       }).languageModel(llm.model);
     } else if (llm.provider == "openrouter") {
       return createOpenRouter({
         apiKey: apiKey,
         baseURL: baseURL,
+        fetch: llm.fetch,
+        headers: llm.config?.headers,
+        compatibility: llm.config?.compatibility,
       }).languageModel(llm.model);
     } else {
       return llm.provider.languageModel(llm.model);
@@ -231,8 +278,10 @@ export class RetryLanguageModel {
 
   private streamWrapper(
     parts: LanguageModelV1StreamPart[],
-    reader: ReadableStreamDefaultReader<LanguageModelV1StreamPart>
+    reader: ReadableStreamDefaultReader<LanguageModelV1StreamPart>,
+    abortController: AbortController
   ): ReadableStream<LanguageModelV1StreamPart> {
+    let timer: any = null;
     return new ReadableStream<LanguageModelV1StreamPart>({
       start: (controller) => {
         if (parts != null && parts.length > 0) {
@@ -242,7 +291,11 @@ export class RetryLanguageModel {
         }
       },
       pull: async (controller) => {
+        timer = setTimeout(() => {
+          abortController.abort("Streaming request timeout");
+        }, this.stream_token_timeout);
         const { done, value } = await reader.read();
+        clearTimeout(timer);
         if (done) {
           controller.close();
           reader.releaseLock();
@@ -251,8 +304,17 @@ export class RetryLanguageModel {
         controller.enqueue(value);
       },
       cancel: (reason) => {
+        timer && clearTimeout(timer);
         reader.cancel(reason);
       },
     });
+  }
+
+  public get Llms(): LLMs {
+    return this.llms;
+  }
+
+  public get Names(): string[] {
+    return this.names;
   }
 }

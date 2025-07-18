@@ -1,6 +1,6 @@
 {
   "name": "@eko-ai/eko",
-  "version": "2.1.6",
+  "version": "2.2.0",
   "description": "Personal extension on eko-ai/eko",
   "workspaces": [
     "packages/eko-core",

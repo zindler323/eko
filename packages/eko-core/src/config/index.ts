@@ -3,6 +3,8 @@ type GlobalConfig = {
   platform: "windows" | "mac" | "linux";
   maxReactNum: number;
   maxTokens: number;
+  maxRetryNum: number;
+  agentParallel: boolean;
   compressThreshold: number; // Dialogue context compression threshold (message count)
   largeTextLength: number;
   fileTextMaxLength: number;
@@ -14,6 +16,8 @@ const config: GlobalConfig = {
   platform: "mac",
   maxReactNum: 500,
   maxTokens: 16000,
+  maxRetryNum: 3,
+  agentParallel: false,
   compressThreshold: 80,
   largeTextLength: 5000,
   fileTextMaxLength: 20000,

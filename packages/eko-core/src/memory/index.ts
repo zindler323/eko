@@ -7,10 +7,11 @@ import {
 import config from "../config";
 import { Tool } from "../types";
 import TaskSnapshotTool from "./snapshot";
-import { callLLM } from "../agent/base";
+import { callAgentLLM } from "../agent/llm";
 import { RetryLanguageModel } from "../llm";
 import { mergeTools } from "../common/utils";
 import { AgentContext } from "../core/context";
+import Log from "../common/log";
 
 export function extractUsedTool<T extends Tool | LanguageModelV1FunctionTool>(
   messages: LanguageModelV1Prompt,
@@ -69,9 +70,22 @@ export async function compressAgentMessages(
   messages: LanguageModelV1Prompt,
   tools: LanguageModelV1FunctionTool[]
 ) {
-  if (messages.length < 10) {
+  if (messages.length < 5) {
     return;
   }
+  try {
+    doCompressAgentMessages(agentContext, rlm, messages, tools);
+  } catch (e) {
+    Log.error("Error compressing agent messages:", e);
+  }
+}
+
+async function doCompressAgentMessages(
+  agentContext: AgentContext,
+  rlm: RetryLanguageModel,
+  messages: LanguageModelV1Prompt,
+  tools: LanguageModelV1FunctionTool[]
+) {
   // extract used tool
   let usedTools = extractUsedTool(messages, tools);
   let snapshotTool = new TaskSnapshotTool();
@@ -103,10 +117,17 @@ export async function compressAgentMessages(
     ],
   });
   // compress snapshot
-  let result = await callLLM(agentContext, rlm, newMessages, newTools, true, {
-    type: "tool",
-    toolName: snapshotTool.name,
-  });
+  let result = await callAgentLLM(
+    agentContext,
+    rlm,
+    newMessages,
+    newTools,
+    true,
+    {
+      type: "tool",
+      toolName: snapshotTool.name,
+    }
+  );
   let toolCall = result.filter((s) => s.type == "tool-call")[0];
   let args =
     typeof toolCall.args == "string"
@@ -115,16 +136,19 @@ export async function compressAgentMessages(
   let toolResult = await snapshotTool.execute(args, agentContext);
   let callback = agentContext.context.config.callback;
   if (callback) {
-    await callback.onMessage({
-      taskId: agentContext.context.taskId,
-      agentName: agentContext.agent.Name,
-      nodeId: agentContext.agentChain.agent.id,
-      type: "tool_result",
-      toolId: toolCall.toolCallId,
-      toolName: toolCall.toolName,
-      params: args,
-      toolResult: toolResult,
-    }, agentContext);
+    await callback.onMessage(
+      {
+        taskId: agentContext.context.taskId,
+        agentName: agentContext.agent.Name,
+        nodeId: agentContext.agentChain.agent.id,
+        type: "tool_result",
+        toolId: toolCall.toolCallId,
+        toolName: toolCall.toolName,
+        params: args,
+        toolResult: toolResult,
+      },
+      agentContext
+    );
   }
   // handle original messages
   let firstToolIndex = 3;
@@ -182,7 +206,7 @@ export async function activeCompressContext(
   };
 
   // 执行压缩，使用静默回调
-  let result = await callLLM(
+  let result = await callAgentLLM(
     agentContext,
     rlm,
     compressPrompt,
@@ -192,7 +216,7 @@ export async function activeCompressContext(
       type: "tool",
       toolName: snapshotTool.name,
     },
-    false,
+    0,
     silentCallback
   );
 
@@ -267,7 +291,10 @@ export function handleLargeContextMessages(messages: LanguageModelV1Prompt) {
         }
         for (let r = 0; r < toolContent.length; r++) {
           let _content = toolContent[r];
-          if (_content.type == "text" && _content.text?.length > config.largeTextLength) {
+          if (
+            _content.type == "text" &&
+            _content.text?.length > config.largeTextLength
+          ) {
             if (!longTextTools[toolResult.toolName]) {
               longTextTools[toolResult.toolName] = 1;
               break;

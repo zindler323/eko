@@ -277,7 +277,7 @@ export default abstract class BaseFileAgent extends Agent {
             },
             glob: {
               type: "string",
-              description: "Filename pattern using glob syntax wildcards",
+              description: "Filename pattern using glob syntax wildcards, Example: **/*.txt",
             },
           },
           required: ["path", "glob"],
