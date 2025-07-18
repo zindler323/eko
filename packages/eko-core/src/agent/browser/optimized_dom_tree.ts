@@ -174,9 +174,18 @@ export function run_build_dom_tree() {
 
   function build_dom_tree(doHighlightElements) {
     let highlightIndex = 0; // Reset highlight index
+    const pendingHighlights = []; // 批量高亮队列
 
     function highlightElement(element, index, parentIframe = null) {
-      // Create or get highlight container
+      // 将高亮操作添加到批量队列，而不是立即执行
+      pendingHighlights.push({ element, index, parentIframe });
+    }
+
+    // 批量执行高亮操作
+    function executeBatchHighlights() {
+      if (pendingHighlights.length === 0) return;
+
+      // 创建或获取高亮容器
       let container = document.getElementById('eko-highlight-container');
       if (!container) {
         container = document.createElement('div');
@@ -191,97 +200,95 @@ export function run_build_dom_tree() {
         document.documentElement.appendChild(container);
       }
 
-      // Generate a color based on the index
-      const colors = [
-        '#FF0000',
-        '#00FF00',
-        '#0000FF',
-        '#FFA500',
-        '#800080',
-        '#008080',
-        '#FF69B4',
-        '#4B0082',
-        '#FF4500',
-        '#2E8B57',
-        '#DC143C',
-        '#4682B4',
-      ];
-      const colorIndex = index % colors.length;
-      const baseColor = colors[colorIndex];
-      const backgroundColor = `${baseColor}1A`; // 10% opacity version of the color
+      // 批量处理所有待高亮元素
+      const fragment = document.createDocumentFragment();
+      
+      pendingHighlights.forEach(({ element, index, parentIframe }) => {
+        try {
+          // Generate a color based on the index
+          const colors = [
+            '#FF0000', '#00FF00', '#0000FF', '#FFA500', '#800080',
+            '#008080', '#FF69B4', '#4B0082', '#FF4500', '#2E8B57',
+            '#DC143C', '#4682B4',
+          ];
+          const colorIndex = index % colors.length;
+          const baseColor = colors[colorIndex];
+          const backgroundColor = `${baseColor}1A`; // 10% opacity version
 
-      // Create highlight overlay
-      const overlay = document.createElement('div');
-      overlay.style.position = 'absolute';
-      overlay.style.border = `2px solid ${baseColor}`;
-      overlay.style.pointerEvents = 'none';
-      overlay.style.boxSizing = 'border-box';
+          // Create highlight overlay
+          const overlay = document.createElement('div');
+          overlay.style.position = 'absolute';
+          overlay.style.border = `2px solid ${baseColor}`;
+          overlay.style.pointerEvents = 'none';
+          overlay.style.boxSizing = 'border-box';
 
-      // Position overlay based on element
-      const rect = element.getBoundingClientRect();
-      let top = rect.top;
-      let left = rect.left;
+          // Position overlay based on element
+          const rect = element.getBoundingClientRect();
+          let top = rect.top;
+          let left = rect.left;
 
-      if (rect.width < window.innerWidth / 2 || rect.height < window.innerHeight / 2) {
-        overlay.style.backgroundColor = backgroundColor;
-      }
+          if (rect.width < window.innerWidth / 2 || rect.height < window.innerHeight / 2) {
+            overlay.style.backgroundColor = backgroundColor;
+          }
 
-      // Adjust position if element is inside an iframe
-      if (parentIframe) {
-        const iframeRect = parentIframe.getBoundingClientRect();
-        top += iframeRect.top;
-        left += iframeRect.left;
-      }
+          // Adjust position if element is inside an iframe
+          if (parentIframe) {
+            const iframeRect = parentIframe.getBoundingClientRect();
+            top += iframeRect.top;
+            left += iframeRect.left;
+          }
 
-      overlay.style.top = `${top}px`;
-      overlay.style.left = `${left}px`;
-      overlay.style.width = `${rect.width}px`;
-      overlay.style.height = `${rect.height}px`;
+          overlay.style.top = `${top}px`;
+          overlay.style.left = `${left}px`;
+          overlay.style.width = `${rect.width}px`;
+          overlay.style.height = `${rect.height}px`;
 
-      // Create label
-      const label = document.createElement('div');
-      label.className = 'eko-highlight-label';
-      label.style.position = 'absolute';
-      label.style.background = baseColor;
-      label.style.color = 'white';
-      label.style.padding = '1px 4px';
-      label.style.borderRadius = '4px';
-      label.style.fontSize = `${Math.min(12, Math.max(8, rect.height / 2))}px`; // Responsive font size
-      label.textContent = index;
+          // Create label
+          const label = document.createElement('div');
+          label.className = 'eko-highlight-label';
+          label.style.position = 'absolute';
+          label.style.background = baseColor;
+          label.style.color = 'white';
+          label.style.padding = '1px 4px';
+          label.style.borderRadius = '4px';
+          label.style.fontSize = `${Math.min(12, Math.max(8, rect.height / 2))}px`;
+          label.textContent = index;
 
-      // Calculate label position
-      const labelWidth = 20; // Approximate width
-      const labelHeight = 16; // Approximate height
+          // Calculate label position
+          const labelWidth = 20;
+          const labelHeight = 16;
+          let labelTop = top + 2;
+          let labelLeft = left + rect.width - labelWidth - 2;
 
-      // Default position (top-right corner inside the box)
-      let labelTop = top + 2;
-      let labelLeft = left + rect.width - labelWidth - 2;
+          if (rect.width < labelWidth + 4 || rect.height < labelHeight + 4) {
+            labelTop = top - labelHeight - 2;
+            labelLeft = left + rect.width - labelWidth;
+          }
 
-      // Adjust if box is too small
-      if (rect.width < labelWidth + 4 || rect.height < labelHeight + 4) {
-        // Position outside the box if it's too small
-        labelTop = top - labelHeight - 2;
-        labelLeft = left + rect.width - labelWidth;
-      }
+          if (labelTop < 0) labelTop = top + 2;
+          if (labelLeft < 0) labelLeft = left + 2;
+          if (labelLeft + labelWidth > window.innerWidth) {
+            labelLeft = left + rect.width - labelWidth - 2;
+          }
 
-      // Ensure label stays within viewport
-      if (labelTop < 0) labelTop = top + 2;
-      if (labelLeft < 0) labelLeft = left + 2;
-      if (labelLeft + labelWidth > window.innerWidth) {
-        labelLeft = left + rect.width - labelWidth - 2;
-      }
+          label.style.top = `${labelTop}px`;
+          label.style.left = `${labelLeft}px`;
 
-      label.style.top = `${labelTop}px`;
-      label.style.left = `${labelLeft}px`;
+          // Add to fragment for batch DOM insertion
+          fragment.appendChild(overlay);
+          fragment.appendChild(label);
 
-      // Add to container
-      container.appendChild(overlay);
-      container.appendChild(label);
+          // Store reference for cleanup
+          element.setAttribute('eko-user-highlight-id', `eko-highlight-${index}`);
+        } catch (error) {
+          console.warn(`批量高亮元素失败 (index: ${index}):`, error);
+        }
+      });
 
-      // Store reference for cleanup
-      element.setAttribute('eko-user-highlight-id', `eko-highlight-${index}`);
-
-      return index + 1;
+      // 一次性将所有高亮元素添加到容器
+      container.appendChild(fragment);
+      
+      console.log(`批量高亮完成: ${pendingHighlights.length} 个元素`);
     }
 
     // Helper function to generate XPath as a tree
@@ -732,6 +739,14 @@ export function run_build_dom_tree() {
         - 执行时间: ${executionTime.toFixed(2)}ms
         - 内存使用: ${(memoryUsed / 1024).toFixed(2)}KB
         - 平均每节点: ${(executionTime / processedNodes).toFixed(3)}ms`);
+
+      // 批量执行高亮操作
+      if (doHighlightElements && pendingHighlights.length > 0) {
+        const highlightStartTime = performance.now();
+        executeBatchHighlights();
+        const highlightEndTime = performance.now();
+        console.log(`批量高亮执行时间: ${(highlightEndTime - highlightStartTime).toFixed(2)}ms`);
+      }
 
       return result;
     }
