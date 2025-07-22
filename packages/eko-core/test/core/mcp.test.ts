@@ -5,6 +5,7 @@ import {
   LLMs,
   StreamCallbackMessage,
   SimpleSseMcpClient,
+  SimpleHttpMcpClient,
 } from "../../src/index";
 import { TaskNodeStatusTool } from "../../src/tools";
 import dotenv from "dotenv";
@@ -19,7 +20,7 @@ const claudeApiKey = process.env.ANTHROPIC_API_KEY;
 const llms: LLMs = {
   default: {
     provider: "anthropic",
-    model: "claude-3-5-sonnet-20241022",
+    model: "claude-sonnet-4-20250514",
     apiKey: claudeApiKey || "",
     config: {
       baseURL: claudeBaseURL,
@@ -35,7 +36,7 @@ const llms: LLMs = {
   },
 };
 
-async function run() {
+async function runWithSse() {
   Log.setLevel(0);
   let callback = {
     onMessage: async (message: StreamCallbackMessage) => {
@@ -56,7 +57,7 @@ async function run() {
   let agents: Agent[] = [
     new Agent({
       name: "SmartMall",
-      description: "提供商品查询、库存管理和订单处理",
+      description: "Provide product inquiry, inventory management, and order processing.",
       tools: [],
       // tools: [new TaskNodeStatusTool()],
       mcpClient: mcpClient,
@@ -65,11 +66,47 @@ async function run() {
   ];
   let eko = new Eko({ llms, agents, callback });
   let result = await eko.run(
-    "我有3000块钱，请帮我购买华为 MateBook X Pro 和 1个蓝牙耳机、1个移动电源"
+    "I have 3000 RMB, please help me buy a Huawei MateBook X Pro and 1 Bluetooth earphone, 1 mobile power bank."
+  );
+  console.log("result: ", JSON.stringify(result));
+}
+
+async function runWithHttp() {
+  Log.setLevel(0);
+  let callback = {
+    onMessage: async (message: StreamCallbackMessage) => {
+      if (message.type == "workflow" && !message.streamDone) {
+        return;
+      }
+      if (message.type == "text" && !message.streamDone) {
+        return;
+      }
+      if (message.type == "tool_streaming") {
+        return;
+      }
+      console.log("message: ", JSON.stringify(message, null, 2));
+    },
+  };
+  let httpUrl = "http://localhost:3088/mcp";
+  let mcpClient = new SimpleHttpMcpClient(httpUrl);
+  let agents: Agent[] = [
+    new Agent({
+      name: "Code",
+      description: "Run code snippet.",
+      tools: [],
+      // tools: [new TaskNodeStatusTool()],
+      mcpClient: mcpClient,
+      llms: Object.keys(llms),
+    }),
+  ];
+  let eko = new Eko({ llms, agents, callback });
+  let result = await eko.run(
+    "Execute the following JavaScript code: \n```\nconsole.log('Hello, world!');\n```"
   );
   console.log("result: ", JSON.stringify(result));
 }
 
 test.only("eko", async () => {
-  await run();
+  // await runWithSse();
+  await runWithHttp();
 });

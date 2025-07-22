@@ -16,7 +16,7 @@ export async function testClaudePrompt() {
   const client: LanguageModelV1 = createAnthropic({
     apiKey: apiKey,
     baseURL: baseURL,
-  }).languageModel("claude-3-7-sonnet-20250219");
+  }).languageModel("claude-sonnet-4-20250514");
 
   let result = await client.doGenerate({
     inputFormat: "messages",
@@ -40,7 +40,7 @@ export async function testClaudeStream() {
   const client: LanguageModelV1 = createAnthropic({
     apiKey: apiKey,
     baseURL: baseURL,
-  }).languageModel("claude-3-7-sonnet-20250219");
+  }).languageModel("claude-sonnet-4-20250514");
 
   let result = await client.doStream({
     inputFormat: "messages",
@@ -77,7 +77,7 @@ export async function testToolsPrompt() {
   const client: LanguageModelV1 = createAnthropic({
     apiKey: apiKey,
     baseURL: baseURL,
-  }).languageModel("claude-3-7-sonnet-20250219");
+  }).languageModel("claude-sonnet-4-20250514");
 
   let result = await client.doStream({
     inputFormat: "messages",

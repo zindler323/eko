@@ -121,7 +121,7 @@ export default abstract class BaseBrowserAgent extends Agent {
             agent_name: agentContext.agent.Name,
             browser_url: agentContext.variables.get("lastUrl"),
           },
-        });
+        }, agentContext.context.controller.signal);
         if (
           result.extInfo &&
           result.extInfo["javascript"] &&

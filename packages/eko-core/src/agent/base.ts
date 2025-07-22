@@ -71,7 +71,7 @@ export class Agent {
     let agentContext = new AgentContext(context, this, agentChain);
     try {
       this.agentContext = agentContext;
-      mcpClient && !mcpClient.isConnected() && (await mcpClient.connect());
+      mcpClient && !mcpClient.isConnected() && (await mcpClient.connect(context.controller.signal));
       return this.runWithContext(agentContext, mcpClient, config.maxReactNum);
     } finally {
       mcpClient && (await mcpClient.close());
@@ -319,7 +319,7 @@ export class Agent {
   ): Promise<Tool[]> {
     try {
       if (!mcpClient.isConnected()) {
-        await mcpClient.connect();
+        await mcpClient.connect(context.controller.signal);
       }
       let list = await mcpClient.listTools({
         taskId: context.taskId,
@@ -329,7 +329,7 @@ export class Agent {
         params: {},
         prompt: agentNode?.task || context.chain.taskPrompt,
         ...(mcpParams || {}),
-      });
+      }, context.controller.signal);
       let mcpTools: Tool[] = [];
       for (let i = 0; i < list.length; i++) {
         let toolSchema: ToolSchema = list[i];
@@ -369,7 +369,7 @@ export class Agent {
             environment: config.platform,
             agent_name: agentContext.agent.Name,
           },
-        });
+        }, agentContext.context.controller.signal);
       },
     };
   }
