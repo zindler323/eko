@@ -19,7 +19,8 @@ Your task is to understand the user's requirements, dynamically plan the user's 
 {agents}
 
 ## Output Rules and Format
-ChatAgent don't output the <thought></thought>
+1. ChatAgent don't output the <thought></thought>.
+2. If your task ultimately requires summarizing, generalizing, or planning, please make sure to keep track of the relevant information throughout the process.
 <root>
   <!-- Task Name (Short) -->
   <name>Task Name</name>
