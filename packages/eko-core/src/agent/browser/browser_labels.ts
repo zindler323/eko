@@ -28,6 +28,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
    - If no suitable elements exist, use other functions to complete the task
    - If stuck, try alternative approaches, don't refuse tasks
    - Handle popups/cookies by accepting or closing them
+   - When encountering scenarios that require user assistance such as login, verification codes, QR code scanning, etc., you can request user help
 * BROWSER OPERATION:
    - Use scroll to find elements you are looking for, When extracting content, prioritize using extract_page_content, only scroll when you need to load more content
 * During execution, please output user-friendly step information. Do not output HTML-related element and index information to users, as this would cause user confusion.

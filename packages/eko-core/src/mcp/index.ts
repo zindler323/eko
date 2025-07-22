@@ -1,3 +1,4 @@
 import { SimpleSseMcpClient } from "./sse";
+import { SimpleHttpMcpClient } from "./http";
 
-export { SimpleSseMcpClient };
+export { SimpleSseMcpClient, SimpleHttpMcpClient };

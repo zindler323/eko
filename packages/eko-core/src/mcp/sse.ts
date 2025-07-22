@@ -30,15 +30,22 @@ export class SimpleSseMcpClient implements IMcpClient {
   private msgUrl?: string;
   private pingTimer?: number;
   private reconnectTimer?: number;
+  private headers: Record<string, string>;
+  private protocolVersion: string = "2024-11-05";
   private requestMap: Map<string, (messageData: any) => void>;
 
-  constructor(sseServerUrl: string, clientName: string = "EkoMcpClient") {
+  constructor(
+    sseServerUrl: string,
+    clientName: string = "EkoMcpClient",
+    headers: Record<string, string> = {}
+  ) {
     this.sseUrl = sseServerUrl;
     this.clientName = clientName;
+    this.headers = headers;
     this.requestMap = new Map();
   }
 
-  async connect(): Promise<void> {
+  async connect(signal?: AbortSignal): Promise<void> {
     Log.info("MCP Client, connecting...", this.sseUrl);
     if (this.sseHandler && this.sseHandler.readyState == 1) {
       this.sseHandler.close && this.sseHandler.close();
@@ -47,7 +54,7 @@ export class SimpleSseMcpClient implements IMcpClient {
     this.pingTimer && clearInterval(this.pingTimer);
     this.reconnectTimer && clearTimeout(this.reconnectTimer);
     await new Promise<void>((resolve) => {
-      let timer = setTimeout(resolve, 15000);
+      const timer = setTimeout(resolve, 15000);
       this.sseHandler = {
         onopen: () => {
           Log.info("MCP Client, connection successful", this.sseUrl);
@@ -67,7 +74,7 @@ export class SimpleSseMcpClient implements IMcpClient {
           resolve();
         },
       };
-      connectSse(this.sseUrl, this.sseHandler);
+      connectSse(this.sseUrl, this.sseHandler, this.headers, signal);
     });
     this.pingTimer = setInterval(() => this.ping(), 10000);
   }
@@ -94,7 +101,7 @@ export class SimpleSseMcpClient implements IMcpClient {
 
   private async initialize() {
     await this.request("initialize", {
-      protocolVersion: "2024-11-05",
+      protocolVersion: this.protocolVersion,
       capabilities: {
         tools: {
           listChanged: true,
@@ -106,6 +113,7 @@ export class SimpleSseMcpClient implements IMcpClient {
         version: "1.0.0",
       },
     });
+    this.request("notifications/initialized", {});
   }
 
   private ping() {
@@ -114,11 +122,17 @@ export class SimpleSseMcpClient implements IMcpClient {
 
   private async request(
     method: string,
-    params: Record<string, any>
+    params: Record<string, any>,
+    signal?: AbortSignal
   ): Promise<any> {
-    let id = uuidv4();
+    const id = uuidv4();
     try {
-      let callback = new Promise<any>((resolve) => {
+      const callback = new Promise<any>((resolve, reject) => {
+        if (signal) {
+          signal.addEventListener("abort", () => {
+            reject(new Error("AbortError"));
+          });
+        }
         this.requestMap.set(id, resolve);
       });
       Log.debug(`MCP Client, ${method}`, id, params);
@@ -126,6 +140,7 @@ export class SimpleSseMcpClient implements IMcpClient {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...this.headers,
         },
         body: JSON.stringify({
           jsonrpc: "2.0",
@@ -135,8 +150,9 @@ export class SimpleSseMcpClient implements IMcpClient {
             ...params,
           },
         }),
+        signal: signal,
       });
-      let body = await response.text();
+      const body = await response.text();
       if (body == "Accepted") {
         return await callback;
       } else {
@@ -147,10 +163,17 @@ export class SimpleSseMcpClient implements IMcpClient {
     }
   }
 
-  async listTools(param: McpListToolParam): Promise<McpListToolResult> {
-    let message = await this.request("tools/list", {
-      ...param,
-    });
+  async listTools(
+    param: McpListToolParam,
+    signal?: AbortSignal
+  ): Promise<McpListToolResult> {
+    const message = await this.request(
+      "tools/list",
+      {
+        ...param,
+      },
+      signal
+    );
     if (message.error) {
       Log.error("McpClient listTools error: ", param, message);
       throw new Error("listTools Exception");
@@ -158,10 +181,17 @@ export class SimpleSseMcpClient implements IMcpClient {
     return message.result.tools || [];
   }
 
-  async callTool(param: McpCallToolParam): Promise<ToolResult> {
-    let message = await this.request("tools/call", {
-      ...param,
-    });
+  async callTool(
+    param: McpCallToolParam,
+    signal?: AbortSignal
+  ): Promise<ToolResult> {
+    const message = await this.request(
+      "tools/call",
+      {
+        ...param,
+      },
+      signal
+    );
     if (message.error) {
       Log.error("McpClient callTool error: ", param, message);
       throw new Error("callTool Exception");
@@ -186,19 +216,28 @@ export class SimpleSseMcpClient implements IMcpClient {
   }
 }
 
-async function connectSse(sseUrl: string, hander: SseHandler) {
+async function connectSse(
+  sseUrl: string,
+  hander: SseHandler,
+  headers: Record<string, string> = {},
+  _signal?: AbortSignal
+) {
   try {
     hander.readyState = 0;
     const controller = new AbortController();
+    const signal = _signal
+      ? AbortSignal.any([controller.signal, _signal])
+      : controller.signal;
     const response = await fetch(sseUrl, {
       method: "GET",
       headers: {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
+        ...headers,
       },
       body: null,
       keepalive: true,
-      signal: controller.signal,
+      signal: signal,
     });
     const reader = response.body?.getReader() as ReadableStreamDefaultReader;
     hander.close = () => {
@@ -207,7 +246,7 @@ async function connectSse(sseUrl: string, hander: SseHandler) {
       Log.debug("McpClient close abort.", sseUrl);
     };
     let str = "";
-    let decoder = new TextDecoder();
+    const decoder = new TextDecoder();
     hander.readyState = 1;
     hander.onopen();
     while (hander.readyState == 1) {
@@ -218,17 +257,17 @@ async function connectSse(sseUrl: string, hander: SseHandler) {
       const text = decoder.decode(value);
       str += text;
       if (str.indexOf("\n\n") > -1) {
-        let chunks = str.split("\n\n");
+        const chunks = str.split("\n\n");
         for (let i = 0; i < chunks.length - 1; i++) {
-          let chunk = chunks[i];
-          let chunkData = parseChunk(chunk);
+          const chunk = chunks[i];
+          const chunkData = parseChunk(chunk);
           hander.onmessage(chunkData);
         }
         str = chunks[chunks.length - 1];
       }
     }
   } catch (e: any) {
-    if (e?.name !== 'AbortError') {
+    if (e?.name !== "AbortError") {
       Log.error("MCP Client, connectSse error:", e);
       hander.onerror(e);
     }
@@ -238,10 +277,10 @@ async function connectSse(sseUrl: string, hander: SseHandler) {
 }
 
 function parseChunk(chunk: string): SseEventData {
-  let lines = chunk.split("\n");
-  let chunk_obj: SseEventData = {};
+  const lines = chunk.split("\n");
+  const chunk_obj: SseEventData = {};
   for (let j = 0; j < lines.length; j++) {
-    let line = lines[j];
+    const line = lines[j];
     if (line.startsWith("id:")) {
       chunk_obj["id"] = line.substring(3).trim();
     } else if (line.startsWith("event:")) {
@@ -249,7 +288,7 @@ function parseChunk(chunk: string): SseEventData {
     } else if (line.startsWith("data:")) {
       chunk_obj["data"] = line.substring(5).trim();
     } else {
-      let idx = line.indexOf(":");
+      const idx = line.indexOf(":");
       if (idx > -1) {
         chunk_obj[line.substring(0, idx)] = line.substring(idx + 1).trim();
       }

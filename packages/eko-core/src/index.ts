@@ -3,9 +3,9 @@ import Log from "./common/log";
 import { Eko } from "./core/index";
 import { Planner } from "./core/plan";
 import { RetryLanguageModel } from "./llm";
-import { SimpleSseMcpClient } from "./mcp";
 import Chain, { AgentChain } from "./core/chain";
 import Context, { AgentContext } from "./core/context";
+import { SimpleSseMcpClient, SimpleHttpMcpClient } from "./mcp";
 
 export default Eko;
 
@@ -19,6 +19,7 @@ export {
   Chain,
   AgentChain,
   SimpleSseMcpClient,
+  SimpleHttpMcpClient,
   RetryLanguageModel,
 };
 
