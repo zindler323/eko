@@ -113,11 +113,6 @@ Eko can be used in multiple environments:
 ## Community and Support
 
 - Report issues on [GitHub Issues](https://github.com/FellouAI/eko/issues)
-- Join our [slack community discussions](https://join.slack.com/t/eko-ai/shared_invite/zt-2xhvkudv9-nHvD1g8Smp227sM51x_Meg)
-- Join our [Discard](https://discord.gg/XpFfk2e5):
-![](discard.png)
-- Contribute tools and improvements
-- Share your use cases and feedback
 
 [![Star History Chart](https://api.star-history.com/svg?repos=FellouAI/eko&type=Date)](https://star-history.com/#FellouAI/eko&Date)
 
