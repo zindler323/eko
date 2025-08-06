@@ -758,12 +758,26 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     const summaryMessages: LanguageModelV1Prompt = [
       {
         role: "system",
-        content: "You are a task summarizer. Please provide a concise structured summary in the following format without Markdown:\n\n🎯 Task: [User's specific task requirements]\n📋 Plan: [Execution plan and steps]\n✅ Progress: [Detailed completion status for each step, e.g.: Step1 ✓ Step2 ✗ Step3 ✓]\n📝 Summary: [Main results, concise description]\n⚠️ Notes: [Exceptions or issues, omit if none]\n\nPlease keep output concise and detailed progress for each step.",
+        content: `The above messages are a conversation between a user and an AI assistant.
+The AI assistant helped the user with their task and arrived potentially at a "Final Answer" to accomplish their task.
+You are a task summarizer. Please provide a comprehensive summary in the following format without Markdown:
+
+🎯 Progress: [Detailed completion status for each step, e.g.: Step1 ✓ Step2 ✗ Step3 ✓]
+📝 Summary: [Main results, concise description. Include specific outcomes, data collected, actions completed, and final answers achieved.]
+⚠️ Notes: [Exceptions or issues, omit if none]
+
+Important guidelines for the summary:
+1. **Include Final Results**: If the task was completed successfully, describe the final outcome, data collected, or answer achieved
+2. **Specific Details**: Mention specific numbers, dates, URLs, file names, or other concrete information that was obtained
+3. **Actions Completed**: List the key actions that were performed (e.g., "Clicked submit button", "Downloaded report", "Found 5 matching results")
+4. **Data Collected**: If any information was gathered, summarize what was collected and its significance
+5. **Task Status**: Clearly indicate whether the task was completed, partially completed, or failed
+6. **Key Achievements**: Highlight the most important accomplishments or discoveries`,
       },
       ...messages,
       {
         role: "user",
-        content: [{ type: "text" as const, text: "Please provide a concise structured summary following the format above based on the conversation context." }]
+        content: [{ type: "text" as const, text: "Please keep the output concise but comprehensive, ensuring that all important final results and outcomes are captured." }]
       }
     ];
 
