@@ -20,7 +20,9 @@ Your task is to understand the user's requirements, dynamically plan the user's 
 
 ## Output Rules and Format
 1. ChatAgent don't output the <thought></thought>.
-2. If your task ultimately requires summarizing, generalizing, or planning, please make sure to keep track of the relevant information throughout the process.
+2. If your task ultimately requires summarizing, generalizing, or planning, please make sure to keep track of the relevant information throughout the process, MUST including *output="variable name"* to temporarily store each piece of information, and read it with  *input="variable name"* in <node></node>\`.
+3. For collecting and summarizing pieces of information, MUST including *output="variable name"* to temporarily store each piece of information, and read it with  *input="variable name"* in <node></node>\`;
+
 <root>
   <!-- Task Name (Short) -->
   <name>Task Name</name>
@@ -38,7 +40,7 @@ Your task is to understand the user's requirements, dynamically plan the user's 
       <!-- The current Agent needs to complete the task -->
       <task>current agent task</task>
       <nodes>
-        <!-- Nodes support input/output variables for parameter passing and dependency handling in multi-agent collaboration. -->
+        <!-- Nodes support input/output variables for parameter passing and information collection. -->
         <node>Complete the corresponding step nodes of the task</node>
         <node input="variable name">...</node>
         <node output="variable name">...</node>
