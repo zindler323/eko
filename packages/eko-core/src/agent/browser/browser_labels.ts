@@ -739,109 +739,97 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     return await memory.activeCompressContext(agentContext, rlm, messages, tools)
   }
 
+  /**
+   * 收集压缩区间中的variable数据
+   * 符合要求的数据为：
+   * 1. role=assistant，content中有一项type=tool-call，这一项的toolName=variable_storage，这一项的args中operation=write_variable
+   * 2. role=tool，content的toolName=variable_storage，args中的operation=read_variable
+   */
+  private collectVariableMessages(messages: LanguageModelV1Prompt): LanguageModelV1Prompt {
+    const variableMessages: any[] = [];
+
+    for (const message of messages) {
+      if (message.role === 'assistant' && Array.isArray(message.content)) {
+        // 检查assistant消息中的tool-call
+        for (const content of message.content) {
+          if (content.type === 'tool-call' &&
+              content.toolName === 'variable_storage' &&
+              content.args &&
+              typeof content.args === 'object' &&
+              'operation' in content.args &&
+              content.args.operation === 'write_variable') {
+            variableMessages.push(message);
+          }
+        }
+      } else if (message.role === 'tool' && Array.isArray(message.content)) {
+        // 检查tool消息中的tool-result
+        for (const content of message.content) {
+          if (content.type === 'tool-result' &&
+              content.toolName === 'variable_storage' &&
+              content.result &&
+              typeof content.result === 'object' &&
+              'operation' in content.result &&
+              content.result.operation === 'read_variable') {
+            variableMessages.push(message);
+          }
+        }
+      }
+    }
+
+    return variableMessages;
+  }
+
+
   protected async variableAggregateContext(
     agentContext: AgentContext,
     rlm: RetryLanguageModel,
     messages: LanguageModelV1Prompt
   ): Promise<LanguageModelV1Prompt> {
-    const compressPrompt: LanguageModelV1Prompt = [
-      {
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text: `The above are past message records. Now you need to aggregate the information collected in the past. In this data, messages with role 'assistant' are requests to read/write information, while messages with role 'tool' are responses to the previous requests. You need to summarize all write_variable information and generate a corresponding read_variable message with role 'assistant'. 
-
-CRITICAL: You MUST output the result in EXACT XML format as shown below. Do not add any text before or after the XML. Do not use markdown formatting. Output ONLY the XML content.
-
-Required XML format:
-<aggregate>
-    <text>I will extract the information that has been obtained in the past</text>
-    <params>
-        <variableName1>variable value content 1</variableName1>
-        <variableName2>variable value content 2</variableName2>
-        <variableName3>variable value content 3</variableName3>
-    </params>
-</aggregate>
-
-Here's a concrete example based on weather information:
-<aggregate>
-    <text>I will extract the weather information that has been collected for different cities during our conversation</text>
-    <params>
-        <guangzhouWeather>广州周末天气：周六上午多云，下午晴朗，高温34°C，低温28°C，降雨几率14%。周日阵雨，高温32°C，低温27°C，降雨几率60%</guangzhouWeather>
-        <shanghaiWeather>上海下周末天气：周六大部地区晴朗，高温34°C，低温27°C，降雨几率10%。周日局部多云，高温33°C，低温27°C，降雨几率10%</shanghaiWeather>
-    </params>
-</aggregate>
-
-IMPORTANT: 
-1. Output ONLY the XML content, no other text
-2. If you do not find any information that matches the requirements, please output "None" as the result
-3. Ensure the XML is properly formatted with opening and closing tags
-
-Messages: ${messages}`,
-          },
-        ],
-      },
-    ];
-
-    // 创建静默回调，不显示tool调用过程
-    const silentCallback = {
-      onMessage: async () => {},
-    };
-
-    // 执行压缩，使用静默回调
-    let results = await callAgentLLM(
-      agentContext,
-      rlm,
-      compressPrompt,
-      [], // 不需要工具
-      false, // noCompress
-      undefined, // toolChoice
-      0,
-      silentCallback
-    );
-
-    // 提取文本结果
-    const textResult = results.find(result => result.type === "text");
-    if (!textResult || !textResult.text || textResult.text.trim() === "" || textResult.text.trim() === "None") {
+    // 使用 collectVariableMessages 筛选出变量相关的消息
+    const variableMessages = this.collectVariableMessages(messages);
+    if (variableMessages.length === 0) {
       return [];
     }
-    console.log("text: ", { textResult })
-    // 解析XML结果
-    const xmlContent = textResult.text;
-    const textMatch = xmlContent.match(/<text>(.*?)<\/text>/s);
-    const paramsMatch = xmlContent.match(/<params>(.*?)<\/params>/s);
-
-    if (!textMatch || !paramsMatch) {
-      return [{
-        role: "assistant" as const,
-        content: [
-          {
-            type: "text" as const,
-            text: xmlContent
+    // 收集所有变量名和值
+    const allVariables: { [key: string]: any } = {};
+    
+    for (const message of variableMessages) {
+      if (message.role === 'assistant' && Array.isArray(message.content)) {
+        // 从 assistant 消息中提取变量名
+        for (const content of message.content) {
+          if (content.type === 'tool-call' &&
+              content.toolName === 'variable_storage' &&
+              content.args &&
+              typeof content.args === 'object' &&
+              'operation' in content.args &&
+              content.args.operation === 'write_variable') {
+            // 提取变量名
+            if ('name' in content.args && 'value' in content.args) {
+              const varName = content.args.name as string;
+              const varValue = content.args.value;
+              if (varValue !== undefined) {
+                allVariables[varName] = varValue;
+              }
+            }
           }
-        ]
-      }];
-    }
-
-    const text = textMatch[1].trim();
-    const paramsContent = paramsMatch[1];
-
-    // 提取所有name和value对
-    const nameValuePairs: { [key: string]: string } = {};
-    
-    // 使用更灵活的正则表达式来匹配任意标签名
-    const paramMatches = paramsContent.match(/<([^>]+)>(.*?)<\/\1>/gs);
-    
-    if (paramMatches) {
-      for (const match of paramMatches) {
-        const tagMatch = match.match(/<([^>]+)>(.*?)<\/\1>/s);
-        if (tagMatch) {
-          const tagName = tagMatch[1].trim();
-          const tagValue = tagMatch[2].trim();
-          nameValuePairs[tagName] = tagValue;
+        }
+      } else if (message.role === 'tool' && Array.isArray(message.content)) {
+        // 从 tool 消息中提取变量值
+        for (const content of message.content) {
+          if (content.type === 'tool-result' &&
+              content.toolName === 'variable_storage' &&
+              content.result) {
+            // 如果 result 是对象，提取其中的变量
+            if (typeof content.result === 'object' && content.result !== null) {
+              Object.assign(allVariables, content.result);
+            }
+          }
         }
       }
+    }
+
+    if (Object.keys(allVariables).length === 0) {
+      return [];
     }
 
     // 构建两条消息，确保toolCallId长度不超过30
@@ -854,15 +842,11 @@ Messages: ${messages}`,
       role: "assistant" as const,
       content: [
         {
-          type: "text" as const,
-          text: text
-        },
-        {
           type: "tool-call" as const,
           toolCallId: toolCallId,
           toolName: "variable_storage",
           args: {
-            name: Object.keys(nameValuePairs),
+            name: Object.keys(allVariables),
             operation: "read_variable"
           }
         }
@@ -876,7 +860,7 @@ Messages: ${messages}`,
           type: "tool-result" as const,
           toolCallId: toolResultId,
           toolName: "variable_storage",
-          result: nameValuePairs,
+          result: allVariables,
           isError: false
         }
       ]

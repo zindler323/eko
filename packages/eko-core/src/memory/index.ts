@@ -173,7 +173,7 @@ export async function activeCompressContext(
   rlm: RetryLanguageModel,
   messages: LanguageModelV1Prompt,
   tools: LanguageModelV1FunctionTool[]
-) {
+): Promise<LanguageModelV1Prompt> {
   // 提取已使用的工具
   let usedTools = extractUsedTool(messages, tools);
   let snapshotTool = new TaskSnapshotTool();
@@ -228,15 +228,14 @@ export async function activeCompressContext(
 
   let toolResult = await snapshotTool.execute(args, agentContext);
 
-  // 只保留一条摘要消息
-  messages.length = 0;
-  messages.push({
+  // 返回新的消息数组，不修改传入的 messages
+  return [{
     role: "assistant",
-    content: toolResult.content.filter((s) => s.type == "text") as Array<{
+    content: toolResult.content.filter((s) => s.type === "text") as Array<{
       type: "text";
       text: string;
     }>,
-  });
+  }];
 }
 
 export function handleLargeContextMessages(messages: LanguageModelV1Prompt) {
