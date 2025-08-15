@@ -689,7 +689,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       //   "6. 不允许一次输出多个操作，即使接下来有一系列操作，只允许输出第一个。\n" +
       //   "识别说明：请仔细分辨下拉框（有灰色下拉标志）和输入框，当涉及到“选择”操作时，必须通过点击下拉框/单选框后选择最符合的选项，禁止直接向下拉框中输入文本，禁止向截图中非输入框的元素输入文本。" +
       //   "这是最新的截图和页面元素信息.\n元素和对应的index:\n"
-    const pseudoHtmlDescription = "This is the environmental information after the operation, including the latest browser screenshot and page elements. Please note that the element indexes are obtained by capturing the DOM elements of the entire page, while the screenshot only displays the current window. You should consider both pieces of information when deciding the next step. Please perform the next operation based on the environmental information. Do not output the following elements and index information in your response.\n\nIndex and elements:\n";
+    const observePrompt = this.getObservePrompt()
     let lastTool = this.lastToolResult(messages);
     if (
       lastTool &&
@@ -721,13 +721,17 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
           ...image_contents,
           {
             type: "text",
-            text: pseudoHtmlDescription + "```html\n" + result.pseudoHtml + "\n```",
+            text: observePrompt + "```html\n" + result.pseudoHtml + "\n```",
           },
         ],
       });
     }
     await super.handleMessages(agentContext, messages, tools);
-    this.handlePseudoHtmlText(messages, pseudoHtmlDescription);
+    this.handlePseudoHtmlText(messages, observePrompt);
+  }
+
+  protected getObservePrompt() {
+    return "This is the environmental information after the operation, including the latest browser screenshot and page elements. Please note that the element indexes are obtained by capturing the DOM elements of the entire page, while the screenshot only displays the current window. You should consider both pieces of information when deciding the next step. Please perform the next operation based on the environmental information. Do not output the following elements and index information in your response.\n\nIndex and elements:\n";
   }
 
   protected async activeCompressContext(

@@ -26,6 +26,10 @@ export class Eko {
     return this.config
   }
 
+  protected getTaskMap() {
+    return this.taskMap
+  }
+
   public async generate(
     taskPrompt: string,
     taskId: string = uuidv4(),
