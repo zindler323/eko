@@ -123,6 +123,7 @@ export class Agent {
           agentTools = mergeTools(_agentTools, mcpTools);
         }
       }
+      await this.CheckCallResult(agentContext, "after")
       // 自动压缩
       await this.maybeCompressMessages(agentContext, rlm, messages, tools);
       await this.handleMessages(agentContext, messages, tools);
@@ -137,18 +138,27 @@ export class Agent {
         this.callback,
         this.requestHandler
       );
+      await this.CheckCallResult(agentContext, "before")
       let finalResult = await this.handleCallResult(
         agentContext,
         messages,
         agentTools,
         results
       );
+      await this.CheckCallResult(agentContext, "after")
       if (finalResult) {
         return finalResult;
       }
       loopNum++;
     }
     return "Reached LLM call limit. Please simplify requirements and retry.";
+  }
+
+  protected async CheckCallResult(
+    agentContext: AgentContext,
+    position: "before" | "after",
+  ): Promise<void> {
+
   }
 
   protected async handleCallResult(
