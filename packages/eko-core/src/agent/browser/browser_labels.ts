@@ -38,7 +38,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
 `;
     const claudeDescription = `You are a browser operation agent, use structured commands to interact with the browser.
 * This is a browser GUI interface where you need to analyze webpages by taking screenshot and page element structures, and specify action sequences to complete designated tasks.
-* For the first visit, please call the \`navigate_to\` or \`current_page\` tool first. After that, each of your actions will return a screenshot of the page and structured element information, both of which have been specially processed.
+* For the first visit, please call the \`navigate_to\` or \`current_page\` tool first，if the target url is given in the plan, try to navigate to this target url first. After that, each of your actions will return a screenshot of the page and structured element information, both of which have been specially processed.
 * Screenshot description:
   - Screenshot are used to understand page layouts, with labeled bounding boxes corresponding to element indexes. Each bounding box and its label share the same color, with labels typically positioned in the top-right corner of the box.
   - Screenshot help verify element positions and relationships. Labels may sometimes overlap, so extracted elements are used to verify the correct elements.
@@ -696,40 +696,62 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     const pseudoHtmlDescription = "This is the environmental information after the operation, including the latest browser screenshot and page elements. Please note that the element indexes are obtained by capturing the DOM elements of the entire page, while the screenshot only displays the current window. You should consider both pieces of information when deciding the next step. Please perform the next operation based on the environmental information. Do not output the following elements and index information in your response.\n\nIndex and elements:\n";
     let lastTool = this.lastToolResult(messages);
     if (
-      lastTool &&
-      lastTool.toolName !== "extract_page_content" &&
-      lastTool.toolName !== "get_all_tabs" &&
-      lastTool.toolName !== "variable_storage"
-    ) {
-      await sleep(700);
-      let image_contents: LanguageModelV1ImagePart[] = [];
-      if (await this.double_screenshots(agentContext, messages, tools)) {
-        let imageResult = await this.screenshot(agentContext);
-        let image = toImage(imageResult.imageBase64);
-        image_contents.push({
-          type: "image",
-          image: image,
-          mimeType: imageResult.imageType,
-        });
-      }
-      let result = await this.screenshot_and_html(agentContext);
-      let image = toImage(result.imageBase64);
-      image_contents.push({
-        type: "image",
-        image: image,
-        mimeType: result.imageType,
-      });
-      messages.push({
-        role: "user",
-        content: [
-          ...image_contents,
-          {
-            type: "text",
-            text: pseudoHtmlDescription + "```html\n" + result.pseudoHtml + "\n```",
-          },
-        ],
-      });
-    }
+  lastTool &&
+  lastTool.toolName !== "extract_page_content" &&
+  lastTool.toolName !== "get_all_tabs" &&
+  lastTool.toolName !== "variable_storage"
+) {
+  const isDebugMode =
+  // @ts-ignore - 动态添加的属性
+  agentContext?.context?.debugMode
+
+  console.log("isDebugMode", isDebugMode)
+  if (isDebugMode && lastTool.toolName !== "human_interact") {
+    messages.push({
+      role: "user",
+      content: [{
+        type: "text",
+        text: "Please apply the human_interact valid tool to check this action. " +
+            "If the user provides guidance instructions, you must adhere to them in subsequent actions.",
+      }],
+    });
+    return;
+  }
+
+  await sleep(700);
+
+  const image_contents: LanguageModelV1ImagePart[] = [];
+
+  if (await this.double_screenshots(agentContext, messages, tools)) {
+    const imageResult = await this.screenshot(agentContext);
+    const image = toImage(imageResult.imageBase64);
+    image_contents.push({
+      type: "image",
+      image: image,
+      mimeType: imageResult.imageType,
+    });
+  }
+
+  const result = await this.screenshot_and_html(agentContext);
+  const image = toImage(result.imageBase64);
+  image_contents.push({
+    type: "image",
+    image: image,
+    mimeType: result.imageType,
+  });
+
+  messages.push({
+    role: "user",
+    content: [
+      ...image_contents,
+      {
+        type: "text",
+        text: pseudoHtmlDescription + "```html\n" + result.pseudoHtml + "\n```",
+      },
+    ],
+  });
+}
+
     await super.handleMessages(agentContext, messages, tools);
     this.handlePseudoHtmlText(messages, pseudoHtmlDescription);
   }
@@ -772,7 +794,10 @@ Important guidelines for the summary:
 3. **Actions Completed**: List the key actions that were performed (e.g., "Clicked submit button", "Downloaded report", "Found 5 matching results")
 4. **Data Collected**: If any information was gathered, summarize what was collected and its significance
 5. **Task Status**: Clearly indicate whether the task was completed, partially completed, or failed
-6. **Key Achievements**: Highlight the most important accomplishments or discoveries`,
+6. **Key Achievements**: Highlight the most important accomplishments or discoveries
+
+Language Requirement:
+The output language should follow the language corresponding to the user's task.`
       },
       ...messages,
       {

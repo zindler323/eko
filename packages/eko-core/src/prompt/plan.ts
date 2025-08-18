@@ -14,6 +14,7 @@ Your task is to understand the user's requirements, dynamically plan the user's 
 5. You only need to provide the steps to complete the user's task, key steps only, no need to be too detailed.
 6. Please strictly follow the output format and example output.
 7. The output language should follow the language corresponding to the user's task.
+8. If a task can be completed by a single agent, do not split it into multiple parts.
 
 ## Agent list
 {agents}

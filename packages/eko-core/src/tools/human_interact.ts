@@ -18,14 +18,15 @@ export default class HumanInteractTool implements Tool {
 confirm: Ask the user to confirm whether to execute an operation, especially when performing dangerous actions such as deleting system files, users will choose Yes or No.
 input: Prompt the user to enter text; for example, when a task is ambiguous, the AI can choose to ask the user for details, and the user can respond by inputting.
 select: Allow the user to make a choice; in situations that require selection, the AI can ask the user to make a decision.
-request_help: Request assistance from the user; for instance, when an operation is blocked, the AI can ask the user for help, such as needing to log into a website or solve a CAPTCHA or Scan the QR code.`;
+request_help: Request assistance from the user; for instance, when an operation is blocked, the AI can ask the user for help, such as needing to log into a website or solve a CAPTCHA or Scan the QR code.
+valid: Allow the user to check each action; For instance, after click/input an element, ask for human to confirm whether we are on the optimal path`;
     this.parameters = {
       type: "object",
       properties: {
         interactType: {
           type: "string",
           description: "The type of interaction with users.",
-          enum: ["confirm", "input", "select", "request_help"],
+          enum: ["confirm", "input", "select", "request_help", "valid"],
         },
         prompt: {
           type: "string",
@@ -62,6 +63,15 @@ request_help: Request assistance from the user; for instance, when an operation 
     let resultText = "";
     if (callback) {
       switch (interactType) {
+        case "valid":
+          if (callback.onHumanValid) {
+            let result = await callback.onHumanValid(
+              agentContext,
+              args.prompt as string
+            );
+            resultText = `users' valid result: ${result}`;
+          }
+          break;
         case "confirm":
           if (callback.onHumanConfirm) {
             let result = await callback.onHumanConfirm(

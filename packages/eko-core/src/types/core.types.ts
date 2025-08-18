@@ -151,6 +151,11 @@ export interface HumanCallback {
     prompt: string,
     extInfo?: any
   ) => Promise<string>;
+  onHumanValid?: (
+    agentContext: AgentContext,
+    prompt: string,
+    extInfo?: any
+  ) => Promise<string>;
   onHumanSelect?: (
     agentContext: AgentContext,
     prompt: string,
