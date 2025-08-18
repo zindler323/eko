@@ -1,16 +1,12 @@
-import { AgentContext } from "../../core/context";
+import {AgentContext} from "../../core/context";
 import * as memory from "../../memory";
-import { run_build_dom_tree } from "./optimized_dom_tree";
-import { BaseBrowserAgent, AGENT_NAME } from "./browser_base";
-import {
-  LanguageModelV1ImagePart,
-  LanguageModelV1Prompt,
-  LanguageModelV1FunctionTool,
-} from "@ai-sdk/provider";
-import { Tool, ToolResult, IMcpClient, StreamCallback } from "../../types";
-import { mergeTools, sleep, toImage } from "../../common/utils";
+import {run_build_dom_tree} from "./optimized_dom_tree";
+import {AGENT_NAME, BaseBrowserAgent} from "./browser_base";
+import {LanguageModelV1FunctionTool, LanguageModelV1ImagePart, LanguageModelV1Prompt,} from "@ai-sdk/provider";
+import {IMcpClient, StreamCallback, Tool, ToolResult} from "../../types";
+import {mergeTools, sleep, toImage} from "../../common/utils";
 import {RetryLanguageModel} from "../../llm";
-import { callAgentLLM } from "../llm";
+import {callAgentLLM} from "../llm";
 
 export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
   constructor(llms?: string[], ext_tools?: Tool[], mcpClient?: IMcpClient) {
@@ -693,7 +689,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       //   "6. 不允许一次输出多个操作，即使接下来有一系列操作，只允许输出第一个。\n" +
       //   "识别说明：请仔细分辨下拉框（有灰色下拉标志）和输入框，当涉及到“选择”操作时，必须通过点击下拉框/单选框后选择最符合的选项，禁止直接向下拉框中输入文本，禁止向截图中非输入框的元素输入文本。" +
       //   "这是最新的截图和页面元素信息.\n元素和对应的index:\n"
-    const pseudoHtmlDescription = "This is the environmental information after the operation, including the latest browser screenshot and page elements. Please note that the element indexes are obtained by capturing the DOM elements of the entire page, while the screenshot only displays the current window. You should consider both pieces of information when deciding the next step. Please perform the next operation based on the environmental information. Do not output the following elements and index information in your response.\n\nIndex and elements:\n";
+    const observePrompt = this.getObservePrompt()
     let lastTool = this.lastToolResult(messages);
     if (
   lastTool &&
@@ -746,14 +742,18 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       ...image_contents,
       {
         type: "text",
-        text: pseudoHtmlDescription + "```html\n" + result.pseudoHtml + "\n```",
+        text: observePrompt + "```html\n" + result.pseudoHtml + "\n```",
       },
     ],
   });
 }
 
     await super.handleMessages(agentContext, messages, tools);
-    this.handlePseudoHtmlText(messages, pseudoHtmlDescription);
+    this.handlePseudoHtmlText(messages, observePrompt);
+  }
+
+  protected getObservePrompt() {
+    return "This is the environmental information after the operation, including the latest browser screenshot and page elements. Please note that the element indexes are obtained by capturing the DOM elements of the entire page, while the screenshot only displays the current window. You should consider both pieces of information when deciding the next step. Please perform the next operation based on the environmental information. Do not output the following elements and index information in your response.\n\nIndex and elements:\n";
   }
 
   protected async activeCompressContext(
@@ -761,8 +761,139 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     rlm: RetryLanguageModel,
     messages: LanguageModelV1Prompt,
     tools: LanguageModelV1FunctionTool[]
-  ) {
-    await memory.activeCompressContext(agentContext, rlm, messages, tools)
+  ): Promise<LanguageModelV1Prompt> {
+    return await memory.activeCompressContext(agentContext, rlm, messages, tools)
+  }
+
+  /**
+   * 收集压缩区间中的variable数据
+   * 符合要求的数据为：
+   * 1. role=assistant，content中有一项type=tool-call，这一项的toolName=variable_storage，这一项的args中operation=write_variable
+   * 2. role=tool，content的toolName=variable_storage，args中的operation=read_variable
+   */
+  private collectVariableMessages(messages: LanguageModelV1Prompt): LanguageModelV1Prompt {
+    const variableMessages: any[] = [];
+
+    for (const message of messages) {
+      if (message.role === 'assistant' && Array.isArray(message.content)) {
+        // 检查assistant消息中的tool-call
+        for (const content of message.content) {
+          if (content.type === 'tool-call' &&
+              content.toolName === 'variable_storage' &&
+              content.args &&
+              typeof content.args === 'object' &&
+              'operation' in content.args &&
+              content.args.operation === 'write_variable') {
+            variableMessages.push(message);
+          }
+        }
+      } else if (message.role === 'tool' && Array.isArray(message.content)) {
+        // 检查tool消息中的tool-result
+        for (const content of message.content) {
+          if (content.type === 'tool-result' &&
+              content.toolName === 'variable_storage' &&
+              content.result &&
+              typeof content.result === 'object' &&
+              'operation' in content.result &&
+              content.result.operation === 'read_variable') {
+            variableMessages.push(message);
+          }
+        }
+      }
+    }
+
+    return variableMessages;
+  }
+
+
+  protected async variableAggregateContext(
+    agentContext: AgentContext,
+    rlm: RetryLanguageModel,
+    messages: LanguageModelV1Prompt
+  ): Promise<LanguageModelV1Prompt> {
+    // 使用 collectVariableMessages 筛选出变量相关的消息
+    const variableMessages = this.collectVariableMessages(messages);
+    if (variableMessages.length === 0) {
+      return [];
+    }
+    // 收集所有变量名和值
+    const allVariables: { [key: string]: any } = {};
+
+    for (const message of variableMessages) {
+      if (message.role === 'assistant' && Array.isArray(message.content)) {
+        // 从 assistant 消息中提取变量名
+        for (const content of message.content) {
+          if (content.type === 'tool-call' &&
+              content.toolName === 'variable_storage' &&
+              content.args &&
+              typeof content.args === 'object' &&
+              'operation' in content.args &&
+              content.args.operation === 'write_variable') {
+            // 提取变量名
+            if ('name' in content.args && 'value' in content.args) {
+              const varName = content.args.name as string;
+              const varValue = content.args.value;
+              if (varValue !== undefined) {
+                allVariables[varName] = varValue;
+              }
+            }
+          }
+        }
+      } else if (message.role === 'tool' && Array.isArray(message.content)) {
+        // 从 tool 消息中提取变量值
+        for (const content of message.content) {
+          if (content.type === 'tool-result' &&
+              content.toolName === 'variable_storage' &&
+              content.result) {
+            // 如果 result 是对象，提取其中的变量
+            if (typeof content.result === 'object' && content.result !== null) {
+              Object.assign(allVariables, content.result);
+            }
+          }
+        }
+      }
+    }
+
+    if (Object.keys(allVariables).length === 0) {
+      return [];
+    }
+
+    // 构建两条消息，确保toolCallId长度不超过30
+    const timestamp = Date.now().toString(36);
+    const randomPart = Math.random().toString(36).substr(2, 5);
+    const toolCallId = `toolu_${timestamp}${randomPart}`.substring(0, 30);
+    const toolResultId = `toolu_${timestamp}${randomPart}`.substring(0, 30);
+
+    const assistantMessage = {
+      role: "assistant" as const,
+      content: [
+        {
+          type: "tool-call" as const,
+          toolCallId: toolCallId,
+          toolName: "variable_storage",
+          args: {
+            name: Object.keys(allVariables),
+            operation: "read_variable"
+          }
+        }
+      ]
+    };
+
+    const toolMessage = {
+      role: "tool" as const,
+      content: [
+        {
+          type: "tool-result" as const,
+          toolCallId: toolResultId,
+          toolName: "variable_storage",
+          result: allVariables,
+          isError: false
+        }
+      ]
+    };
+
+    // 返回新的消息数组，不修改传入的 messages
+    return [assistantMessage, toolMessage];
   }
 
   protected async summary(

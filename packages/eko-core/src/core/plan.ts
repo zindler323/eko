@@ -12,9 +12,9 @@ import {
 } from "@ai-sdk/provider";
 
 export class Planner {
-  private taskId: string;
-  private context: Context;
-  private callback?: StreamCallback;
+  protected taskId: string;
+  protected context: Context;
+  protected callback?: StreamCallback;
 
   constructor(context: Context, callback?: StreamCallback) {
     this.context = context;
@@ -87,12 +87,7 @@ export class Planner {
   ): Promise<Workflow> {
     const config = this.context.config;
     const rlm = new RetryLanguageModel(config.llms, config.planLlms);
-    const request: LLMRequest = {
-      maxTokens: 4096,
-      temperature: 0.7,
-      messages: messages,
-      abortSignal: this.context.controller.signal,
-    };
+    const request: LLMRequest = this.getPlanLLMRequest(messages)
     const result = await rlm.callStream(request);
     const reader = result.stream.getReader();
     let streamText = "";
@@ -165,5 +160,14 @@ export class Planner {
       workflow.taskPrompt = taskPrompt.trim();
     }
     return workflow;
+  }
+
+  protected getPlanLLMRequest(messages: LanguageModelV1Prompt, token?: number, temperature?: number): LLMRequest {
+    return {
+      maxTokens: token || 4096,
+      temperature: temperature || 0.7,
+      messages: messages,
+      abortSignal: this.context.controller.signal,
+    };
   }
 }
