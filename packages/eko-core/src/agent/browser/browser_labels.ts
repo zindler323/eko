@@ -692,62 +692,42 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     const observePrompt = this.getObservePrompt()
     let lastTool = this.lastToolResult(messages);
     if (
-  lastTool &&
-  lastTool.toolName !== "extract_page_content" &&
-  lastTool.toolName !== "get_all_tabs" &&
-  lastTool.toolName !== "variable_storage"
-) {
-  const isDebugMode =
-  // @ts-ignore - 动态添加的属性
-  agentContext?.context?.debugMode
+      lastTool &&
+      lastTool.toolName !== "extract_page_content" &&
+      lastTool.toolName !== "get_all_tabs" &&
+      lastTool.toolName !== "variable_storage"
+    ) {
+      await sleep(700);
+      let image_contents: LanguageModelV1ImagePart[] = [];
+      if (await this.double_screenshots(agentContext, messages, tools)) {
+        const imageResult = await this.screenshot(agentContext);
+        const image = toImage(imageResult.imageBase64);
+        image_contents.push({
+          type: "image",
+          image: image,
+          mimeType: imageResult.imageType,
+        });
+      }
 
-  console.log("isDebugMode", isDebugMode)
-  if (isDebugMode && lastTool.toolName !== "human_interact") {
-    messages.push({
-      role: "user",
-      content: [{
-        type: "text",
-        text: "Please apply the human_interact valid tool to check this action. " +
-            "If the user provides guidance instructions, you must adhere to them in subsequent actions.",
-      }],
-    });
-    return;
-  }
+      let result = await this.screenshot_and_html(agentContext);
+      let image = toImage(result.imageBase64);
+      image_contents.push({
+        type: "image",
+        image: image,
+        mimeType: result.imageType,
+      });
 
-  await sleep(700);
-
-  const image_contents: LanguageModelV1ImagePart[] = [];
-
-  if (await this.double_screenshots(agentContext, messages, tools)) {
-    const imageResult = await this.screenshot(agentContext);
-    const image = toImage(imageResult.imageBase64);
-    image_contents.push({
-      type: "image",
-      image: image,
-      mimeType: imageResult.imageType,
-    });
-  }
-
-  const result = await this.screenshot_and_html(agentContext);
-  const image = toImage(result.imageBase64);
-  image_contents.push({
-    type: "image",
-    image: image,
-    mimeType: result.imageType,
-  });
-
-  messages.push({
-    role: "user",
-    content: [
-      ...image_contents,
-      {
-        type: "text",
-        text: observePrompt + "```html\n" + result.pseudoHtml + "\n```",
-      },
-    ],
-  });
-}
-
+      messages.push({
+        role: "user",
+        content: [
+          ...image_contents,
+          {
+            type: "text",
+            text: observePrompt + "```html\n" + result.pseudoHtml + "\n```",
+          },
+        ],
+      });
+    }
     await super.handleMessages(agentContext, messages, tools);
     this.handlePseudoHtmlText(messages, observePrompt);
   }

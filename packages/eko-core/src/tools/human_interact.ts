@@ -64,10 +64,11 @@ valid: Allow the user to check each action; For instance, after click/input an e
     if (callback) {
       switch (interactType) {
         case "valid":
-          if (callback.onHumanValid) {
-            let result = await callback.onHumanValid(
+          if (callback.onHumanInput) {
+            let result = await callback.onHumanInput(
               agentContext,
-              args.prompt as string
+              args.prompt as string,
+              {valid: true},
             );
             resultText = `users' valid result: ${result}`;
           }

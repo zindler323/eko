@@ -123,7 +123,7 @@ export class Agent {
           agentTools = mergeTools(_agentTools, mcpTools);
         }
       }
-      await this.CheckCallResult(agentContext, "after")
+      await this.CheckCallResult(agentContext, messages, "start")
       // 自动压缩
       await this.maybeCompressMessages(agentContext, rlm, messages, tools);
       await this.handleMessages(agentContext, messages, tools);
@@ -138,14 +138,14 @@ export class Agent {
         this.callback,
         this.requestHandler
       );
-      await this.CheckCallResult(agentContext, "before")
+      await this.CheckCallResult(agentContext, messages, "before")
       let finalResult = await this.handleCallResult(
         agentContext,
         messages,
         agentTools,
         results
       );
-      await this.CheckCallResult(agentContext, "after")
+      await this.CheckCallResult(agentContext, messages, "after")
       if (finalResult) {
         return finalResult;
       }
@@ -156,10 +156,9 @@ export class Agent {
 
   protected async CheckCallResult(
     agentContext: AgentContext,
-    position: "before" | "after",
-  ): Promise<void> {
-
-  }
+    messages: LanguageModelV1Prompt,
+    position: "before" | "after" | "start",
+  ): Promise<void> {}
 
   protected async handleCallResult(
     agentContext: AgentContext,
