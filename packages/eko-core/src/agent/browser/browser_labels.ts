@@ -34,7 +34,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
 `;
     const claudeDescription = `You are a browser operation agent, use structured commands to interact with the browser.
 * This is a browser GUI interface where you need to analyze webpages by taking screenshot and page element structures, and specify action sequences to complete designated tasks.
-* For the first visit, please call the \`navigate_to\` or \`current_page\` tool first. After that, each of your actions will return a screenshot of the page and structured element information, both of which have been specially processed.
+* For the first visit, please call the \`navigate_to\` or \`current_page\` tool first，if the target url is given in the plan, try to navigate to this target url first. After that, each of your actions will return a screenshot of the page and structured element information, both of which have been specially processed.
 * Screenshot description:
   - Screenshot are used to understand page layouts, with labeled bounding boxes corresponding to element indexes. Each bounding box and its label share the same color, with labels typically positioned in the top-right corner of the box.
   - Screenshot help verify element positions and relationships. Labels may sometimes overlap, so extracted elements are used to verify the correct elements.
@@ -700,14 +700,15 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       await sleep(700);
       let image_contents: LanguageModelV1ImagePart[] = [];
       if (await this.double_screenshots(agentContext, messages, tools)) {
-        let imageResult = await this.screenshot(agentContext);
-        let image = toImage(imageResult.imageBase64);
+        const imageResult = await this.screenshot(agentContext);
+        const image = toImage(imageResult.imageBase64);
         image_contents.push({
           type: "image",
           image: image,
           mimeType: imageResult.imageType,
         });
       }
+
       let result = await this.screenshot_and_html(agentContext);
       let image = toImage(result.imageBase64);
       image_contents.push({
@@ -715,6 +716,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
         image: image,
         mimeType: result.imageType,
       });
+
       messages.push({
         role: "user",
         content: [
@@ -796,7 +798,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     }
     // 收集所有变量名和值
     const allVariables: { [key: string]: any } = {};
-    
+
     for (const message of variableMessages) {
       if (message.role === 'assistant' && Array.isArray(message.content)) {
         // 从 assistant 消息中提取变量名
@@ -903,7 +905,10 @@ Important guidelines for the summary:
 3. **Actions Completed**: List the key actions that were performed (e.g., "Clicked submit button", "Downloaded report", "Found 5 matching results")
 4. **Data Collected**: If any information was gathered, summarize what was collected and its significance
 5. **Task Status**: Clearly indicate whether the task was completed, partially completed, or failed
-6. **Key Achievements**: Highlight the most important accomplishments or discoveries`,
+6. **Key Achievements**: Highlight the most important accomplishments or discoveries
+
+Language Requirement:
+The output language should follow the language corresponding to the user's task.`
       },
       ...messages,
       {
