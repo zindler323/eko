@@ -47,7 +47,7 @@ valid: Allow the user to check each action; For instance, after click/input an e
         helpType: {
           type: "string",
           description: "Help type, required when interactType is request_help.",
-          enum: ["request_login", "request_assistance"],
+          enum: ["request_login", "request_assistance", "request_checkPopup"],
         },
       },
       required: ["interactType", "prompt"],

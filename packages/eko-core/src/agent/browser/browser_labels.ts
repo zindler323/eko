@@ -691,6 +691,32 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
       //   "这是最新的截图和页面元素信息.\n元素和对应的index:\n"
     const observePrompt = this.getObservePrompt()
     let lastTool = this.lastToolResult(messages);
+
+    // 检测连续重复工具调用
+    const repeatedToolDetection = this.detectRepeatedToolUse(agentContext, messages);
+    if (repeatedToolDetection.isRepeated) {
+      messages.push({
+        role: "user",
+        content: [{
+          type: "text",
+          text: `I notice you've been repeatedly using the ${repeatedToolDetection.toolName} tool with similar results. This might be due to browser popup blocking. Please take the following actions:
+
+          Firstly, use the human_interact request_help tool (request_checkPopup) to remind the user to check browser popup settings:
+             - Visit chrome://settings/content/popups in Chrome to enable popups
+             - Or check for popup blocking icon in the address bar and click to allow
+          
+          Based on previous messages, if the user has already enabled popups but still experiencing issues:
+             - Try alternative methods that don't require opening new windows
+             - Look for options to open content in the same tab
+             - Consider using different tools or approaches to accomplish the task goal
+          
+          Please avoid repeating the same operation and find alternative paths to achieve your objective.`,
+        }],
+      });
+      return;
+    }
+
+    console.log("日只能用")
     if (
       lastTool &&
       lastTool.toolName !== "extract_page_content" &&
@@ -993,6 +1019,222 @@ The output language should follow the language corresponding to the user's task.
         return line.replace('" >', '">').replace(" >", ">");
       })
       .join("\n");
+  }
+
+
+  protected calculateNGramSimilarity(str1: string, str2: string, n: number = 3): number {
+    // 如果字符串长度小于n，直接返回精确匹配结果
+    console.log("gram", str1, str2)
+    // 将字符串转为小写并去除多余空白
+    const text1 = str1.toLowerCase().replace(/\s+/g, ' ').trim();
+    const text2 = str2.toLowerCase().replace(/\s+/g, ' ').trim();
+    
+    // 生成N-gram集合
+    const getNGrams = (text: string, n: number): Set<string> => {
+      const ngrams = new Set<string>();
+      for (let i = 0; i <= text.length - n; i++) {
+        ngrams.add(text.substring(i, i + n));
+      }
+      return ngrams;
+    };
+    
+    const ngrams1 = getNGrams(text1, n);
+    const ngrams2 = getNGrams(text2, n);
+    
+    // 计算交集大小
+    let intersection = 0;
+    for (const ngram of ngrams1) {
+      if (ngrams2.has(ngram)) {
+        intersection++;
+      }
+    }
+    
+    // 计算Jaccard相似度：交集大小 / 并集大小
+    const union = ngrams1.size + ngrams2.size - intersection;
+    return union > 0 ? intersection / union : 0;
+  }
+
+  protected detectRepeatedToolUse(
+    agentContext: AgentContext,
+    messages: LanguageModelV1Prompt
+  ): { isRepeated: boolean; toolName: string; reason?: string } {
+    // 获取最近的工具调用历史
+    const toolHistory = this.toolUseNames(messages);
+  
+    // 如果工具调用历史不足3个，则不进行检测
+    if (toolHistory.length < 3) {
+      return { isRepeated: false, toolName: '' };
+    }
+  
+    // 检查最近3次工具调用是否相同
+    const lastTool = toolHistory[toolHistory.length - 1];
+    const secondLastTool = toolHistory[toolHistory.length - 2];
+    const thirdLastTool = toolHistory[toolHistory.length - 3];
+    console.log(lastTool, secondLastTool, thirdLastTool)
+    if (
+      lastTool.includes("click") &&
+      secondLastTool.includes("click") &&
+      thirdLastTool.includes("click")
+    ) {
+      console.log("检测到连续点击");
+      
+      // 构建消息序列，关联工具调用和观察结果
+      interface MessageSequence {
+        toolName: string;
+        toolArgs: any;
+        toolResult: any;
+        observation: string;
+      }
+      
+      const sequences: MessageSequence[] = [];
+      
+      // 记录所有assistant消息的观察文本，用于后续匹配
+      const assistantObservations: Array<{index: number; text: string}> = [];
+      
+      // 记录所有工具调用和结果，用于后续匹配
+      const toolCalls: Array<{
+        index: number; 
+        toolName: string; 
+        toolCallId: string; 
+        args: any;
+      }> = [];
+      
+      const toolResults: Array<{
+        index: number; 
+        toolCallId: string; 
+        result: any;
+      }> = [];
+      
+      // 第一步：提取所有assistant观察、工具调用和工具结果
+      console.log("开始提取消息组件...");
+      for (let i = 0; i < messages.length; i++) {
+        const message = messages[i];
+        console.log(`处理消息 ${i}, 角色: ${message.role}`);
+        
+        // 提取assistant的观察文本
+        if (message.role === 'assistant' && Array.isArray(message.content)) {
+          let observationText = '';
+          let hasToolCall = false;
+          let toolName = '';
+          let toolCallId = '';
+          let args = null;
+          
+          for (const content of message.content) {
+            if (content.type === 'text') {
+              observationText = content.text || '';
+            } else if (content.type === 'tool-call') {
+              hasToolCall = true;
+              toolName = content.toolName || '';
+              toolCallId = content.toolCallId || '';
+              args = content.args;
+            }
+          }
+          
+          // 记录观察文本
+          if (observationText) {
+            console.log(`找到assistant观察文本 [${i}]: ${observationText.substring(0, 50)}...`);
+            assistantObservations.push({
+              index: i,
+              text: observationText
+            });
+          }
+          
+          // 记录工具调用
+          if (hasToolCall) {
+            console.log(`找到工具调用 [${i}]: ${toolName}, ID: ${toolCallId}`);
+            toolCalls.push({
+              index: i,
+              toolName,
+              toolCallId,
+              args
+            });
+          }
+        }
+        
+        // 提取工具结果
+        if (message.role === 'tool' && Array.isArray(message.content)) {
+          for (const content of message.content) {
+            if (content.type === 'tool-result') {
+              console.log(`找到工具结果 [${i}]: ${content.toolName}, ID: ${content.toolCallId}`);
+              toolResults.push({
+                index: i,
+                toolCallId: content.toolCallId || '',
+                result: content.result
+              });
+            }
+          }
+        }
+      }
+      
+      // 第二步：构建完整序列
+      console.log("开始构建序列...");
+      console.log(`工具调用数: ${toolCalls.length}, 工具结果数: ${toolResults.length}, 观察文本数: ${assistantObservations.length}`);
+      
+      // 遍历每个工具调用
+      for (let i = 0; i < toolCalls.length; i++) {
+        const toolCall = toolCalls[i];
+        
+        // 查找对应的工具结果
+        const toolResult = toolResults.find(result => result.toolCallId === toolCall.toolCallId);
+        
+        if (toolResult) {
+          // 查找下一个assistant消息中的观察文本
+          // 找到当前工具结果后面的第一个assistant观察
+          const nextObservation = assistantObservations.find(obs => 
+            obs.index > toolResult.index
+          );
+          
+          if (nextObservation) {
+            console.log(`构建完整序列: ${toolCall.toolName} -> 结果 -> 观察: ${nextObservation.text.substring(0, 30)}...`);
+            
+            sequences.push({
+              toolName: toolCall.toolName,
+              toolArgs: toolCall.args,
+              toolResult: toolResult.result,
+              observation: nextObservation.text
+            });
+          }
+        }
+      }
+      
+      console.log(`构建了 ${sequences.length} 个序列`);
+      
+      // 过滤出与目标工具相关的序列
+      const targetSequences = sequences.filter(seq => 
+        seq.toolName === lastTool || 
+        seq.toolName === secondLastTool || 
+        seq.toolName === thirdLastTool
+      );
+      
+      console.log(`找到 ${targetSequences.length} 个目标工具相关序列`);
+      
+      // 如果找到了至少3个相关序列，计算观察文本的相似度
+      if (targetSequences.length >= 3) {
+        // 取最近的3个观察结果
+        const recentObservations = targetSequences.slice(-3).map(seq => seq.observation);
+        
+        console.log("最近3个观察文本:");
+        recentObservations.forEach((obs, idx) => {
+          console.log(`[${idx}]: ${obs.substring(0, 50)}...`);
+        });
+        
+        const ngram12 = this.calculateNGramSimilarity(recentObservations[0], recentObservations[1], 2);
+        const ngram23 = this.calculateNGramSimilarity(recentObservations[1], recentObservations[2], 2);
+        
+        console.log("观察文本相似度 NGram:", ngram12, ngram23);
+
+        const ngramThreshold = 0.5; // N-gram相似度阈值
+        
+        // 如果相似度超过阈值，则认为是重复调用
+        if ((ngram23 > 0.6) || (ngram12 > 0.5 && ngram23 > 0.5)) {
+          return { isRepeated: true, toolName: lastTool, reason: 'similar_observations' };
+        }
+      } else {
+        console.log("目标序列数量不足3个，无法进行相似度分析");
+      }
+    }
+    
+    return { isRepeated: false, toolName: '' };
   }
 }
 

@@ -81,7 +81,7 @@ export class Agent {
   public async runWithContext(
     agentContext: AgentContext,
     mcpClient?: IMcpClient,
-    maxReactNum: number = 100,
+    maxReactNum: number = 50,
     historyMessages: LanguageModelV1Prompt = []
   ): Promise<string> {
     let loopNum = 0;
