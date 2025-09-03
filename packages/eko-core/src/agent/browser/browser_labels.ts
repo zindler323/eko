@@ -678,81 +678,85 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     messages: LanguageModelV1Prompt,
     tools: Tool[]
   ): Promise<void> {
-      // const pseudoHtmlDescription =
-      // "请你先评估从当前截图中看到的执行结果是否符合预期，用拟人化的语气将看到的结果分点简洁列出，例如当执行有效时使用“太好了! 我看到...”, 或者“完美！我观察到...”, 当执行有误不符合预期，或者没有变化时使用“看起来似乎不太对，我发现...”，注意在描述元素时务必要补充元素所在的位置区域信息描述。" +
-      //   "再用一句话说明接下来要执行的一个操作是什么，例如“接下来我会执行...”。注意：" +
-      //   "1. 一步一步思考，从多个角度思考当前的问题。生成操作时不要被plan中的信息限制，任何可以导向最终任务要求的都可以被考虑在内。" +
-      //   "2. 如果页面元素信息中有操作相关的信息，但没有编号，同时截图中也没有这个元素信息，可能是不在可视网页范围内，需要滚动直到获取到想要的元素或到达页面边界为止。" +
-      //   "3. 生成的执行操作需要参考上文的评估，确保区域和描述正确。" +
-      //   "4. 优先处理弹窗、浮层。如果包含信息汇总在内的全部任务都已经完成，明确表达出任务已经完成的意思。" +
-      //   "5. 操作只能为工具列表相关的操作，信息汇总等非工具相关的操作请在该环节之前输出。" +
-      //   "6. 不允许一次输出多个操作，即使接下来有一系列操作，只允许输出第一个。\n" +
-      //   "识别说明：请仔细分辨下拉框（有灰色下拉标志）和输入框，当涉及到“选择”操作时，必须通过点击下拉框/单选框后选择最符合的选项，禁止直接向下拉框中输入文本，禁止向截图中非输入框的元素输入文本。" +
-      //   "这是最新的截图和页面元素信息.\n元素和对应的index:\n"
+    // const pseudoHtmlDescription =
+    // "请你先评估从当前截图中看到的执行结果是否符合预期，用拟人化的语气将看到的结果分点简洁列出，例如当执行有效时使用“太好了! 我看到...”, 或者“完美！我观察到...”, 当执行有误不符合预期，或者没有变化时使用“看起来似乎不太对，我发现...”，注意在描述元素时务必要补充元素所在的位置区域信息描述。" +
+    //   "再用一句话说明接下来要执行的一个操作是什么，例如“接下来我会执行...”。注意：" +
+    //   "1. 一步一步思考，从多个角度思考当前的问题。生成操作时不要被plan中的信息限制，任何可以导向最终任务要求的都可以被考虑在内。" +
+    //   "2. 如果页面元素信息中有操作相关的信息，但没有编号，同时截图中也没有这个元素信息，可能是不在可视网页范围内，需要滚动直到获取到想要的元素或到达页面边界为止。" +
+    //   "3. 生成的执行操作需要参考上文的评估，确保区域和描述正确。" +
+    //   "4. 优先处理弹窗、浮层。如果包含信息汇总在内的全部任务都已经完成，明确表达出任务已经完成的意思。" +
+    //   "5. 操作只能为工具列表相关的操作，信息汇总等非工具相关的操作请在该环节之前输出。" +
+    //   "6. 不允许一次输出多个操作，即使接下来有一系列操作，只允许输出第一个。\n" +
+    //   "识别说明：请仔细分辨下拉框（有灰色下拉标志）和输入框，当涉及到“选择”操作时，必须通过点击下拉框/单选框后选择最符合的选项，禁止直接向下拉框中输入文本，禁止向截图中非输入框的元素输入文本。" +
+    //   "这是最新的截图和页面元素信息.\n元素和对应的index:\n"
     const observePrompt = this.getObservePrompt()
-    let lastTool = this.lastToolResult(messages);
-
-    // 检测连续重复工具调用
-    const repeatedToolDetection = this.detectRepeatedToolUse(agentContext, messages);
-    if (repeatedToolDetection.isRepeated) {
-      messages.push({
-        role: "user",
-        content: [{
-          type: "text",
-          text: `I notice you've been repeatedly using the ${repeatedToolDetection.toolName} tool with similar results. This might be due to browser popup blocking. Please take the following actions:
-
-          Firstly, use the human_interact request_help tool (request_checkPopup) to remind the user to check browser popup settings:
-             - Visit chrome://settings/content/popups in Chrome to enable popups
-             - Or check for popup blocking icon in the address bar and click to allow
-          
-          Based on previous messages, if the user has already enabled popups but still experiencing issues:
-             - Try alternative methods that don't require opening new windows
-             - Look for options to open content in the same tab
-             - Consider using different tools or approaches to accomplish the task goal
-          
-          Please avoid repeating the same operation and find alternative paths to achieve your objective.`,
-        }],
-      });
-      return;
-    }
-
-    console.log("日只能用")
-    if (
-      lastTool &&
-      lastTool.toolName !== "extract_page_content" &&
-      lastTool.toolName !== "get_all_tabs" &&
-      lastTool.toolName !== "variable_storage"
-    ) {
-      await sleep(700);
-      let image_contents: LanguageModelV1ImagePart[] = [];
-      if (await this.double_screenshots(agentContext, messages, tools)) {
-        const imageResult = await this.screenshot(agentContext);
-        const image = toImage(imageResult.imageBase64);
+    try {
+      let lastTool = this.lastToolResult(messages);
+  
+      // 检测连续重复工具调用
+      const repeatedToolDetection = this.detectRepeatedToolUse(agentContext, messages);
+      if (repeatedToolDetection.isRepeated) {
+        messages.push({
+          role: "user",
+          content: [{
+            type: "text",
+            text: `I notice you've been repeatedly using the ${repeatedToolDetection.toolName} tool with similar results. This might be due to browser popup blocking. Please take the following actions:
+  
+            Firstly, use the human_interact request_help tool (request_checkPopup) to remind the user to check browser popup settings:
+               - Visit chrome://settings/content/popups in Chrome to enable popups
+               - Or check for popup blocking icon in the address bar and click to allow
+            
+            Based on previous messages, if the user has already enabled popups but still experiencing issues:
+               - Try alternative methods that don't require opening new windows
+               - Look for options to open content in the same tab
+               - Consider using different tools or approaches to accomplish the task goal
+            
+            Please avoid repeating the same operation and find alternative paths to achieve your objective.`,
+          }],
+        });
+        return;
+      }
+  
+      console.log("日只能用")
+      if (
+        lastTool &&
+        lastTool.toolName !== "extract_page_content" &&
+        lastTool.toolName !== "get_all_tabs" &&
+        lastTool.toolName !== "variable_storage"
+      ) {
+        await sleep(700);
+        let image_contents: LanguageModelV1ImagePart[] = [];
+        if (await this.double_screenshots(agentContext, messages, tools)) {
+          const imageResult = await this.screenshot(agentContext);
+          const image = toImage(imageResult.imageBase64);
+          image_contents.push({
+            type: "image",
+            image: image,
+            mimeType: imageResult.imageType,
+          });
+        }
+  
+        let result = await this.screenshot_and_html(agentContext);
+        let image = toImage(result.imageBase64);
         image_contents.push({
           type: "image",
           image: image,
-          mimeType: imageResult.imageType,
+          mimeType: result.imageType,
+        });
+  
+        messages.push({
+          role: "user",
+          content: [
+            ...image_contents,
+            {
+              type: "text",
+              text: observePrompt + "```html\n" + result.pseudoHtml + "\n```",
+            },
+          ],
         });
       }
-
-      let result = await this.screenshot_and_html(agentContext);
-      let image = toImage(result.imageBase64);
-      image_contents.push({
-        type: "image",
-        image: image,
-        mimeType: result.imageType,
-      });
-
-      messages.push({
-        role: "user",
-        content: [
-          ...image_contents,
-          {
-            type: "text",
-            text: observePrompt + "```html\n" + result.pseudoHtml + "\n```",
-          },
-        ],
-      });
+    } catch (e) {
+      console.warn('Error in handleMessages: ', e);
     }
     await super.handleMessages(agentContext, messages, tools);
     this.handlePseudoHtmlText(messages, observePrompt);
