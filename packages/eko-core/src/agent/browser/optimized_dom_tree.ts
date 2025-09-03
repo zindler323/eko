@@ -738,7 +738,114 @@ export function run_build_dom_tree() {
     return buildDomTree(document.body);
   }
 
+  /**
+   * 简化HTML标签
+   * 按照optimized_dom_tree.ts中的逻辑简化element对应的HTML标签
+   * @param element DOM元素
+   * @returns 简化后的HTML字符串
+   */
+  function simplifyHTML(element) {
+    // 使用与optimized_dom_tree.ts相同的属性列表
+    const includeAttributes = [
+      'id',
+      'title',
+      'type',
+      'name',
+      'role',
+      'class',
+      'src',
+      'href',
+      'aria-label',
+      'placeholder',
+      'value',
+      'alt',
+      'aria-expanded',
+    ];
+
+    // 构建属性字符串，使用相同的逻辑
+    let attributes_str = '';
+    for (let i = 0; i < includeAttributes.length; i++) {
+      let key = includeAttributes[i];
+      let value = element.getAttribute(key);
+      
+      if (key == "class" && value && value.length > 30) {
+        let classList = value.split(" ").slice(0, 3);
+        value = classList.join(" ");
+      } else if ((key == "src" || key == "href") && value && value.length > 200) {
+        continue;
+      } else if ((key == "src" || key == "href") && value && value.startsWith("/")) {
+        value = window.location.origin + value;
+      }
+      
+      if (key && value) {
+        attributes_str += ` ${key}="${value}"`;
+      }
+    }
+    
+    // 清理属性字符串中的换行符
+    attributes_str = attributes_str.replace(/\n+/g, ' ');
+
+    // 获取文本内容，使用相同的文本收集逻辑
+    function get_all_text_till_next_clickable_element(element_node) {
+      let text_parts = [];
+      
+      function collect_text(node) {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          // 检查是否有highlightIndex（这里我们简化处理）
+          const element = node;
+          if (element !== element_node) {
+            // 检查是否为可交互元素
+            const isInteractive = isInteractiveElement(element);
+            if (isInteractive) {
+              return; // 遇到下一个可交互元素时停止
+            }
+          }
+          
+          // 递归处理子节点
+          for (let i = 0; i < node.childNodes.length; i++) {
+            collect_text(node.childNodes[i]);
+          }
+        } else if (node.nodeType === Node.TEXT_NODE) {
+          const text = node.textContent?.trim();
+          if (text) {
+            text_parts.push(text);
+          }
+        }
+      }
+      
+      collect_text(element_node);
+      return text_parts.join('\n').trim().replace(/\n+/g, ' ');
+    }
+
+    // 检查元素是否为可交互元素（简化版本）
+    function isInteractiveElement(element) {
+      const interactiveElements = new Set([
+        'a', 'button', 'details', 'embed', 'input', 'label', 'menu', 
+        'menuitem', 'object', 'select', 'textarea', 'summary'
+      ]);
+      
+      const tagName = element.tagName.toLowerCase();
+      const role = element.getAttribute('role');
+      const tabIndex = element.getAttribute('tabindex');
+      const contentEditable = element.getAttribute('contenteditable');
+      
+      return (
+        interactiveElements.has(tagName) ||
+        role === 'button' || role === 'link' || role === 'checkbox' ||
+        role === 'radio' || role === 'slider' || role === 'tab' ||
+        (tabIndex !== null && tabIndex !== '-1') ||
+        contentEditable === 'true'
+      );
+    }
+
+    const tagName = element.tagName.toLowerCase();
+    const text = get_all_text_till_next_clickable_element(element);
+    
+    return `<${tagName}${attributes_str}>${text}</${tagName}>`;
+  }
+
   window.get_clickable_elements = get_clickable_elements;
   window.get_highlight_element = get_highlight_element;
   window.remove_highlight = remove_highlight;
+  window.simplifyHTML = simplifyHTML;
 }
