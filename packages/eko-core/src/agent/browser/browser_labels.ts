@@ -728,7 +728,14 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
         let image_contents: LanguageModelV1ImagePart[] = [];
         if (await this.double_screenshots(agentContext, messages, tools)) {
           const imageResult = await this.screenshot(agentContext);
+
+          // @ts-ignore
+          if (imageResult.imageBase64) chrome?.storage.session.set({
+            shot_cache: 'data:image/jpeg;base64,' + imageResult.imageBase64,
+          });
+
           const image = toImage(imageResult.imageBase64);
+
           image_contents.push({
             type: "image",
             image: image,
