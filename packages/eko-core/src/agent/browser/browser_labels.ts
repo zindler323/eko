@@ -690,17 +690,17 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     //   "识别说明：请仔细分辨下拉框（有灰色下拉标志）和输入框，当涉及到“选择”操作时，必须通过点击下拉框/单选框后选择最符合的选项，禁止直接向下拉框中输入文本，禁止向截图中非输入框的元素输入文本。" +
     //   "这是最新的截图和页面元素信息.\n元素和对应的index:\n"
     const observePrompt = this.getObservePrompt()
-    try {
-      let lastTool = this.lastToolResult(messages);
-  
-      // 检测连续重复工具调用
-      const repeatedToolDetection = this.detectRepeatedToolUse(agentContext, messages);
-      if (repeatedToolDetection.isRepeated) {
-        messages.push({
-          role: "user",
-          content: [{
-            type: "text",
-            text: `I notice you've been repeatedly using the ${repeatedToolDetection.toolName} tool with similar results. This might be due to browser popup blocking. Please take the following actions:
+
+    let lastTool = this.lastToolResult(messages);
+
+    // 检测连续重复工具调用
+    const repeatedToolDetection = this.detectRepeatedToolUse(agentContext, messages);
+    if (repeatedToolDetection.isRepeated) {
+      messages.push({
+        role: "user",
+        content: [{
+          type: "text",
+          text: `I notice you've been repeatedly using the ${repeatedToolDetection.toolName} tool with similar results. This might be due to browser popup blocking. Please take the following actions:
   
             Firstly, use the human_interact request_help tool (request_checkPopup) to remind the user to check browser popup settings:
                - Visit chrome://settings/content/popups in Chrome to enable popups
@@ -712,20 +712,25 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
                - Consider using different tools or approaches to accomplish the task goal
             
             Please avoid repeating the same operation and find alternative paths to achieve your objective.`,
-          }],
-        });
-        return;
+        }],
+      });
+      return;
+    }
+
+    if (
+      lastTool &&
+      lastTool.toolName !== "extract_page_content" &&
+      lastTool.toolName !== "get_all_tabs" &&
+      lastTool.toolName !== "variable_storage"
+    ) {
+      await sleep(700);
+      let image_contents: LanguageModelV1ImagePart[] = [];
+      let result = {
+        imageBase64: '',
+        imageType: "image/jpeg",
+        pseudoHtml: '',
       }
-  
-      console.log("日只能用")
-      if (
-        lastTool &&
-        lastTool.toolName !== "extract_page_content" &&
-        lastTool.toolName !== "get_all_tabs" &&
-        lastTool.toolName !== "variable_storage"
-      ) {
-        await sleep(700);
-        let image_contents: LanguageModelV1ImagePart[] = [];
+      try {
         if (await this.double_screenshots(agentContext, messages, tools)) {
           const imageResult = await this.screenshot(agentContext);
 
@@ -742,29 +747,30 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
             mimeType: imageResult.imageType,
           });
         }
-  
-        let result = await this.screenshot_and_html(agentContext);
-        let image = toImage(result.imageBase64);
-        image_contents.push({
-          type: "image",
-          image: image,
-          mimeType: result.imageType,
-        });
-  
-        messages.push({
-          role: "user",
-          content: [
-            ...image_contents,
-            {
-              type: "text",
-              text: observePrompt + "```html\n" + result.pseudoHtml + "\n```",
-            },
-          ],
-        });
+
+        result = await this.screenshot_and_html(agentContext);
+      } catch (e) {
+        console.warn('Error in handleMessages: ', e);
       }
-    } catch (e) {
-      console.warn('Error in handleMessages: ', e);
+      let image = toImage(result.imageBase64);
+      image_contents.push({
+        type: "image",
+        image: image,
+        mimeType: result.imageType,
+      });
+
+      messages.push({
+        role: "user",
+        content: [
+          ...image_contents,
+          {
+            type: "text",
+            text: observePrompt + "```html\n" + result.pseudoHtml + "\n```",
+          },
+        ],
+      });
     }
+
     await super.handleMessages(agentContext, messages, tools);
     this.handlePseudoHtmlText(messages, observePrompt);
   }
