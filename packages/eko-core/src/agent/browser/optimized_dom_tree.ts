@@ -4,17 +4,39 @@ export function run_build_dom_tree() {
    * Get clickable elements on the page
    *
    * @param {*} doHighlightElements Is highlighted
-   * @param {*} includeAttributes [attr_names...]
+   * @param includeAttributes
    * @returns { element_str, selector_map }
    */
   function get_clickable_elements(doHighlightElements = true, includeAttributes) {
     window.clickable_elements = {};
+    window.invisible_elements = {};
     document.querySelectorAll("[eko-user-highlight-id]").forEach(ele => ele.removeAttribute("eko-user-highlight-id"));
+    document.querySelectorAll("[eko-user-invisible-id]").forEach(ele => ele.removeAttribute("eko-user-invisible-id"));
+    
     let page_tree = build_dom_tree(doHighlightElements);
     let element_tree = parse_node(page_tree);
     let selector_map = create_selector_map(element_tree);
-    let element_str = clickable_elements_to_string(element_tree, includeAttributes);
-    return { element_str, selector_map };
+    
+    // 获取可见元素字符串
+    let visible_str = clickable_elements_to_string(element_tree, includeAttributes);
+    
+    // 获取不可见元素字符串
+    let invisible_str = invisible_elements_to_string(element_tree, includeAttributes);
+    
+    // 拼接两种结果
+    let element_str = '';
+    if (visible_str) {
+      element_str += '## Visible Elements \n';
+      element_str += visible_str;
+      element_str += '\n';
+    }
+    if (invisible_str) {
+      element_str += '## Invisible Elements \n';
+      element_str += invisible_str;
+      element_str += '\n';
+    }
+    
+    return { element_str: element_str.trim(), selector_map };
   }
 
   function get_highlight_element(highlightIndex) {
@@ -22,11 +44,20 @@ export function run_build_dom_tree() {
     return element || window.clickable_elements[highlightIndex];
   }
 
+  function get_invisible_element(invisibleIndex) {
+    let element = document.querySelector(`[eko-user-invisible-id="eko-invisible-${invisibleIndex}"]`);
+    return element || window.invisible_elements[invisibleIndex];
+  }
+
   function remove_highlight() {
     let highlight = document.getElementById('eko-highlight-container');
     if (highlight) {
       highlight.remove();
     }
+  }
+
+  function remove_invisible() {
+    document.querySelectorAll("[eko-user-invisible-id]").forEach(ele => ele.removeAttribute("eko-user-invisible-id"));
   }
 
   function clickable_elements_to_string(element_tree, includeAttributes) {
@@ -117,6 +148,92 @@ export function run_build_dom_tree() {
     return formatted_text.join('\n');
   }
 
+  function invisible_elements_to_string(element_tree, includeAttributes) {
+    if (!includeAttributes) {
+      includeAttributes = [
+        'id',
+        'title',
+        'type',
+        'name',
+        'role',
+        'class',
+        'src',
+        'href',
+        'aria-label',
+        'placeholder',
+        'value',
+        'alt',
+        'aria-expanded',
+      ];
+    }
+
+    function get_all_text_till_next_invisible_element(element_node) {
+      let text_parts = [];
+      function collect_text(node) {
+        if (node.tagName && node != element_node && node.invisibleIndex != null) {
+          return;
+        }
+        if (!node.tagName && node.text) {
+          text_parts.push(node.text);
+        } else if (node.tagName) {
+          for (let i = 0; i < node.children.length; i++) {
+            collect_text(node.children[i]);
+          }
+        }
+      }
+      collect_text(element_node);
+      return text_parts.join('\n').trim().replace(/\n+/g, ' ');
+    }
+
+    function has_parent_with_invisible_index(node) {
+      let current = node.parent;
+      while (current) {
+        if (current.invisibleIndex != null) {
+          return true;
+        }
+        current = current.parent;
+      }
+      return false;
+    }
+
+    let formatted_text = [];
+    function process_node(node, depth) {
+      if (node.text == null) {
+        if (node.invisibleIndex != null) {
+          let attributes_str = '';
+          if (includeAttributes) {
+            for (let i = 0; i < includeAttributes.length; i++) {
+              let key = includeAttributes[i];
+              let value = node.attributes[key];
+              if (key == "class" && value && value.length > 30) {
+                let classList = value.split(" ").slice(0, 3);
+                value = classList.join(" ");
+              } else if ((key == "src" || key == "href") && value && value.length > 200) {
+                continue;
+              } else if ((key == "src" || key == "href") && value && value.startsWith("/")) {
+                value = window.location.origin + value;
+              }
+              if (key && value) {
+                attributes_str += ` ${key}="${value}"`;
+              }
+            }
+            attributes_str = attributes_str.replace(/\n+/g, ' ');
+          }
+          let text = get_all_text_till_next_invisible_element(node);
+          formatted_text.push(
+            `[${node.invisibleIndex}]:<${node.tagName}${attributes_str}>${text}</${node.tagName}>`
+          );
+        }
+        for (let i = 0; i < node.children.length; i++) {
+          let child = node.children[i];
+          process_node(child, depth + 1);
+        }
+      }
+    }
+    process_node(element_tree, 0);
+    return formatted_text.join('\n');
+  }
+
   function create_selector_map(element_tree) {
     let selector_map = {};
     function process_node(node) {
@@ -148,6 +265,7 @@ export function run_build_dom_tree() {
       tagName: node_data.tagName,
       xpath: node_data.xpath,
       highlightIndex: node_data.highlightIndex,
+      invisibleIndex: node_data.invisibleIndex,
       attributes: node_data.attributes || {},
       isVisible: node_data.isVisible || false,
       isInteractive: node_data.isInteractive || false,
@@ -174,6 +292,19 @@ export function run_build_dom_tree() {
 
   function build_dom_tree(doHighlightElements) {
     let highlightIndex = 0; // Reset highlight index
+    let invisibleIndex = 0; // Reset invisible index
+
+    // 缓存视窗和文档尺寸，避免重复计算
+    const viewWidth = window.innerWidth || document.documentElement.clientWidth;
+    const viewHeight = window.innerHeight || document.documentElement.clientHeight;
+    const docWidth = Math.max(
+      document.documentElement.scrollWidth,
+      document.body.scrollWidth
+    );
+    const docHeight = Math.max(
+      document.documentElement.scrollHeight,
+      document.body.scrollHeight
+    );
 
     function highlightElement(element, index, parentIframe = null) {
       // Create or get highlight container
@@ -554,6 +685,28 @@ export function run_build_dom_tree() {
       }
     }
 
+    // Helper function to check if element is scrollable into view
+    function isScrollableIntoView(el) {
+      if (!el) return false;
+
+      // 如果元素已经有highlight标签，直接返回false
+      if (el.hasAttribute('eko-user-highlight-id')) {
+        return false;
+      }
+
+      const rect = el.getBoundingClientRect();
+      
+      // 条件1: 当前不在视窗内
+      const inViewport = rect.top < viewHeight && rect.bottom > 0 && 
+                        rect.left < viewWidth && rect.right > 0;
+      
+      if (inViewport) return false;
+
+      // 条件2: 元素在文档可滚动范围内
+      // 元素完全在视窗外，但在文档范围内
+      return rect.top >= viewHeight || rect.bottom <= 0;
+    }
+
     // Helper function to check if text node is visible
     function isTextNodeVisible(textNode) {
       const range = document.createRange();
@@ -592,7 +745,7 @@ export function run_build_dom_tree() {
           console.warn('Stack size too large, stopping traversal');
           break;
         }
-        
+
         const { node, parentIframe, result: parentResult } = stack.pop();
         processedNodes++;
 
@@ -605,7 +758,7 @@ export function run_build_dom_tree() {
               text: textContent,
               isVisible: true,
             };
-            
+
             if (parentResult) {
               if (!parentResult.children) parentResult.children = [];
               parentResult.children.push(textNodeData);
@@ -653,6 +806,10 @@ export function run_build_dom_tree() {
             if (doHighlightElements) {
               highlightElement(node, nodeData.highlightIndex, parentIframe);
             }
+          } else if (isInteractive && isScrollableIntoView(node)) {
+            nodeData.invisibleIndex = invisibleIndex++;
+            window.invisible_elements[nodeData.invisibleIndex] = node;
+            node.setAttribute('eko-user-invisible-id', `eko-invisible-${nodeData.invisibleIndex}`);
           }
         }
 
@@ -670,8 +827,8 @@ export function run_build_dom_tree() {
         if (node.shadowRoot) {
           const shadowChildren = Array.from(node.shadowRoot.childNodes);
           for (let i = shadowChildren.length - 1; i >= 0; i--) {
-            stack.push({ 
-              node: shadowChildren[i], 
+            stack.push({
+              node: shadowChildren[i],
               parentIframe: parentIframe,
               result: nodeData
             });
@@ -685,8 +842,8 @@ export function run_build_dom_tree() {
             if (iframeDoc) {
               const iframeChildren = Array.from(iframeDoc.body.childNodes);
               for (let i = iframeChildren.length - 1; i >= 0; i--) {
-                stack.push({ 
-                  node: iframeChildren[i], 
+                stack.push({
+                  node: iframeChildren[i],
                   parentIframe: node,
                   result: nodeData
                 });
@@ -699,8 +856,8 @@ export function run_build_dom_tree() {
           // Handle regular children - 非递归处理
           const children = Array.from(node.childNodes);
           for (let i = children.length - 1; i >= 0; i--) {
-            stack.push({ 
-              node: children[i], 
+            stack.push({
+              node: children[i],
               parentIframe: parentIframe,
               result: nodeData
             });
@@ -726,7 +883,7 @@ export function run_build_dom_tree() {
       const endMemory = performance.memory ? performance.memory.usedJSHeapSize : 0;
       const executionTime = endTime - startTime;
       const memoryUsed = endMemory - startMemory;
-      
+
       console.log(`DOM遍历性能统计:
         - 处理节点数: ${processedNodes}
         - 执行时间: ${executionTime.toFixed(2)}ms
@@ -846,6 +1003,8 @@ export function run_build_dom_tree() {
 
   window.get_clickable_elements = get_clickable_elements;
   window.get_highlight_element = get_highlight_element;
+  window.get_invisible_element = get_invisible_element;
   window.remove_highlight = remove_highlight;
+  window.remove_invisible = remove_invisible;
   window.simplifyHTML = simplifyHTML;
 }

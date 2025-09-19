@@ -88,9 +88,10 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     agentContext: AgentContext,
     index: number,
     text: string,
-    enter: boolean
+    enter: boolean,
+    is_visible: boolean = true
   ): Promise<any> {
-    await this.execute_script(agentContext, typing, [{ index, text, enter }]);
+    await this.execute_script(agentContext, typing, [{ index, text, enter, is_visible }]);
     if (enter) {
       await sleep(200);
     }
@@ -100,10 +101,11 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     agentContext: AgentContext,
     index: number,
     num_clicks: number,
-    button: "left" | "right" | "middle"
+    button: "left" | "right" | "middle",
+    is_visible: boolean = true
   ): Promise<any> {
     await this.execute_script(agentContext, do_click, [
-      { index, num_clicks, button },
+      { index, num_clicks, button, is_visible },
     ]);
   }
 
@@ -114,13 +116,19 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     await this.execute_script(
       agentContext,
       (index) => {
-        return (window as any)
-          .get_highlight_element(index)
-          .scrollIntoView({ behavior: "smooth" });
+        // 只从不可见元素中获取
+        const element = (window as any).get_invisible_element(index);
+        if (!element) {
+          return false;
+        }
+        
+        // 滚动到元素位置
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+        return true;
       },
       [index]
     );
-    await sleep(200);
+    await sleep(500);
   }
 
   protected async scroll_mouse_wheel(
@@ -165,12 +173,14 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     agentContext: AgentContext,
     index: number,
     direction: 'up' | 'down' = 'down',
+    is_visible: boolean = true
   ): Promise<any> {
     await this.execute_script(
       agentContext,
-      (index, direction) => {
-        const $el =  (window as any)
-          .get_highlight_element(index);
+      (index, direction, is_visible) => {
+        const $el = is_visible ? 
+          (window as any).get_highlight_element(index) :
+          (window as any).get_invisible_element(index);
         if (!$el) {
           console.warn('yc:: element not found');
           return;
@@ -198,24 +208,26 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
           scrollable.scrollBy(0, direction === 'down' ? delta : -delta);
         }
       },
-      [index, direction]
+      [index, direction, is_visible]
     );
     await sleep(200);
   }
 
   protected async hover_to_element(
     agentContext: AgentContext,
-    index: number
+    index: number,
+    is_visible: boolean = true
   ): Promise<void> {
-    await this.execute_script(agentContext, hover_to, [{ index }]);
+    await this.execute_script(agentContext, hover_to, [{ index, is_visible }]);
   }
 
   protected async get_select_options(
     agentContext: AgentContext,
-    index: number
+    index: number,
+    is_visible: boolean = true
   ): Promise<any> {
     return await this.execute_script(agentContext, get_select_options, [
-      { index },
+      { index, is_visible },
     ]);
   }
 
@@ -235,30 +247,42 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
     pseudoHtml: string;
   }> {
     try {
-      let element_result = null;
+      let clickable_result = null;
+      
       for (let i = 0; i < 5; i++) {
         await sleep(200);
         await this.execute_script(agentContext, run_build_dom_tree, []);
         await sleep(50);
-        element_result = (await this.execute_script(
+        
+        // 一次性获取两种元素
+        clickable_result = (await this.execute_script(
           agentContext,
           () => {
             return (window as any).get_clickable_elements(true);
           },
           []
         )) as any;
-        if (element_result) {
+        
+        if (clickable_result) {
           break;
         }
       }
+      
       await sleep(100);
       let screenshot = await this.screenshot(agentContext);
-      // agentContext.variables.set("selector_map", element_result.selector_map);
-      let pseudoHtml = element_result?.element_str || '';
+      
+      // 组合pseudoHtml，通过标题区分
+      let pseudoHtml = '';
+      
+      // 使用clickable_result中的element_str，它已经包含了两种元素
+      if (clickable_result?.element_str) {
+        pseudoHtml = clickable_result.element_str;
+      }
+      
       return {
         imageBase64: screenshot.imageBase64,
         imageType: screenshot.imageType,
-        pseudoHtml: pseudoHtml,
+        pseudoHtml: pseudoHtml.trim(),
       };
     } catch (e) {
       throw new Error("Oops! Something went wrong, and the page crashed. Please reload.");
@@ -267,7 +291,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
         await this.execute_script(
           agentContext,
           () => {
-            return (window as any).remove_highlight();
+            (window as any).remove_highlight();
           },
           []
         );
@@ -353,6 +377,10 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
                 "When text input is completed, press Enter (applicable to search boxes)",
               default: false,
             },
+            is_visible: {
+              type: "boolean",
+              description: "Whether the element is visible (true) or invisible (false), default true",
+            },
           },
           required: ["index", "text"],
         },
@@ -365,7 +393,8 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
               agentContext,
               args.index as number,
               args.text as string,
-              args.enter as boolean
+              args.enter as boolean,
+              (args.is_visible !== false) as boolean
             )
           );
         },
@@ -389,6 +418,10 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
               description: "Mouse button type, default left",
               enum: ["left", "right", "middle"],
             },
+            is_visible: {
+              type: "boolean",
+              description: "Whether the element is visible (true) or invisible (false), default true",
+            },
           },
           required: ["index"],
         },
@@ -401,21 +434,21 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
               agentContext,
               args.index as number,
               (args.num_clicks || 1) as number,
-              (args.button || "left") as any
+              (args.button || "left") as any,
+              (args.is_visible !== false) as boolean
             )
           );
         },
       },
-      /*
       {
         name: "scroll_to_element",
-        description: "Scroll to the element",
+        description: "Scroll to an invisible element to make it visible",
         parameters: {
           type: "object",
           properties: {
             index: {
               type: "number",
-              description: "The index of the element to input text into",
+              description: "The index of the invisible element to scroll to",
             },
           },
           required: ["index"],
@@ -429,7 +462,6 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
           );
         },
       },
-      */
       {
         name: "scroll_mouse_wheel",
         description:
@@ -485,6 +517,10 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
               type: "string",
               enum: ["up", "down"],
             },
+            is_visible: {
+              type: "boolean",
+              description: "Whether the element is visible (true) or invisible (false), default true",
+            },
             extract_page_content: {
               type: "boolean",
               default: false,
@@ -501,7 +537,8 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
             await this.scroll_element(
               agentContext,
               args.index as number,
-              args.direction as 'up' | 'down'
+              args.direction as 'up' | 'down',
+              (args.is_visible !== false) as boolean
             );
           });
         }},
@@ -515,6 +552,10 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
               type: "number",
               description: "The index of the element to input text into",
             },
+            is_visible: {
+              type: "boolean",
+              description: "Whether the element is visible (true) or invisible (false), default true",
+            },
           },
           required: ["index"],
         },
@@ -523,7 +564,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
           agentContext: AgentContext
         ): Promise<ToolResult> => {
           return await this.callInnerTool(() =>
-            this.hover_to_element(agentContext, args.index as number)
+            this.hover_to_element(agentContext, args.index as number, (args.is_visible !== false) as boolean)
           );
         },
       },
@@ -555,6 +596,10 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
               type: "number",
               description: "The index of the element to select",
             },
+            is_visible: {
+              type: "boolean",
+              description: "Whether the element is visible (true) or invisible (false), default true",
+            },
           },
           required: ["index"],
         },
@@ -563,7 +608,7 @@ export default abstract class BaseBrowserLabelsAgent extends BaseBrowserAgent {
           agentContext: AgentContext
         ): Promise<ToolResult> => {
           return await this.callInnerTool(() =>
-            this.get_select_options(agentContext, args.index as number)
+            this.get_select_options(agentContext, args.index as number, (args.is_visible !== false) as boolean)
           );
         },
       },
@@ -1259,9 +1304,12 @@ function typing(params: {
   index: number;
   text: string;
   enter: boolean;
+  is_visible: boolean;
 }): boolean {
-  let { index, text, enter } = params;
-  let element = (window as any).get_highlight_element(index);
+  let { index, text, enter, is_visible } = params;
+  let element = is_visible ? 
+    (window as any).get_highlight_element(index) :
+    (window as any).get_invisible_element(index);
   if (!element) {
     return false;
   }
@@ -1334,16 +1382,30 @@ function do_click(params: {
   index: number;
   button: "left" | "right" | "middle";
   num_clicks: number;
+  is_visible: boolean;
 }): boolean {
-  let { index, button, num_clicks } = params;
-  console.log('click_el',index)
-  let element = (window as any).get_highlight_element(index);
-  console.log('click_el',element)
+  let { index, button, num_clicks, is_visible } = params;
+  
+  // 根据is_visible参数选择不同的元素获取方法
+  let element;
+  if (is_visible) {
+    element = (window as any).get_highlight_element(index);
+  } else {
+    element = (window as any).get_invisible_element(index);
+  }
+  
   function simulateMouseEvent(
     eventTypes: Array<string>,
     button: 0 | 1 | 2
   ): boolean {
-    let element = (window as any).get_highlight_element(index);
+    // 重新获取元素，确保获取到正确的元素
+    let element;
+    if (is_visible) {
+      element = (window as any).get_highlight_element(index);
+    } else {
+      element = (window as any).get_invisible_element(index);
+    }
+    
     if (!element) {
       return false;
     }
@@ -1369,8 +1431,10 @@ function do_click(params: {
   }
 }
 
-function hover_to(params: { index: number }): boolean {
-  let element = (window as any).get_highlight_element(params.index);
+function hover_to(params: { index: number; is_visible: boolean }): boolean {
+  let element = params.is_visible ? 
+    (window as any).get_highlight_element(params.index) :
+    (window as any).get_invisible_element(params.index);
   if (!element) {
     return false;
   }
@@ -1383,8 +1447,10 @@ function hover_to(params: { index: number }): boolean {
   return true;
 }
 
-function get_select_options(params: { index: number }) {
-  let element = (window as any).get_highlight_element(params.index);
+function get_select_options(params: { index: number; is_visible: boolean }) {
+  let element = params.is_visible ? 
+    (window as any).get_highlight_element(params.index) :
+    (window as any).get_invisible_element(params.index);
   if (!element || element.tagName.toUpperCase() !== "SELECT") {
     return "Error: Not a select element";
   }
